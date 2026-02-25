@@ -3,7 +3,7 @@ import { Search, Filter, MapPin, Cloud, Sun, Clock, ChevronRight, X, Heart, Shar
 import { motion, AnimatePresence } from 'motion/react';
 import { recipes as staticRecipes, Recipe, Ingredient, Step, WeatherCondition } from './data/recipes';
 import { useWeather } from './hooks/useWeather';
-import { getCoffeeRecommendation } from './services/geminiService';
+import { getLocalCoffeeRecommendation } from './services/recommendationService';
 import { fetchRecipesFromSupabase, insertRecipeToSupabase, deleteRecipeFromSupabase } from './services/supabaseService';
 import { cn } from './lib/utils';
 
@@ -84,19 +84,9 @@ export default function App() {
   }, [favorites]);
 
   useEffect(() => {
-    // Sugestão inicial rápida baseada em temperatura padrão ou atual
-    if (!recommendation) {
-      const isHot = weather.temp > 25;
-      const fallback = allRecipes.find(r => isHot ? r.weatherSuitability.includes('hot') : r.weatherSuitability.includes('cold')) || allRecipes[0];
-      setRecommendation({ 
-        recipeId: fallback.id, 
-        reason: weather.loading ? "Detectando clima da sua região..." : "Buscando a melhor opção para você..." 
-      });
-    }
-
-    if (!weather.loading) {
-      getCoffeeRecommendation({ temp: weather.temp, condition: weather.condition }, allRecipes)
-        .then(setRecommendation);
+    if (!weather.loading && allRecipes.length > 0) {
+      const rec = getLocalCoffeeRecommendation({ temp: weather.temp, condition: weather.condition }, allRecipes);
+      setRecommendation(rec);
     }
   }, [weather.loading, weather.temp, weather.condition, allRecipes]);
 
