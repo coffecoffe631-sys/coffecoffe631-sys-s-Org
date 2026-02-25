@@ -21,6 +21,11 @@ export default function App() {
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
+  // Temp states for dynamic fields
+  const [tempIngredient, setTempIngredient] = useState({ name: '', amount: '' });
+  const [tempEquipment, setTempEquipment] = useState('');
+  const [tempStep, setTempStep] = useState({ title: '', description: '' });
+  
   const [newRecipe, setNewRecipe] = useState<Partial<Recipe>>({
     name: '',
     country: 'Brasil',
@@ -174,6 +179,56 @@ export default function App() {
     }
   };
 
+  const addIngredient = () => {
+    if (!tempIngredient.name || !tempIngredient.amount) return;
+    setNewRecipe(prev => ({
+      ...prev,
+      detailedIngredients: [...(prev.detailedIngredients || []), { ...tempIngredient }],
+      ingredients: [...(prev.ingredients || []), tempIngredient.name]
+    }));
+    setTempIngredient({ name: '', amount: '' });
+  };
+
+  const removeIngredient = (index: number) => {
+    setNewRecipe(prev => ({
+      ...prev,
+      detailedIngredients: prev.detailedIngredients?.filter((_, i) => i !== index),
+      ingredients: prev.ingredients?.filter((_, i) => i !== index)
+    }));
+  };
+
+  const addEquipment = () => {
+    if (!tempEquipment) return;
+    setNewRecipe(prev => ({
+      ...prev,
+      equipment: [...(prev.equipment || []), tempEquipment]
+    }));
+    setTempEquipment('');
+  };
+
+  const removeEquipment = (index: number) => {
+    setNewRecipe(prev => ({
+      ...prev,
+      equipment: prev.equipment?.filter((_, i) => i !== index)
+    }));
+  };
+
+  const addStep = () => {
+    if (!tempStep.title || !tempStep.description) return;
+    setNewRecipe(prev => ({
+      ...prev,
+      steps: [...(prev.steps || []), { ...tempStep }]
+    }));
+    setTempStep({ title: '', description: '' });
+  };
+
+  const removeStep = (index: number) => {
+    setNewRecipe(prev => ({
+      ...prev,
+      steps: prev.steps?.filter((_, i) => i !== index)
+    }));
+  };
+
   const handleDeleteRecipe = async (id: string) => {
     if (!confirm('Tem certeza que deseja excluir esta receita?')) return;
     try {
@@ -188,8 +243,9 @@ export default function App() {
   return (
     <div className="min-h-screen pb-24">
       {/* Header */}
-      <header className="px-6 pt-8 pb-4 flex items-center justify-between sticky top-0 bg-coffee-50/80 backdrop-blur-md z-30">
-        <div className="flex items-center gap-3">
+      <header className="sticky top-0 bg-coffee-50/80 backdrop-blur-md z-30 border-b border-coffee-100/50">
+        <div className="max-w-5xl mx-auto px-6 pt-8 pb-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
           <div 
             className="w-10 h-10 rounded-full overflow-hidden border-2 border-coffee-200 cursor-pointer"
             onClick={() => isAdminAuthenticated ? setShowAdminPanel(true) : setShowAdminLogin(true)}
@@ -223,9 +279,10 @@ export default function App() {
             </div>
           )}
         </div>
+        </div>
       </header>
 
-      <main className="px-6 space-y-8 max-w-2xl mx-auto">
+      <main className="px-6 py-8 space-y-8 max-w-5xl mx-auto">
         {/* Search & Filters */}
         <section className="space-y-4">
           <div className="relative group">
@@ -300,7 +357,7 @@ export default function App() {
             )}
           </AnimatePresence>
 
-          <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
+          <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar sm:justify-center">
             <button 
               onClick={() => setSelectedCategory(null)}
               className={cn(
@@ -327,14 +384,14 @@ export default function App() {
 
         {/* Recipe Grid */}
         <section className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-serif font-bold text-coffee-950">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <h2 className="text-xl sm:text-2xl font-serif font-bold text-coffee-950 break-words">
               {activeTab === 'favorites' ? 'Meus Favoritos' : (searchQuery || selectedCategory ? 'Resultados' : 'Explorar Sabores')}
             </h2>
-            <span className="text-xs font-bold text-coffee-400 uppercase tracking-widest">{filteredRecipes.length} Receitas</span>
+            <span className="text-[10px] sm:text-xs font-bold text-coffee-400 uppercase tracking-widest shrink-0">{filteredRecipes.length} Receitas</span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredRecipes.map((recipe, idx) => (
               <motion.div 
                 key={recipe.id}
@@ -374,7 +431,7 @@ export default function App() {
                     <MapPin size={12} />
                     <span className="text-[10px] font-bold uppercase tracking-widest">{recipe.country}</span>
                   </div>
-                  <h3 className="text-xl font-serif font-bold text-coffee-950 mb-1">{recipe.name}</h3>
+                  <h3 className="text-xl font-serif font-bold text-coffee-950 mb-1 break-words">{recipe.name}</h3>
                   <div className="flex items-center gap-4 text-coffee-400">
                     <div className="flex items-center gap-1">
                       <Clock size={14} />
@@ -426,12 +483,12 @@ export default function App() {
 
       {/* Integrated Bottom Navigation & Recommendation */}
       <AnimatePresence>
-        {!isExplainingRecommendation && (
+        {!isExplainingRecommendation && !selectedRecipe && (
           <motion.div 
             initial={{ y: 100, opacity: 0, x: '-50%' }}
             animate={{ y: 0, opacity: 1, x: '-50%' }}
             exit={{ y: 100, opacity: 0, x: '-50%' }}
-            className="fixed bottom-6 left-1/2 w-[calc(100%-2rem)] max-w-[400px] z-[70]"
+            className="fixed bottom-6 left-1/2 w-[calc(100%-2rem)] max-w-[500px] z-[70]"
           >
             <div className="bg-coffee-950 rounded-[2.5rem] p-3 shadow-2xl flex flex-col gap-3 border border-white/5">
               {/* Recommendation Section */}
@@ -630,7 +687,7 @@ export default function App() {
             <motion.div 
               initial={{ y: 50, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              className="bg-white rounded-[2.5rem] p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl border border-coffee-100 no-scrollbar"
+              className="bg-white rounded-[2.5rem] p-8 w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl border border-coffee-100 no-scrollbar"
             >
               <div className="flex justify-between items-center mb-8 sticky top-0 bg-white py-2 z-10">
                 <div>
@@ -716,6 +773,131 @@ export default function App() {
                         className="w-full bg-white border border-coffee-100 rounded-xl py-2.5 px-4 text-sm h-20 resize-none"
                       />
                     </div>
+
+                    {/* Dynamic Ingredients */}
+                    <div className="md:col-span-2 space-y-3">
+                      <label className="block text-[10px] font-bold text-coffee-400 uppercase tracking-widest">Ingredientes Detalhados</label>
+                      <div className="flex gap-2">
+                        <input 
+                          value={tempIngredient.name}
+                          onChange={(e) => setTempIngredient({...tempIngredient, name: e.target.value})}
+                          placeholder="Nome (Ex: Café Moído)"
+                          className="flex-1 bg-white border border-coffee-100 rounded-xl py-2 px-3 text-sm"
+                        />
+                        <input 
+                          value={tempIngredient.amount}
+                          onChange={(e) => setTempIngredient({...tempIngredient, amount: e.target.value})}
+                          placeholder="Qtd (Ex: 20g)"
+                          className="w-24 bg-white border border-coffee-100 rounded-xl py-2 px-3 text-sm"
+                        />
+                        <button type="button" onClick={addIngredient} className="bg-coffee-100 text-coffee-700 p-2 rounded-xl hover:bg-coffee-200">
+                          <Plus size={20} />
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {newRecipe.detailedIngredients?.map((ing, i) => (
+                          <div key={i} className="bg-white border border-coffee-100 px-3 py-1 rounded-full text-xs flex items-center gap-2">
+                            <span>{ing.name} ({ing.amount})</span>
+                            <button type="button" onClick={() => removeIngredient(i)} className="text-red-400 hover:text-red-600">
+                              <X size={14} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Dynamic Equipment */}
+                    <div className="md:col-span-2 space-y-3">
+                      <label className="block text-[10px] font-bold text-coffee-400 uppercase tracking-widest">Equipamentos</label>
+                      <div className="flex gap-2">
+                        <input 
+                          value={tempEquipment}
+                          onChange={(e) => setTempEquipment(e.target.value)}
+                          placeholder="Ex: Prensa Francesa"
+                          className="flex-1 bg-white border border-coffee-100 rounded-xl py-2 px-3 text-sm"
+                        />
+                        <button type="button" onClick={addEquipment} className="bg-coffee-100 text-coffee-700 p-2 rounded-xl hover:bg-coffee-200">
+                          <Plus size={20} />
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {newRecipe.equipment?.map((eq, i) => (
+                          <div key={i} className="bg-white border border-coffee-100 px-3 py-1 rounded-full text-xs flex items-center gap-2">
+                            <span>{eq}</span>
+                            <button type="button" onClick={() => removeEquipment(i)} className="text-red-400 hover:text-red-600">
+                              <X size={14} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Dynamic Steps */}
+                    <div className="md:col-span-2 space-y-3">
+                      <label className="block text-[10px] font-bold text-coffee-400 uppercase tracking-widest">Passo a Passo</label>
+                      <div className="space-y-2">
+                        <input 
+                          value={tempStep.title}
+                          onChange={(e) => setTempStep({...tempStep, title: e.target.value})}
+                          placeholder="Título do Passo (Ex: Moagem)"
+                          className="w-full bg-white border border-coffee-100 rounded-xl py-2 px-3 text-sm"
+                        />
+                        <div className="flex gap-2">
+                          <textarea 
+                            value={tempStep.description}
+                            onChange={(e) => setTempStep({...tempStep, description: e.target.value})}
+                            placeholder="Descrição detalhada..."
+                            className="flex-1 bg-white border border-coffee-100 rounded-xl py-2 px-3 text-sm h-16 resize-none"
+                          />
+                          <button type="button" onClick={addStep} className="bg-coffee-100 text-coffee-700 p-2 rounded-xl hover:bg-coffee-200 self-end">
+                            <Plus size={20} />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        {newRecipe.steps?.map((step, i) => (
+                          <div key={i} className="bg-white border border-coffee-100 p-3 rounded-xl text-xs flex justify-between items-start gap-4">
+                            <div>
+                              <p className="font-bold text-coffee-900 mb-1">{i + 1}. {step.title}</p>
+                              <p className="text-coffee-500">{step.description}</p>
+                            </div>
+                            <button type="button" onClick={() => removeStep(i)} className="text-red-400 hover:text-red-600 shrink-0">
+                              <X size={16} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="block text-[10px] font-bold text-coffee-400 uppercase tracking-widest mb-1.5">Clima Adequado</label>
+                      <div className="flex flex-wrap gap-2">
+                        {(['hot', 'cold', 'neutral', 'rainy'] as WeatherCondition[]).map(condition => (
+                          <button
+                            key={condition}
+                            type="button"
+                            onClick={() => {
+                              const current = newRecipe.weatherSuitability || [];
+                              const updated = current.includes(condition)
+                                ? current.filter(c => c !== condition)
+                                : [...current, condition];
+                              setNewRecipe({...newRecipe, weatherSuitability: updated});
+                            }}
+                            className={cn(
+                              "px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border",
+                              newRecipe.weatherSuitability?.includes(condition)
+                                ? "bg-coffee-900 text-white border-coffee-900 shadow-md"
+                                : "bg-white text-coffee-400 border-coffee-100 hover:border-coffee-200"
+                            )}
+                          >
+                            {condition === 'hot' ? '🔥 Quente' : 
+                             condition === 'cold' ? '❄️ Frio' : 
+                             condition === 'rainy' ? '🌧️ Chuva' : '✨ Neutro'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
                     <button 
                       type="submit"
                       disabled={isSubmitting}
@@ -771,7 +953,7 @@ export default function App() {
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
-              className="bg-coffee-50 w-full max-w-2xl h-full sm:h-[90vh] sm:rounded-[3rem] overflow-hidden flex flex-col shadow-2xl"
+              className="bg-coffee-50 w-full max-w-3xl h-full sm:h-[90vh] sm:rounded-[3rem] overflow-hidden flex flex-col shadow-2xl"
             >
               <div className="relative h-72 sm:h-80 shrink-0">
                 <img src={selectedRecipe.image} alt={selectedRecipe.name} className="w-full h-full object-cover" />
@@ -810,8 +992,8 @@ export default function App() {
                       <span>•</span>
                       <span>{selectedRecipe.difficulty}</span>
                     </div>
-                    <h2 className="text-4xl font-serif font-bold text-coffee-950">{selectedRecipe.name}</h2>
-                    <p className="text-coffee-600 italic leading-relaxed">{selectedRecipe.description}</p>
+                    <h2 className="text-3xl sm:text-4xl font-serif font-bold text-coffee-950 break-words">{selectedRecipe.name}</h2>
+                    <p className="text-coffee-600 italic leading-relaxed break-words">{selectedRecipe.description}</p>
                   </div>
 
                   <div className="flex gap-8 py-4 border-y border-coffee-200">
