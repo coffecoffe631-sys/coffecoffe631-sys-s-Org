@@ -1,0 +1,5 @@
+{
+  "name": "Cheirinho Mineiro",
+  "description": "Um guia sofisticado de receitas de café com alma brasileira e sabores do mundo.",
+  "requestFramePermissions": ["geolocation"]
+}
