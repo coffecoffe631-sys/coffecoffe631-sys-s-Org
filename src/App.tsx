@@ -511,6 +511,7 @@ export default function App() {
                   <img 
                     src={recipe.image} 
                     alt={recipe.name} 
+                    referrerPolicy="no-referrer"
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                   />
                   <div className="absolute top-4 right-4 flex flex-col gap-2">
@@ -616,7 +617,7 @@ export default function App() {
                       className="absolute inset-0 pointer-events-none"
                     />
                     <div className="w-12 h-12 rounded-2xl overflow-hidden shrink-0 border border-white/10 relative">
-                      <img src={recommendedRecipe.image} alt={recommendedRecipe.name} className="w-full h-full object-cover" />
+                      <img src={recommendedRecipe.image} alt={recommendedRecipe.name} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -670,7 +671,7 @@ export default function App() {
               className="absolute inset-0 bg-coffee-950/95 backdrop-blur-xl"
             >
               <div className="absolute inset-0 opacity-30">
-                <img src={recommendedRecipe.image} className="w-full h-full object-cover blur-3xl scale-150" alt="" />
+                <img src={recommendedRecipe.image} referrerPolicy="no-referrer" className="w-full h-full object-cover blur-3xl scale-150" alt="" />
               </div>
             </motion.div>
             
@@ -687,7 +688,7 @@ export default function App() {
                   transition={{ type: "spring", damping: 12 }}
                   className="w-32 h-32 rounded-[2.5rem] overflow-hidden mb-8 border-4 border-white/20 shadow-2xl relative"
                 >
-                  <img src={recommendedRecipe.image} alt={recommendedRecipe.name} className="w-full h-full object-cover" />
+                  <img src={recommendedRecipe.image} alt={recommendedRecipe.name} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
                 </motion.div>
                 
@@ -903,7 +904,7 @@ export default function App() {
                         </div>
                         {newRecipe.image && (
                           <div className="relative h-32 rounded-2xl overflow-hidden border border-coffee-100 bg-white">
-                            <img src={newRecipe.image} alt="Preview" className="w-full h-full object-cover" />
+                            <img src={newRecipe.image} alt="Preview" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
                             <button 
                               type="button"
                               onClick={() => setNewRecipe({...newRecipe, image: ''})}
@@ -1091,7 +1092,7 @@ export default function App() {
                       <div key={r.id} className="flex items-center justify-between p-4 bg-white border border-coffee-100 rounded-2xl group hover:border-coffee-200 transition-all">
                         <div className="flex items-center gap-4">
                           <div className="w-12 h-12 rounded-xl overflow-hidden border border-coffee-100">
-                            <img src={r.image} alt={r.name} className="w-full h-full object-cover" />
+                            <img src={r.image} alt={r.name} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
                           </div>
                           <div>
                             <h5 className="text-sm font-bold text-coffee-900">{r.name}</h5>
@@ -1140,7 +1141,7 @@ export default function App() {
               className="bg-coffee-50 w-full max-w-3xl h-full sm:h-[90vh] sm:rounded-[3rem] overflow-hidden flex flex-col shadow-2xl"
             >
               <div className="relative h-72 sm:h-80 shrink-0">
-                <img src={selectedRecipe.image} alt={selectedRecipe.name} className="w-full h-full object-cover" />
+                <img src={selectedRecipe.image} alt={selectedRecipe.name} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
                 <div className="absolute top-6 right-6 flex gap-2">
                   <button 
                     onClick={(e) => toggleFavorite(e, selectedRecipe.id)}
