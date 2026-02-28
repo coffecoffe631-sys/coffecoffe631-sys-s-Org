@@ -51,6 +51,7 @@ export default function App() {
   const [isExplainingRecommendation, setIsExplainingRecommendation] = useState(false);
   const [recommendation, setRecommendation] = useState<{ recipeId: string, reason: string } | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [appLogo, setAppLogo] = useState<string | null>(() => localStorage.getItem('coffee_app_logo'));
   const [activeIngredients, setActiveIngredients] = useState<string[]>([]);
   const [activeEquipment, setActiveEquipment] = useState<string[]>([]);
   const [pendingIngredients, setPendingIngredients] = useState<string[]>([]);
@@ -261,6 +262,28 @@ export default function App() {
     }
   };
 
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 1024 * 1024) {
+        alert('O logo deve ter no máximo 1MB');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64 = reader.result as string;
+        setAppLogo(base64);
+        localStorage.setItem('coffee_app_logo', base64);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const resetLogo = () => {
+    setAppLogo(null);
+    localStorage.removeItem('coffee_app_logo');
+  };
+
   const addIngredient = () => {
     if (!tempIngredient.name || !tempIngredient.amount) return;
     setNewRecipe(prev => ({
@@ -330,17 +353,17 @@ export default function App() {
         <div className="max-w-5xl mx-auto px-6 pt-8 pb-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
           <div 
-            className="w-10 h-10 rounded-full overflow-hidden border-2 border-coffee-200 cursor-pointer"
+            className="w-10 h-10 rounded-full bg-coffee-100 flex items-center justify-center border-2 border-coffee-200 cursor-pointer text-coffee-700 overflow-hidden"
             onClick={() => isAdminAuthenticated ? setShowAdminPanel(true) : setShowAdminLogin(true)}
           >
-            <img src="https://picsum.photos/seed/user/100/100" alt="Profile" referrerPolicy="no-referrer" />
+            {appLogo ? (
+              <img src={appLogo} alt="App Logo" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+            ) : (
+              <Coffee size={20} fill="currentColor" />
+            )}
           </div>
           <div>
-            <div className="flex items-center gap-1 text-coffee-600">
-              <MapPin size={14} />
-              <span className="text-xs font-medium uppercase tracking-wider">{weather.location}</span>
-            </div>
-            <h1 className="text-xl font-serif font-bold text-coffee-900 leading-none mt-1">Cheirinho Mineiro</h1>
+            <h1 className="text-xl font-serif font-bold text-coffee-900 leading-none">Cheirinho Mineiro</h1>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -807,6 +830,39 @@ export default function App() {
               </div>
 
               <div className="space-y-10">
+                {/* App Customization */}
+                <section className="bg-coffee-50 rounded-3xl p-6 border border-coffee-100">
+                  <h4 className="text-sm font-bold text-coffee-900 uppercase tracking-widest flex items-center gap-2 mb-6">
+                    <Settings size={18} className="text-coffee-500" />
+                    Personalização do App
+                  </h4>
+                  <div className="flex items-center gap-6">
+                    <div className="w-20 h-20 rounded-full bg-white border-2 border-coffee-200 flex items-center justify-center overflow-hidden text-coffee-700 shrink-0">
+                      {appLogo ? (
+                        <img src={appLogo} alt="Logo Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      ) : (
+                        <Coffee size={32} fill="currentColor" />
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label className="bg-coffee-900 text-white px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest cursor-pointer hover:bg-coffee-800 transition-all flex items-center gap-2">
+                        <Upload size={14} />
+                        Trocar Logo
+                        <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
+                      </label>
+                      {appLogo && (
+                        <button 
+                          onClick={resetLogo}
+                          className="text-[10px] font-bold text-red-500 uppercase tracking-widest hover:text-red-600 flex items-center gap-1"
+                        >
+                          <RotateCcw size={12} />
+                          Restaurar Padrão
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </section>
+
                 {/* Add New Recipe Form */}
                 <section className="bg-coffee-50 rounded-3xl p-6 border border-coffee-100">
                   <div className="flex justify-between items-center mb-6">
