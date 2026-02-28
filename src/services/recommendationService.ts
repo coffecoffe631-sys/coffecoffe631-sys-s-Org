@@ -25,6 +25,8 @@ export function getLocalCoffeeRecommendation(weather: { temp: number, condition:
   }
 
   // Pick a random one from the filtered list
+  if (filtered.length === 0) return null;
+  
   const recommendation = filtered[Math.floor(Math.random() * filtered.length)];
 
   let reason = "Uma escolha equilibrada para o seu dia!";

@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Search, Filter, MapPin, Cloud, Sun, Clock, ChevronRight, X, Heart, Share2, Coffee, Droplets, Zap, Loader2, Settings, Plus, Trash2, Lock, Sparkles, Edit, RotateCcw } from 'lucide-react';
+import { Search, Filter, MapPin, Cloud, Sun, Clock, ChevronRight, X, Heart, Share2, Coffee, Droplets, Zap, Loader2, Settings, Plus, Trash2, Lock, Sparkles, Edit, RotateCcw, Upload, Image as ImageIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { recipes as staticRecipes, Recipe, Ingredient, Step, WeatherCondition } from './data/recipes';
+import { Recipe, Ingredient, Step, WeatherCondition } from './data/recipes';
 import { useWeather } from './hooks/useWeather';
 import { getLocalCoffeeRecommendation } from './services/recommendationService';
 import { fetchRecipesFromSupabase, insertRecipeToSupabase, deleteRecipeFromSupabase, updateRecipeInSupabase } from './services/supabaseService';
@@ -9,7 +9,7 @@ import { cn } from './lib/utils';
 
 export default function App() {
   const weather = useWeather();
-  const [allRecipes, setAllRecipes] = useState<Recipe[]>(staticRecipes);
+  const [allRecipes, setAllRecipes] = useState<Recipe[]>([]);
   const [isLoadingSupabase, setIsLoadingSupabase] = useState(true);
   const [supabaseError, setSupabaseError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'home' | 'favorites'>('home');
@@ -82,13 +82,8 @@ export default function App() {
     const loadSupabaseData = async () => {
       try {
         const dbRecipes = await fetchRecipesFromSupabase();
-        if (dbRecipes && dbRecipes.length > 0) {
-          // Merge static recipes with DB recipes, avoiding duplicates by name
-          const dbRecipeNames = new Set(dbRecipes.map(r => r.name.toLowerCase()));
-          const uniqueStatic = staticRecipes.filter(r => !dbRecipeNames.has(r.name.toLowerCase()));
-          setAllRecipes([...uniqueStatic, ...dbRecipes]);
-          setSupabaseError(null);
-        }
+        setAllRecipes(dbRecipes || []);
+        setSupabaseError(null);
       } catch (err: any) {
         console.error("Failed to load recipes from Supabase:", err);
         setSupabaseError(err.message || "Erro de conexão");
@@ -189,11 +184,7 @@ export default function App() {
       }
       
       const dbRecipes = await fetchRecipesFromSupabase();
-      if (dbRecipes && dbRecipes.length > 0) {
-        const dbRecipeNames = new Set(dbRecipes.map(r => r.name.toLowerCase()));
-        const uniqueStatic = staticRecipes.filter(r => !dbRecipeNames.has(r.name.toLowerCase()));
-        setAllRecipes([...uniqueStatic, ...dbRecipes]);
-      }
+      setAllRecipes(dbRecipes || []);
       setEditingRecipeId(null);
       setNewRecipe({
         name: '',
@@ -255,6 +246,21 @@ export default function App() {
     });
   };
 
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        alert('A imagem deve ter no máximo 2MB');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setNewRecipe(prev => ({ ...prev, image: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const addIngredient = () => {
     if (!tempIngredient.name || !tempIngredient.amount) return;
     setNewRecipe(prev => ({
@@ -310,9 +316,7 @@ export default function App() {
     try {
       await deleteRecipeFromSupabase(id);
       const dbRecipes = await fetchRecipesFromSupabase();
-      const dbRecipeNames = new Set(dbRecipes.map(r => r.name.toLowerCase()));
-      const uniqueStatic = staticRecipes.filter(r => !dbRecipeNames.has(r.name.toLowerCase()));
-      setAllRecipes([...uniqueStatic, ...dbRecipes]);
+      setAllRecipes(dbRecipes || []);
       alert('Receita excluída!');
     } catch (err: any) {
       alert('Erro ao excluir: ' + err.message);
@@ -870,13 +874,46 @@ export default function App() {
                       />
                     </div>
                     <div className="md:col-span-2">
-                      <label className="block text-[10px] font-bold text-coffee-400 uppercase tracking-widest mb-1.5">URL da Imagem</label>
-                      <input 
-                        value={newRecipe.image}
-                        onChange={(e) => setNewRecipe({...newRecipe, image: e.target.value})}
-                        className="w-full bg-white border border-coffee-100 rounded-xl py-2.5 px-4 text-sm"
-                        placeholder="https://images.unsplash.com/..."
-                      />
+                      <label className="block text-[10px] font-bold text-coffee-400 uppercase tracking-widest mb-1.5">Imagem da Receita</label>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-3">
+                          <div className="flex gap-2">
+                            <label className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-coffee-100 rounded-2xl p-4 hover:border-coffee-300 transition-all cursor-pointer bg-white group">
+                              <Upload size={24} className="text-coffee-300 group-hover:text-coffee-500 mb-2" />
+                              <span className="text-[10px] font-bold text-coffee-400 uppercase tracking-widest">Upload do Dispositivo</span>
+                              <input 
+                                type="file" 
+                                accept="image/*" 
+                                onChange={handleImageUpload} 
+                                className="hidden" 
+                              />
+                            </label>
+                          </div>
+                          <div className="relative">
+                            <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                              <ImageIcon size={16} className="text-coffee-300" />
+                            </div>
+                            <input 
+                              value={newRecipe.image}
+                              onChange={(e) => setNewRecipe({...newRecipe, image: e.target.value})}
+                              className="w-full bg-white border border-coffee-100 rounded-xl py-2.5 pl-10 pr-4 text-sm"
+                              placeholder="Ou cole uma URL aqui..."
+                            />
+                          </div>
+                        </div>
+                        {newRecipe.image && (
+                          <div className="relative h-32 rounded-2xl overflow-hidden border border-coffee-100 bg-white">
+                            <img src={newRecipe.image} alt="Preview" className="w-full h-full object-cover" />
+                            <button 
+                              type="button"
+                              onClick={() => setNewRecipe({...newRecipe, image: ''})}
+                              className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600 shadow-lg"
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <div className="md:col-span-2">
                       <label className="block text-[10px] font-bold text-coffee-400 uppercase tracking-widest mb-1.5">Descrição</label>
