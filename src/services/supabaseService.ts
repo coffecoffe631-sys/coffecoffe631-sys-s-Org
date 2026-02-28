@@ -17,8 +17,10 @@ export const fetchRecipesFromSupabase = async (): Promise<Recipe[]> => {
     country: item.pais || 'Brasil', // Default to Brasil if not present
     description: item.descricao || '',
     image: item.imagem || 'https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=1000&auto=format&fit=crop',
-    ingredients: Array.isArray(item.ingredientes) ? item.ingredientes.map((i: any) => typeof i === 'string' ? i : i.name) : [],
-    equipment: item.equipamentos || [],
+    ingredients: Array.isArray(item.ingredientes) 
+      ? item.ingredientes.map((i: any) => typeof i === 'string' ? i : i.name).filter(Boolean) 
+      : [],
+    equipment: Array.isArray(item.equipamentos) ? item.equipamentos.filter(Boolean) : [],
     detailedIngredients: Array.isArray(item.ingredientes) ? item.ingredientes.map((i: any) => ({
       name: typeof i === 'string' ? i : i.name,
       amount: typeof i === 'string' ? '' : i.amount

@@ -56,11 +56,15 @@ export default function App() {
   const categories = ['Espresso', 'Latte', 'Cappuccino', 'Cold Brew', 'Specialty'];
   
   const allIngredients = useMemo(() => 
-    Array.from(new Set(allRecipes.flatMap(r => r.ingredients))).sort(), 
+    Array.from(new Set(allRecipes.flatMap(r => r.ingredients || [])))
+      .filter(ing => typeof ing === 'string' && ing.trim() !== '')
+      .sort(), 
   [allRecipes]);
   
   const allEquipment = useMemo(() => 
-    Array.from(new Set(allRecipes.flatMap(r => r.equipment))).sort(), 
+    Array.from(new Set(allRecipes.flatMap(r => r.equipment || [])))
+      .filter(eq => typeof eq === 'string' && eq.trim() !== '')
+      .sort(), 
   [allRecipes]);
 
   useEffect(() => {
@@ -68,11 +72,11 @@ export default function App() {
       try {
         const dbRecipes = await fetchRecipesFromSupabase();
         if (dbRecipes && dbRecipes.length > 0) {
-          setAllRecipes(dbRecipes);
+          // Merge static recipes with DB recipes, avoiding duplicates by name
+          const dbRecipeNames = new Set(dbRecipes.map(r => r.name.toLowerCase()));
+          const uniqueStatic = staticRecipes.filter(r => !dbRecipeNames.has(r.name.toLowerCase()));
+          setAllRecipes([...uniqueStatic, ...dbRecipes]);
           setSupabaseError(null);
-        } else if (!dbRecipes || dbRecipes.length === 0) {
-          // If it's empty but no error, maybe table is empty
-          console.log("Supabase connected but table 'receitas_cafe' is empty.");
         }
       } catch (err: any) {
         console.error("Failed to load recipes from Supabase:", err);
@@ -317,39 +321,47 @@ export default function App() {
                   <div>
                     <h3 className="text-xs font-bold uppercase text-coffee-400 mb-2 tracking-widest">Ingredientes</h3>
                     <div className="flex flex-wrap gap-2">
-                      {allIngredients.map(ing => (
-                        <button
-                          key={ing}
-                          onClick={() => toggleIngredient(ing)}
-                          className={cn(
-                            "px-3 py-1.5 rounded-full text-xs font-medium transition-all",
-                            activeIngredients.includes(ing) 
-                              ? "bg-coffee-800 text-white" 
-                              : "bg-coffee-50 text-coffee-600 hover:bg-coffee-100"
-                          )}
-                        >
-                          {ing}
-                        </button>
-                      ))}
+                      {allIngredients.length > 0 ? (
+                        allIngredients.map(ing => (
+                          <button
+                            key={ing}
+                            onClick={() => toggleIngredient(ing)}
+                            className={cn(
+                              "px-3 py-1.5 rounded-full text-xs font-medium transition-all",
+                              activeIngredients.includes(ing) 
+                                ? "bg-coffee-800 text-white" 
+                                : "bg-coffee-50 text-coffee-600 hover:bg-coffee-100"
+                            )}
+                          >
+                            {ing}
+                          </button>
+                        ))
+                      ) : (
+                        <p className="text-[10px] text-coffee-300 italic">Nenhum ingrediente encontrado nas receitas atuais.</p>
+                      )}
                     </div>
                   </div>
                   <div>
                     <h3 className="text-xs font-bold uppercase text-coffee-400 mb-2 tracking-widest">Equipamentos</h3>
                     <div className="flex flex-wrap gap-2">
-                      {allEquipment.map(eq => (
-                        <button
-                          key={eq}
-                          onClick={() => toggleEquipment(eq)}
-                          className={cn(
-                            "px-3 py-1.5 rounded-full text-xs font-medium transition-all",
-                            activeEquipment.includes(eq) 
-                              ? "bg-coffee-800 text-white" 
-                              : "bg-coffee-50 text-coffee-600 hover:bg-coffee-100"
-                          )}
-                        >
-                          {eq}
-                        </button>
-                      ))}
+                      {allEquipment.length > 0 ? (
+                        allEquipment.map(eq => (
+                          <button
+                            key={eq}
+                            onClick={() => toggleEquipment(eq)}
+                            className={cn(
+                              "px-3 py-1.5 rounded-full text-xs font-medium transition-all",
+                              activeEquipment.includes(eq) 
+                                ? "bg-coffee-800 text-white" 
+                                : "bg-coffee-50 text-coffee-600 hover:bg-coffee-100"
+                            )}
+                          >
+                            {eq}
+                          </button>
+                        ))
+                      ) : (
+                        <p className="text-[10px] text-coffee-300 italic">Nenhum equipamento encontrado nas receitas atuais.</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -795,6 +807,18 @@ export default function App() {
                         </button>
                       </div>
                       <div className="flex flex-wrap gap-2">
+                        {allIngredients.slice(0, 8).map(ing => (
+                          <button
+                            key={ing}
+                            type="button"
+                            onClick={() => setTempIngredient({ name: ing, amount: '' })}
+                            className="bg-coffee-100/50 text-coffee-600 px-2 py-1 rounded-lg text-[10px] font-bold uppercase hover:bg-coffee-200 transition-colors"
+                          >
+                            + {ing}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="flex flex-wrap gap-2">
                         {newRecipe.detailedIngredients?.map((ing, i) => (
                           <div key={i} className="bg-white border border-coffee-100 px-3 py-1 rounded-full text-xs flex items-center gap-2">
                             <span>{ing.name} ({ing.amount})</span>
@@ -819,6 +843,18 @@ export default function App() {
                         <button type="button" onClick={addEquipment} className="bg-coffee-100 text-coffee-700 p-2 rounded-xl hover:bg-coffee-200">
                           <Plus size={20} />
                         </button>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {allEquipment.slice(0, 8).map(eq => (
+                          <button
+                            key={eq}
+                            type="button"
+                            onClick={() => setTempEquipment(eq)}
+                            className="bg-coffee-100/50 text-coffee-600 px-2 py-1 rounded-lg text-[10px] font-bold uppercase hover:bg-coffee-200 transition-colors"
+                          >
+                            + {eq}
+                          </button>
+                        ))}
                       </div>
                       <div className="flex flex-wrap gap-2">
                         {newRecipe.equipment?.map((eq, i) => (
