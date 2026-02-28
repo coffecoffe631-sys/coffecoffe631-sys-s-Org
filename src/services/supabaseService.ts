@@ -66,3 +66,26 @@ export const deleteRecipeFromSupabase = async (id: string) => {
 
   if (error) throw error;
 };
+
+export const updateRecipeInSupabase = async (id: string, recipe: Partial<Recipe>) => {
+  const { data, error } = await supabase
+    .from('receitas_cafe')
+    .update({
+      nome: recipe.name,
+      pais: recipe.country,
+      descricao: recipe.description,
+      imagem: recipe.image,
+      categoria: recipe.category,
+      tempo_preparo: recipe.prepTime,
+      dificuldade: recipe.difficulty,
+      ingredientes: recipe.detailedIngredients,
+      modo_preparo: recipe.steps,
+      equipamentos: recipe.equipment,
+      clima_adequado: recipe.weatherSuitability
+    })
+    .eq('id', id)
+    .select();
+
+  if (error) throw error;
+  return data;
+};

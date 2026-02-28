@@ -1,10 +1,10 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Search, Filter, MapPin, Cloud, Sun, Clock, ChevronRight, X, Heart, Share2, Coffee, Droplets, Zap, Loader2, Settings, Plus, Trash2, Lock, Sparkles } from 'lucide-react';
+import { Search, Filter, MapPin, Cloud, Sun, Clock, ChevronRight, X, Heart, Share2, Coffee, Droplets, Zap, Loader2, Settings, Plus, Trash2, Lock, Sparkles, Edit, RotateCcw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { recipes as staticRecipes, Recipe, Ingredient, Step, WeatherCondition } from './data/recipes';
 import { useWeather } from './hooks/useWeather';
 import { getLocalCoffeeRecommendation } from './services/recommendationService';
-import { fetchRecipesFromSupabase, insertRecipeToSupabase, deleteRecipeFromSupabase } from './services/supabaseService';
+import { fetchRecipesFromSupabase, insertRecipeToSupabase, deleteRecipeFromSupabase, updateRecipeInSupabase } from './services/supabaseService';
 import { cn } from './lib/utils';
 
 export default function App() {
@@ -20,6 +20,7 @@ export default function App() {
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingRecipeId, setEditingRecipeId] = useState<string | null>(null);
   
   // Temp states for dynamic fields
   const [tempIngredient, setTempIngredient] = useState({ name: '', amount: '' });
@@ -52,6 +53,16 @@ export default function App() {
   const [showFilters, setShowFilters] = useState(false);
   const [activeIngredients, setActiveIngredients] = useState<string[]>([]);
   const [activeEquipment, setActiveEquipment] = useState<string[]>([]);
+  const [pendingIngredients, setPendingIngredients] = useState<string[]>([]);
+  const [pendingEquipment, setPendingEquipment] = useState<string[]>([]);
+
+  // Sync pending with active when opening
+  useEffect(() => {
+    if (showFilters) {
+      setPendingIngredients(activeIngredients);
+      setPendingEquipment(activeEquipment);
+    }
+  }, [showFilters, activeIngredients, activeEquipment]);
 
   const categories = ['Espresso', 'Latte', 'Cappuccino', 'Cold Brew', 'Specialty'];
   
@@ -130,15 +141,29 @@ export default function App() {
   }, [searchQuery, selectedCategory, activeIngredients, activeEquipment, activeTab, favorites, allRecipes]);
 
   const toggleIngredient = (ing: string) => {
-    setActiveIngredients(prev => 
+    setPendingIngredients(prev => 
       prev.includes(ing) ? prev.filter(i => i !== ing) : [...prev, ing]
     );
   };
 
   const toggleEquipment = (eq: string) => {
-    setActiveEquipment(prev => 
+    setPendingEquipment(prev => 
       prev.includes(eq) ? prev.filter(e => e !== eq) : [...prev, eq]
     );
+  };
+
+  const applyFilters = () => {
+    setActiveIngredients(pendingIngredients);
+    setActiveEquipment(pendingEquipment);
+    setShowFilters(false);
+  };
+
+  const clearFilters = () => {
+    setPendingIngredients([]);
+    setPendingEquipment([]);
+    setActiveIngredients([]);
+    setActiveEquipment([]);
+    setShowFilters(false);
   };
 
   const handleAdminLogin = (e: React.FormEvent) => {
@@ -157,10 +182,19 @@ export default function App() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      await insertRecipeToSupabase(newRecipe as Omit<Recipe, 'id'>);
-      const updated = await fetchRecipesFromSupabase();
-      setAllRecipes(updated);
-      setShowAdminPanel(false);
+      if (editingRecipeId) {
+        await updateRecipeInSupabase(editingRecipeId, newRecipe);
+      } else {
+        await insertRecipeToSupabase(newRecipe as Omit<Recipe, 'id'>);
+      }
+      
+      const dbRecipes = await fetchRecipesFromSupabase();
+      if (dbRecipes && dbRecipes.length > 0) {
+        const dbRecipeNames = new Set(dbRecipes.map(r => r.name.toLowerCase()));
+        const uniqueStatic = staticRecipes.filter(r => !dbRecipeNames.has(r.name.toLowerCase()));
+        setAllRecipes([...uniqueStatic, ...dbRecipes]);
+      }
+      setEditingRecipeId(null);
       setNewRecipe({
         name: '',
         country: 'Brasil',
@@ -175,12 +209,50 @@ export default function App() {
         steps: [],
         weatherSuitability: ['neutral']
       });
-      alert('Receita adicionada com sucesso!');
+      alert(editingRecipeId ? 'Receita atualizada com sucesso!' : 'Receita adicionada com sucesso!');
     } catch (err: any) {
-      alert('Erro ao adicionar: ' + err.message);
+      alert('Erro: ' + err.message);
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleEditClick = (recipe: Recipe) => {
+    setEditingRecipeId(recipe.id);
+    setNewRecipe({
+      name: recipe.name,
+      country: recipe.country,
+      category: recipe.category,
+      difficulty: recipe.difficulty,
+      prepTime: recipe.prepTime,
+      description: recipe.description,
+      image: recipe.image,
+      ingredients: recipe.ingredients,
+      equipment: recipe.equipment,
+      detailedIngredients: recipe.detailedIngredients,
+      steps: recipe.steps,
+      weatherSuitability: recipe.weatherSuitability
+    });
+    // Scroll to form
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingRecipeId(null);
+    setNewRecipe({
+      name: '',
+      country: 'Brasil',
+      category: 'Espresso',
+      difficulty: 'Easy',
+      prepTime: '',
+      description: '',
+      image: '',
+      ingredients: [],
+      equipment: [],
+      detailedIngredients: [],
+      steps: [],
+      weatherSuitability: ['neutral']
+    });
   };
 
   const addIngredient = () => {
@@ -237,7 +309,10 @@ export default function App() {
     if (!confirm('Tem certeza que deseja excluir esta receita?')) return;
     try {
       await deleteRecipeFromSupabase(id);
-      setAllRecipes(prev => prev.filter(r => r.id !== id));
+      const dbRecipes = await fetchRecipesFromSupabase();
+      const dbRecipeNames = new Set(dbRecipes.map(r => r.name.toLowerCase()));
+      const uniqueStatic = staticRecipes.filter(r => !dbRecipeNames.has(r.name.toLowerCase()));
+      setAllRecipes([...uniqueStatic, ...dbRecipes]);
       alert('Receita excluída!');
     } catch (err: any) {
       alert('Erro ao excluir: ' + err.message);
@@ -328,7 +403,7 @@ export default function App() {
                             onClick={() => toggleIngredient(ing)}
                             className={cn(
                               "px-3 py-1.5 rounded-full text-xs font-medium transition-all",
-                              activeIngredients.includes(ing) 
+                              pendingIngredients.includes(ing) 
                                 ? "bg-coffee-800 text-white" 
                                 : "bg-coffee-50 text-coffee-600 hover:bg-coffee-100"
                             )}
@@ -351,7 +426,7 @@ export default function App() {
                             onClick={() => toggleEquipment(eq)}
                             className={cn(
                               "px-3 py-1.5 rounded-full text-xs font-medium transition-all",
-                              activeEquipment.includes(eq) 
+                              pendingEquipment.includes(eq) 
                                 ? "bg-coffee-800 text-white" 
                                 : "bg-coffee-50 text-coffee-600 hover:bg-coffee-100"
                             )}
@@ -363,6 +438,21 @@ export default function App() {
                         <p className="text-[10px] text-coffee-300 italic">Nenhum equipamento encontrado nas receitas atuais.</p>
                       )}
                     </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 pt-2 border-t border-coffee-50">
+                    <button
+                      onClick={applyFilters}
+                      className="flex-1 bg-coffee-900 text-white py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-coffee-800 transition-all flex items-center justify-center gap-2"
+                    >
+                      Aplicar Filtros
+                    </button>
+                    <button
+                      onClick={clearFilters}
+                      className="px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest text-coffee-400 hover:text-coffee-600 transition-all"
+                    >
+                      Limpar
+                    </button>
                   </div>
                 </div>
               </motion.div>
@@ -714,10 +804,21 @@ export default function App() {
               <div className="space-y-10">
                 {/* Add New Recipe Form */}
                 <section className="bg-coffee-50 rounded-3xl p-6 border border-coffee-100">
-                  <h4 className="text-sm font-bold text-coffee-900 uppercase tracking-widest mb-6 flex items-center gap-2">
-                    <Plus size={18} className="text-coffee-500" />
-                    Nova Receita
-                  </h4>
+                  <div className="flex justify-between items-center mb-6">
+                    <h4 className="text-sm font-bold text-coffee-900 uppercase tracking-widest flex items-center gap-2">
+                      {editingRecipeId ? <Edit size={18} className="text-coffee-500" /> : <Plus size={18} className="text-coffee-500" />}
+                      {editingRecipeId ? 'Editar Receita' : 'Nova Receita'}
+                    </h4>
+                    {editingRecipeId && (
+                      <button 
+                        onClick={handleCancelEdit}
+                        className="text-[10px] font-bold text-coffee-400 uppercase tracking-widest hover:text-coffee-600 flex items-center gap-1"
+                      >
+                        <RotateCcw size={12} />
+                        Cancelar Edição
+                      </button>
+                    )}
+                  </div>
                   <form onSubmit={handleAddRecipe} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="md:col-span-2">
                       <label className="block text-[10px] font-bold text-coffee-400 uppercase tracking-widest mb-1.5">Nome da Receita</label>
@@ -939,8 +1040,8 @@ export default function App() {
                       disabled={isSubmitting}
                       className="md:col-span-2 bg-coffee-900 text-white py-3 rounded-xl font-bold hover:bg-coffee-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                     >
-                      {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : <Plus size={18} />}
-                      Adicionar Receita
+                      {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : (editingRecipeId ? <Edit size={18} /> : <Plus size={18} />)}
+                      {editingRecipeId ? 'Salvar Alterações' : 'Adicionar Receita'}
                     </button>
                   </form>
                 </section>
@@ -960,12 +1061,22 @@ export default function App() {
                             <p className="text-[10px] text-coffee-400 font-medium uppercase tracking-widest">{r.category} • {r.country}</p>
                           </div>
                         </div>
-                        <button 
-                          onClick={() => handleDeleteRecipe(r.id)}
-                          className="p-2 text-coffee-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
-                        >
-                          <Trash2 size={18} />
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button 
+                            onClick={() => handleEditClick(r)}
+                            className="p-2 text-coffee-300 hover:text-coffee-600 hover:bg-coffee-50 rounded-lg transition-all"
+                            title="Editar"
+                          >
+                            <Edit size={18} />
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteRecipe(r.id)}
+                            className="p-2 text-coffee-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                            title="Excluir"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
