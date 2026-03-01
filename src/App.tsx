@@ -188,7 +188,15 @@ export default function App() {
       }
       
       const dbRecipes = await fetchRecipesFromSupabase();
-      setAllRecipes(dbRecipes || []);
+      const updatedRecipes = dbRecipes || [];
+      setAllRecipes(updatedRecipes);
+      
+      // Update selectedRecipe if it was the one being edited
+      if (editingRecipeId && selectedRecipe?.id === editingRecipeId) {
+        const updated = updatedRecipes.find(r => r.id === editingRecipeId);
+        if (updated) setSelectedRecipe(updated);
+      }
+
       setEditingRecipeId(null);
       setNewRecipe({
         name: '',
