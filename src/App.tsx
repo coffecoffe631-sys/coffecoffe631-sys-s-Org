@@ -1,10 +1,10 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Search, Filter, MapPin, Cloud, Sun, Clock, ChevronRight, X, Heart, Share2, Coffee, Droplets, Zap, Loader2, Settings, Plus, Trash2, Lock, Sparkles, Edit, RotateCcw, Upload, Image as ImageIcon } from 'lucide-react';
+import { Search, Filter, MapPin, Cloud, Sun, Clock, ChevronRight, ChevronUp, ChevronDown, X, Heart, Share2, Coffee, Droplets, Zap, Loader2, Settings, Plus, Trash2, Lock, Sparkles, Edit, RotateCcw, Upload, Image as ImageIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Recipe, Ingredient, Step, WeatherCondition } from './data/recipes';
+import { Recipe, Ingredient, Step, WeatherCondition, recipes } from './data/recipes';
 import { useWeather } from './hooks/useWeather';
 import { getLocalCoffeeRecommendation } from './services/recommendationService';
-import { fetchRecipesFromSupabase, insertRecipeToSupabase, deleteRecipeFromSupabase, updateRecipeInSupabase } from './services/supabaseService';
+import { fetchRecipesFromSupabase, insertRecipeToSupabase, deleteRecipeFromSupabase, updateRecipeInSupabase, seedRecipes } from './services/supabaseService';
 import { cn } from './lib/utils';
 
 export default function App() {
@@ -25,7 +25,8 @@ export default function App() {
   // Temp states for dynamic fields
   const [tempIngredient, setTempIngredient] = useState({ name: '', amount: '' });
   const [tempEquipment, setTempEquipment] = useState('');
-  const [tempStep, setTempStep] = useState({ title: '', description: '' });
+  const [tempStep, setTempStep] = useState({ title: '', description: '', image: '' });
+  const [editingStepIndex, setEditingStepIndex] = useState<number | null>(null);
   
   const [newRecipe, setNewRecipe] = useState<Partial<Recipe>>({
     name: '',
@@ -48,6 +49,7 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [isExplainingRecommendation, setIsExplainingRecommendation] = useState(false);
   const [recommendation, setRecommendation] = useState<{ recipeId: string, reason: string } | null>(null);
   const [showFilters, setShowFilters] = useState(false);
@@ -176,16 +178,67 @@ export default function App() {
 
   const handleAddRecipe = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Auto-add pending step if it has content
+    if (tempStep.title && tempStep.description) {
+      const steps = [...(newRecipe.steps || [])];
+      if (editingStepIndex !== null) {
+        steps[editingStepIndex] = { ...tempStep };
+      } else {
+        steps.push({ ...tempStep });
+      }
+      newRecipe.steps = steps;
+      setTempStep({ title: '', description: '', image: '' });
+      setEditingStepIndex(null);
+    }
+
     setIsSubmitting(true);
+    console.log("Submitting recipe:", newRecipe);
     try {
+      let updatedRecipe: Recipe | null = null;
       if (editingRecipeId) {
-        await updateRecipeInSupabase(editingRecipeId, newRecipe);
+        const result = await updateRecipeInSupabase(editingRecipeId, newRecipe);
+        console.log("Update result:", result);
+        
+        if (result && result.length > 0) {
+          const item = result[0];
+          updatedRecipe = {
+            id: item.id.toString(),
+            name: item.nome,
+            country: item.pais || 'Brasil',
+            description: item.descricao || '',
+            image: item.imagem || '',
+            ingredients: Array.isArray(item.ingredientes) ? item.ingredientes.map((i: any) => typeof i === 'string' ? i : i.name) : [],
+            equipment: Array.isArray(item.equipamentos) ? item.equipamentos : [],
+            detailedIngredients: Array.isArray(item.ingredientes) ? item.ingredientes : [],
+            steps: Array.isArray(item.modo_preparo) ? item.modo_preparo : [],
+            weatherSuitability: item.clima_adequado || ['neutral'],
+            category: item.categoria || 'Specialty',
+            difficulty: item.dificuldade || 'Medium',
+            prepTime: item.tempo_preparo || '5 min'
+          };
+        } else {
+          // If update didn't find the record, it might be a local mock recipe.
+          // Let's try to insert it as a new record.
+          console.log("Record not found in Supabase, inserting as new...");
+          await insertRecipeToSupabase(newRecipe as Omit<Recipe, 'id'>);
+        }
       } else {
         await insertRecipeToSupabase(newRecipe as Omit<Recipe, 'id'>);
       }
       
       const dbRecipes = await fetchRecipesFromSupabase();
       setAllRecipes(dbRecipes || []);
+      
+      // Update selectedRecipe if it was the one being edited
+      if (editingRecipeId && selectedRecipe?.id === editingRecipeId && updatedRecipe) {
+        setSelectedRecipe(updatedRecipe);
+      } else if (editingRecipeId && selectedRecipe?.id === editingRecipeId) {
+        // Fallback if result mapping failed
+        const refreshed = dbRecipes.find(r => r.id === editingRecipeId);
+        if (refreshed) setSelectedRecipe(refreshed);
+      }
+
       setEditingRecipeId(null);
       setNewRecipe({
         name: '',
@@ -204,6 +257,21 @@ export default function App() {
       alert(editingRecipeId ? 'Receita atualizada com sucesso!' : 'Receita adicionada com sucesso!');
     } catch (err: any) {
       alert('Erro: ' + err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSeedRecipes = async () => {
+    if (!confirm('Deseja carregar as receitas iniciais no banco de dados?')) return;
+    setIsSubmitting(true);
+    try {
+      await seedRecipes(recipes);
+      const dbRecipes = await fetchRecipesFromSupabase();
+      setAllRecipes(dbRecipes || []);
+      alert('Receitas sincronizadas com sucesso!');
+    } catch (err: any) {
+      alert('Erro ao sincronizar: ' + err.message);
     } finally {
       setIsSubmitting(false);
     }
@@ -320,11 +388,45 @@ export default function App() {
 
   const addStep = () => {
     if (!tempStep.title || !tempStep.description) return;
-    setNewRecipe(prev => ({
-      ...prev,
-      steps: [...(prev.steps || []), { ...tempStep }]
-    }));
-    setTempStep({ title: '', description: '' });
+    
+    setNewRecipe(prev => {
+      const steps = [...(prev.steps || [])];
+      if (editingStepIndex !== null) {
+        steps[editingStepIndex] = { ...tempStep };
+      } else {
+        steps.push({ ...tempStep });
+      }
+      return { ...prev, steps };
+    });
+    
+    setTempStep({ title: '', description: '', image: '' });
+    setEditingStepIndex(null);
+  };
+
+  const editStep = (index: number) => {
+    const step = newRecipe.steps?.[index];
+    if (step) {
+      setTempStep({ 
+        title: step.title, 
+        description: step.description, 
+        image: step.image || '' 
+      });
+      setEditingStepIndex(index);
+    }
+  };
+
+  const moveStep = (index: number, direction: 'up' | 'down') => {
+    setNewRecipe(prev => {
+      const steps = [...(prev.steps || [])];
+      const newIndex = direction === 'up' ? index - 1 : index + 1;
+      if (newIndex < 0 || newIndex >= steps.length) return prev;
+      
+      const temp = steps[index];
+      steps[index] = steps[newIndex];
+      steps[newIndex] = temp;
+      
+      return { ...prev, steps };
+    });
   };
 
   const removeStep = (index: number) => {
@@ -332,6 +434,10 @@ export default function App() {
       ...prev,
       steps: prev.steps?.filter((_, i) => i !== index)
     }));
+    if (editingStepIndex === index) {
+      setEditingStepIndex(null);
+      setTempStep({ title: '', description: '', image: '' });
+    }
   };
 
   const handleDeleteRecipe = async (id: string) => {
@@ -824,9 +930,21 @@ export default function App() {
                   <h3 className="text-2xl font-serif font-bold text-coffee-900">Gerenciar Receitas</h3>
                   <p className="text-xs text-coffee-400 font-medium">Adicione ou remova itens do Supabase</p>
                 </div>
-                <button onClick={() => setShowAdminPanel(false)} className="bg-coffee-50 p-2 rounded-full text-coffee-400 hover:text-coffee-600">
-                  <X size={24} />
-                </button>
+                <div className="flex items-center gap-3">
+                  {allRecipes.length <= recipes.length && (
+                    <button 
+                      type="button"
+                      onClick={handleSeedRecipes}
+                      className="text-[10px] font-bold text-coffee-400 uppercase tracking-widest hover:text-coffee-600 flex items-center gap-1 bg-coffee-50 px-3 py-2 rounded-full transition-all"
+                    >
+                      <RotateCcw size={12} />
+                      Sincronizar Iniciais
+                    </button>
+                  )}
+                  <button onClick={() => setShowAdminPanel(false)} className="bg-coffee-50 p-2 rounded-full text-coffee-400 hover:text-coffee-600">
+                    <X size={24} />
+                  </button>
+                </div>
               </div>
 
               <div className="space-y-10">
@@ -1065,36 +1183,113 @@ export default function App() {
 
                     {/* Dynamic Steps */}
                     <div className="md:col-span-2 space-y-3">
-                      <label className="block text-[10px] font-bold text-coffee-400 uppercase tracking-widest">Passo a Passo</label>
-                      <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <label className="block text-[10px] font-bold text-coffee-400 uppercase tracking-widest">Passo a Passo</label>
+                        {editingStepIndex !== null && (
+                          <button 
+                            type="button"
+                            onClick={() => {
+                              setEditingStepIndex(null);
+                              setTempStep({ title: '', description: '', image: '' });
+                            }}
+                            className="text-[10px] font-bold text-amber-600 uppercase tracking-widest flex items-center gap-1"
+                          >
+                            <RotateCcw size={10} />
+                            Cancelar Edição do Passo
+                          </button>
+                        )}
+                      </div>
+                      <div className="space-y-2 bg-white p-4 rounded-2xl border border-coffee-100 shadow-sm">
                         <input 
                           value={tempStep.title}
                           onChange={(e) => setTempStep({...tempStep, title: e.target.value})}
                           placeholder="Título do Passo (Ex: Moagem)"
-                          className="w-full bg-white border border-coffee-100 rounded-xl py-2 px-3 text-sm"
+                          className="w-full bg-coffee-50 border border-coffee-100 rounded-xl py-2 px-3 text-sm focus:ring-2 focus:ring-coffee-200 outline-none"
+                        />
+                        <input 
+                          value={tempStep.image}
+                          onChange={(e) => setTempStep({...tempStep, image: e.target.value})}
+                          placeholder="URL da Imagem do Passo (Opcional)"
+                          className="w-full bg-coffee-50 border border-coffee-100 rounded-xl py-2 px-3 text-sm focus:ring-2 focus:ring-coffee-200 outline-none"
                         />
                         <div className="flex gap-2">
                           <textarea 
                             value={tempStep.description}
                             onChange={(e) => setTempStep({...tempStep, description: e.target.value})}
                             placeholder="Descrição detalhada..."
-                            className="flex-1 bg-white border border-coffee-100 rounded-xl py-2 px-3 text-sm h-16 resize-none"
+                            className="flex-1 bg-coffee-50 border border-coffee-100 rounded-xl py-2 px-3 text-sm h-16 resize-none focus:ring-2 focus:ring-coffee-200 outline-none"
                           />
-                          <button type="button" onClick={addStep} className="bg-coffee-100 text-coffee-700 p-2 rounded-xl hover:bg-coffee-200 self-end">
-                            <Plus size={20} />
+                          <button 
+                            type="button" 
+                            onClick={addStep} 
+                            className={cn(
+                              "p-3 rounded-xl transition-all self-end shadow-sm",
+                              editingStepIndex !== null ? "bg-amber-500 text-white hover:bg-amber-600" : "bg-coffee-900 text-white hover:bg-coffee-800"
+                            )}
+                          >
+                            {editingStepIndex !== null ? <Edit size={20} /> : <Plus size={20} />}
                           </button>
                         </div>
                       </div>
                       <div className="space-y-2">
                         {newRecipe.steps?.map((step, i) => (
-                          <div key={i} className="bg-white border border-coffee-100 p-3 rounded-xl text-xs flex justify-between items-start gap-4">
-                            <div>
-                              <p className="font-bold text-coffee-900 mb-1">{i + 1}. {step.title}</p>
-                              <p className="text-coffee-500">{step.description}</p>
+                          <div 
+                            key={i} 
+                            className={cn(
+                              "bg-white border p-3 rounded-xl text-xs flex justify-between items-center gap-4 transition-all",
+                              editingStepIndex === i ? "border-amber-400 ring-1 ring-amber-400" : "border-coffee-100"
+                            )}
+                          >
+                            <div className="flex gap-3 flex-1 min-w-0">
+                              <div className="flex flex-col gap-1 shrink-0">
+                                <button 
+                                  type="button" 
+                                  onClick={() => moveStep(i, 'up')}
+                                  disabled={i === 0}
+                                  className="p-1 text-coffee-300 hover:text-coffee-600 disabled:opacity-30"
+                                >
+                                  <ChevronUp size={14} />
+                                </button>
+                                <div className="w-6 h-6 rounded-full bg-coffee-100 flex items-center justify-center text-[10px] font-bold text-coffee-900">
+                                  {i + 1}
+                                </div>
+                                <button 
+                                  type="button" 
+                                  onClick={() => moveStep(i, 'down')}
+                                  disabled={i === (newRecipe.steps?.length || 0) - 1}
+                                  className="p-1 text-coffee-300 hover:text-coffee-600 disabled:opacity-30"
+                                >
+                                  <ChevronDown size={14} />
+                                </button>
+                              </div>
+                              {step.image && (
+                                <div className="w-14 h-14 rounded-lg overflow-hidden border border-coffee-100 shrink-0">
+                                  <img src={step.image} alt={step.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <p className="font-bold text-coffee-900 mb-0.5 truncate">{step.title}</p>
+                                <p className="text-coffee-500 line-clamp-2">{step.description}</p>
+                              </div>
                             </div>
-                            <button type="button" onClick={() => removeStep(i)} className="text-red-400 hover:text-red-600 shrink-0">
-                              <X size={16} />
-                            </button>
+                            <div className="flex items-center gap-1">
+                              <button 
+                                type="button" 
+                                onClick={() => editStep(i)} 
+                                className="p-2 text-coffee-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all"
+                                title="Editar Passo"
+                              >
+                                <Edit size={16} />
+                              </button>
+                              <button 
+                                type="button" 
+                                onClick={() => removeStep(i)} 
+                                className="p-2 text-coffee-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                                title="Remover Passo"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -1270,20 +1465,72 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div className="space-y-4">
-                    <h3 className="text-xl font-serif font-bold text-coffee-950">Modo de Preparo</h3>
-                    <div className="space-y-6">
-                      {selectedRecipe.steps.map((step, i) => (
-                        <div key={i} className="flex gap-4">
-                          <div className="shrink-0 w-8 h-8 rounded-full bg-coffee-900 text-white flex items-center justify-center text-xs font-bold">
-                            {i + 1}
+                  <div className="space-y-8 pt-4">
+                    <div className="flex items-center justify-between relative">
+                      <h3 className="text-xl font-serif font-bold text-coffee-950">Modo de Preparo</h3>
+                      <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-coffee-100 shadow-sm">
+                        <span className="text-coffee-900 font-bold text-sm">{currentStepIndex + 1}</span>
+                        <span className="text-coffee-300 text-[10px]">/</span>
+                        <span className="text-coffee-400 text-[10px]">{selectedRecipe.steps.length}</span>
+                      </div>
+                    </div>
+
+                    <div className="bg-white rounded-[3rem] p-8 border border-coffee-100 shadow-sm space-y-10 text-center relative overflow-hidden">
+                      {/* Background decoration */}
+                      <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-coffee-50/30 to-transparent pointer-events-none" />
+                      
+                      <AnimatePresence mode="wait">
+                        <motion.div 
+                          key={currentStepIndex}
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 1.05 }}
+                          transition={{ duration: 0.3 }}
+                          className="space-y-8"
+                        >
+                          <div className="w-full max-w-[280px] aspect-[4/5] mx-auto relative">
+                            <img 
+                              src={selectedRecipe.steps[currentStepIndex].image || `https://picsum.photos/seed/${selectedRecipe.steps[currentStepIndex].title + currentStepIndex}/600/750`} 
+                              alt={selectedRecipe.steps[currentStepIndex].title}
+                              referrerPolicy="no-referrer"
+                              className="w-full h-full object-contain mix-blend-multiply opacity-90 filter contrast-[1.02]"
+                            />
                           </div>
-                          <div className="space-y-1">
-                            <h4 className="text-sm font-bold text-coffee-900 uppercase tracking-wider">{step.title}</h4>
-                            <p className="text-sm text-coffee-600 leading-relaxed">{step.description}</p>
+
+                          <div className="max-w-xs mx-auto">
+                            <p className="text-lg sm:text-xl font-serif text-coffee-800/90 leading-relaxed italic">
+                              {selectedRecipe.steps[currentStepIndex].description}
+                            </p>
                           </div>
-                        </div>
-                      ))}
+                        </motion.div>
+                      </AnimatePresence>
+
+                      <div className="flex flex-col items-center gap-4 pt-4">
+                        <button 
+                          onClick={() => {
+                            if (currentStepIndex < selectedRecipe.steps.length - 1) {
+                              setCurrentStepIndex(prev => prev + 1);
+                            } else {
+                              setCurrentStepIndex(0);
+                            }
+                          }}
+                          className="bg-white border border-coffee-100 px-10 py-4 rounded-full shadow-sm flex items-center gap-3 group hover:bg-coffee-900 hover:text-white transition-all active:scale-95"
+                        >
+                          <span className="text-xs font-bold uppercase tracking-[0.2em] text-coffee-800 group-hover:text-white">
+                            {currentStepIndex < selectedRecipe.steps.length - 1 ? 'Continuar' : 'Reiniciar'}
+                          </span>
+                          <ChevronRight size={16} className="text-coffee-400 group-hover:text-white transition-colors" />
+                        </button>
+
+                        {currentStepIndex > 0 && (
+                          <button 
+                            onClick={() => setCurrentStepIndex(prev => prev - 1)}
+                            className="text-[10px] font-bold text-coffee-300 uppercase tracking-widest hover:text-coffee-500 transition-colors"
+                          >
+                            Voltar passo anterior
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
