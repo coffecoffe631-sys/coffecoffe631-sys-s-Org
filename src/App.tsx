@@ -179,23 +179,39 @@ export default function App() {
 
   const handleAddRecipe = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Auto-save current step if title and description are present
+    let finalSteps = [...(newRecipe.steps || [])];
+    if (tempStep.title && tempStep.description) {
+      if (editingStepIndex !== null) {
+        finalSteps[editingStepIndex] = { ...tempStep };
+      } else {
+        finalSteps.push({ ...tempStep });
+      }
+      setTempStep({ title: '', description: '', image: '' });
+      setEditingStepIndex(null);
+    }
+
+    const recipeToSave = { ...newRecipe, steps: finalSteps };
+    const isEditing = !!editingRecipeId;
+    const currentEditingId = editingRecipeId;
+
     setIsSubmitting(true);
     try {
-      if (editingRecipeId) {
-        await updateRecipeInSupabase(editingRecipeId, newRecipe);
+      if (currentEditingId) {
+        await updateRecipeInSupabase(currentEditingId, recipeToSave);
       } else {
-        await insertRecipeToSupabase(newRecipe as Omit<Recipe, 'id'>);
+        await insertRecipeToSupabase(recipeToSave as Omit<Recipe, 'id'>);
       }
       
+      // Update selectedRecipe immediately if it was the one being edited
+      if (currentEditingId && selectedRecipe?.id === currentEditingId) {
+        setSelectedRecipe(prev => prev ? { ...prev, ...recipeToSave } as Recipe : null);
+      }
+
       const dbRecipes = await fetchRecipesFromSupabase();
       const updatedRecipes = dbRecipes || [];
       setAllRecipes(updatedRecipes);
-      
-      // Update selectedRecipe if it was the one being edited
-      if (editingRecipeId && selectedRecipe?.id === editingRecipeId) {
-        const updated = updatedRecipes.find(r => r.id === editingRecipeId);
-        if (updated) setSelectedRecipe(updated);
-      }
 
       setEditingRecipeId(null);
       setNewRecipe({
@@ -212,7 +228,7 @@ export default function App() {
         steps: [],
         weatherSuitability: ['neutral']
       });
-      alert(editingRecipeId ? 'Receita atualizada com sucesso!' : 'Receita adicionada com sucesso!');
+      alert(isEditing ? 'Receita atualizada com sucesso!' : 'Receita adicionada com sucesso!');
     } catch (err: any) {
       alert('Erro: ' + err.message);
     } finally {
