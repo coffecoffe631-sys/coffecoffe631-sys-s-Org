@@ -180,19 +180,41 @@ export default function App() {
   const handleAddRecipe = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Auto-save current step if title and description are present
+    // Auto-save current step if it has any content
     let finalSteps = [...(newRecipe.steps || [])];
-    if (tempStep.title && tempStep.description) {
+    if (tempStep.title || tempStep.description || tempStep.image) {
       if (editingStepIndex !== null) {
         finalSteps[editingStepIndex] = { ...tempStep };
-      } else {
+      } else if (tempStep.title && tempStep.description) {
         finalSteps.push({ ...tempStep });
       }
       setTempStep({ title: '', description: '', image: '' });
       setEditingStepIndex(null);
     }
 
-    const recipeToSave = { ...newRecipe, steps: finalSteps };
+    // Auto-save current ingredient if it has content
+    let finalDetailedIngredients = [...(newRecipe.detailedIngredients || [])];
+    let finalIngredients = [...(newRecipe.ingredients || [])];
+    if (tempIngredient.name && tempIngredient.amount) {
+      finalDetailedIngredients.push({ ...tempIngredient });
+      finalIngredients.push(tempIngredient.name);
+      setTempIngredient({ name: '', amount: '' });
+    }
+
+    // Auto-save current equipment if it has content
+    let finalEquipment = [...(newRecipe.equipment || [])];
+    if (tempEquipment.trim()) {
+      finalEquipment.push(tempEquipment.trim());
+      setTempEquipment('');
+    }
+
+    const recipeToSave = { 
+      ...newRecipe, 
+      steps: finalSteps,
+      detailedIngredients: finalDetailedIngredients,
+      ingredients: finalIngredients,
+      equipment: finalEquipment
+    };
     const isEditing = !!editingRecipeId;
     const currentEditingId = editingRecipeId;
 
@@ -200,8 +222,18 @@ export default function App() {
     try {
       if (currentEditingId) {
         await updateRecipeInSupabase(currentEditingId, recipeToSave);
+        
+        // Update local list immediately for instant feedback
+        setAllRecipes(prev => prev.map(r => 
+          r.id === currentEditingId ? { ...r, ...recipeToSave } as Recipe : r
+        ));
       } else {
-        await insertRecipeToSupabase(recipeToSave as Omit<Recipe, 'id'>);
+        const result = await insertRecipeToSupabase(recipeToSave as Omit<Recipe, 'id'>);
+        // If we have the new recipe from DB, add it to the list
+        if (result && result[0]) {
+          const newDbRecipe = await fetchRecipesFromSupabase(); // Refetch to get correctly mapped object
+          setAllRecipes(newDbRecipe);
+        }
       }
       
       // Update selectedRecipe immediately if it was the one being edited
@@ -209,10 +241,11 @@ export default function App() {
         setSelectedRecipe(prev => prev ? { ...prev, ...recipeToSave } as Recipe : null);
       }
 
+      // Final sync with DB
       const dbRecipes = await fetchRecipesFromSupabase();
-      const updatedRecipes = dbRecipes || [];
-      setAllRecipes(updatedRecipes);
+      setAllRecipes(dbRecipes || []);
 
+      // Reset form and editing state
       setEditingRecipeId(null);
       setNewRecipe({
         name: '',
@@ -228,9 +261,16 @@ export default function App() {
         steps: [],
         weatherSuitability: ['neutral']
       });
+      
       alert(isEditing ? 'Receita atualizada com sucesso!' : 'Receita adicionada com sucesso!');
+      
+      // If editing, maybe close the panel or scroll to the updated item
+      if (isEditing) {
+        // Optional: setShowAdminPanel(false); 
+      }
     } catch (err: any) {
-      alert('Erro: ' + err.message);
+      console.error("Error saving recipe:", err);
+      alert('Erro ao salvar: ' + err.message);
     } finally {
       setIsSubmitting(false);
     }
