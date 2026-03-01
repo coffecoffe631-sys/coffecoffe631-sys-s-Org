@@ -330,6 +330,21 @@ export default function App() {
     }
   };
 
+  const handleStepImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        alert('A imagem deve ter no máximo 2MB');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setTempStep(prev => ({ ...prev, image: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -1206,12 +1221,40 @@ export default function App() {
                           placeholder="Título do Passo (Ex: Moagem)"
                           className="w-full bg-coffee-50 border border-coffee-100 rounded-xl py-2 px-3 text-sm focus:ring-2 focus:ring-coffee-200 outline-none"
                         />
-                        <input 
-                          value={tempStep.image}
-                          onChange={(e) => setTempStep({...tempStep, image: e.target.value})}
-                          placeholder="URL da Imagem do Passo (Opcional)"
-                          className="w-full bg-coffee-50 border border-coffee-100 rounded-xl py-2 px-3 text-sm focus:ring-2 focus:ring-coffee-200 outline-none"
-                        />
+                        <div className="flex gap-2">
+                          <div className="relative flex-1">
+                            <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                              <ImageIcon size={14} className="text-coffee-300" />
+                            </div>
+                            <input 
+                              value={tempStep.image}
+                              onChange={(e) => setTempStep({...tempStep, image: e.target.value})}
+                              placeholder="URL da Imagem ou use o botão ao lado"
+                              className="w-full bg-coffee-50 border border-coffee-100 rounded-xl py-2 pl-9 pr-3 text-sm focus:ring-2 focus:ring-coffee-200 outline-none"
+                            />
+                          </div>
+                          <label className="bg-coffee-100 text-coffee-700 p-2 rounded-xl hover:bg-coffee-200 cursor-pointer transition-colors flex items-center justify-center shrink-0">
+                            <Upload size={18} />
+                            <input 
+                              type="file" 
+                              accept="image/*" 
+                              onChange={handleStepImageUpload} 
+                              className="hidden" 
+                            />
+                          </label>
+                        </div>
+                        {tempStep.image && (
+                          <div className="relative h-24 rounded-xl overflow-hidden border border-coffee-100 bg-coffee-50">
+                            <img src={tempStep.image} alt="Step Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                            <button 
+                              type="button"
+                              onClick={() => setTempStep({...tempStep, image: ''})}
+                              className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600 shadow-lg"
+                            >
+                              <X size={12} />
+                            </button>
+                          </div>
+                        )}
                         <div className="flex gap-2">
                           <textarea 
                             value={tempStep.description}
