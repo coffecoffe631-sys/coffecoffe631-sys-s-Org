@@ -6,7 +6,6 @@ export interface Ingredient {
 export interface Step {
   title: string;
   description: string;
-  image?: string;
 }
 
 export type WeatherCondition = 'hot' | 'cold' | 'neutral' | 'rainy';
