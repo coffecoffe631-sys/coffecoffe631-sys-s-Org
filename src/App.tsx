@@ -1,11 +1,13 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Search, Filter, MapPin, Cloud, Sun, Clock, ChevronRight, ChevronUp, ChevronDown, X, Heart, Share2, Coffee, Droplets, Zap, Loader2, Settings, Plus, Trash2, Lock, Sparkles, Edit, RotateCcw, Upload, Image as ImageIcon } from 'lucide-react';
+import { Search, Filter, MapPin, Cloud, Sun, Clock, ChevronRight, ChevronUp, ChevronDown, X, Heart, Share2, Coffee, Droplets, Zap, Loader2, Settings, Plus, Trash2, Lock, Sparkles, Edit, RotateCcw, Upload, Image as ImageIcon, User as UserIcon, LogOut, Mail } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Recipe, Ingredient, Step, WeatherCondition, recipes } from './data/recipes';
 import { useWeather } from './hooks/useWeather';
 import { getLocalCoffeeRecommendation } from './services/recommendationService';
 import { fetchRecipesFromSupabase, insertRecipeToSupabase, deleteRecipeFromSupabase, updateRecipeInSupabase, seedRecipes } from './services/supabaseService';
 import { cn } from './lib/utils';
+import { supabase } from './lib/supabase';
+import { User } from '@supabase/supabase-js';
 
 export default function App() {
   const weather = useWeather();
@@ -54,6 +56,15 @@ export default function App() {
   const [recommendation, setRecommendation] = useState<{ recipeId: string, reason: string } | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [appLogo, setAppLogo] = useState<string | null>(() => localStorage.getItem('coffee_app_logo'));
+  
+  // Auth State
+  const [user, setUser] = useState<User | null>(null);
+  const [isInitialAuthCheck, setIsInitialAuthCheck] = useState(true);
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
   const [activeIngredients, setActiveIngredients] = useState<string[]>([]);
   const [activeEquipment, setActiveEquipment] = useState<string[]>([]);
   const [pendingIngredients, setPendingIngredients] = useState<string[]>([]);
@@ -98,8 +109,70 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('coffee_favorites', JSON.stringify(favorites));
-  }, [favorites]);
+    // Check current session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setIsInitialAuthCheck(false);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setIsInitialAuthCheck(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthLoading(true);
+    setAuthError(null);
+
+    try {
+      if (authMode === 'login') {
+        const { error } = await supabase.auth.signInWithPassword({
+          email: authEmail,
+          password: authPassword,
+        });
+        if (error) throw error;
+      } else {
+        const { data, error } = await supabase.auth.signUp({
+          email: authEmail,
+          password: authPassword,
+        });
+        if (error) throw error;
+        
+        // Se o usuário foi criado com sucesso e a confirmação está desativada,
+        // o Supabase pode ou não logar automaticamente. 
+        // Para garantir, tentamos o login logo após o cadastro.
+        if (data.user) {
+          await supabase.auth.signInWithPassword({
+            email: authEmail,
+            password: authPassword,
+          });
+        }
+      }
+      setAuthEmail('');
+      setAuthPassword('');
+    } catch (err: any) {
+      let message = err.message;
+      if (message === 'Invalid login credentials') {
+        message = 'E-mail ou senha incorretos.';
+      } else if (message === 'User already registered') {
+        message = 'Este e-mail já está cadastrado.';
+      } else if (message.includes('at least 6 characters')) {
+        message = 'A senha deve ter pelo menos 6 caracteres.';
+      }
+      setAuthError(message);
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+  };
 
   useEffect(() => {
     if (!weather.loading && allRecipes.length > 0) {
@@ -467,6 +540,137 @@ export default function App() {
     }
   };
 
+  if (isInitialAuthCheck) {
+    return (
+      <div className="min-h-screen bg-coffee-50 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-16 h-16 rounded-full bg-coffee-100 flex items-center justify-center border-4 border-coffee-200">
+            <Coffee size={32} className="text-coffee-700 animate-pulse" />
+          </div>
+          <Loader2 className="animate-spin text-coffee-400" size={24} />
+          <span className="text-xs font-bold text-coffee-400 uppercase tracking-widest">Carregando...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-coffee-50 flex items-center justify-center p-6 relative overflow-hidden">
+        {/* Background Decorations */}
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+          <div className="absolute -top-24 -left-24 w-96 h-96 bg-coffee-100 rounded-full blur-3xl opacity-60" />
+          <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-coffee-200 rounded-full blur-3xl opacity-40" />
+        </div>
+
+        <motion.div 
+          initial={{ scale: 0.9, opacity: 0, y: 20 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
+          className="bg-white rounded-[3rem] p-10 w-full max-w-md shadow-2xl border border-coffee-100 relative z-10"
+        >
+          <div className="flex flex-col items-center text-center mb-10">
+            <div className="w-20 h-20 rounded-[2rem] bg-coffee-900 flex items-center justify-center mb-6 shadow-xl shadow-coffee-900/20 rotate-3">
+              <Coffee size={40} className="text-white" />
+            </div>
+            <h1 className="text-3xl font-serif font-bold text-coffee-900 mb-2">Cheirinho Mineiro</h1>
+            <p className="text-sm text-coffee-500 font-medium">Sua jornada pelo café artesanal começa aqui.</p>
+          </div>
+
+          <div className="flex bg-coffee-50 p-1.5 rounded-2xl mb-8">
+            <button 
+              onClick={() => setAuthMode('login')}
+              className={cn(
+                "flex-1 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all",
+                authMode === 'login' ? "bg-white text-coffee-900 shadow-sm" : "text-coffee-400 hover:text-coffee-600"
+              )}
+            >
+              Entrar
+            </button>
+            <button 
+              onClick={() => setAuthMode('signup')}
+              className={cn(
+                "flex-1 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all",
+                authMode === 'signup' ? "bg-white text-coffee-900 shadow-sm" : "text-coffee-400 hover:text-coffee-600"
+              )}
+            >
+              Cadastrar
+            </button>
+          </div>
+
+          {authError && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-red-50 border border-red-100 text-red-600 p-4 rounded-2xl text-xs font-medium mb-6 flex items-center gap-2"
+            >
+              <Zap size={14} className="shrink-0" />
+              {authError}
+            </motion.div>
+          )}
+
+          <form onSubmit={handleAuth} className="space-y-5">
+            <div className="space-y-1.5">
+              <label className="block text-[10px] font-bold text-coffee-400 uppercase tracking-widest ml-1">E-mail</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-coffee-300">
+                  <Mail size={18} />
+                </div>
+                <input 
+                  type="email" 
+                  required
+                  value={authEmail}
+                  onChange={(e) => setAuthEmail(e.target.value)}
+                  className="w-full bg-coffee-50 border border-coffee-100 rounded-2xl py-4 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-coffee-200 transition-all text-sm"
+                  placeholder="seu@email.com"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-[10px] font-bold text-coffee-400 uppercase tracking-widest ml-1">Senha</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-coffee-300">
+                  <Lock size={18} />
+                </div>
+                <input 
+                  type="password" 
+                  required
+                  value={authPassword}
+                  onChange={(e) => setAuthPassword(e.target.value)}
+                  className="w-full bg-coffee-50 border border-coffee-100 rounded-2xl py-4 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-coffee-200 transition-all text-sm"
+                  placeholder="••••••••"
+                />
+              </div>
+            </div>
+
+            <button 
+              type="submit"
+              disabled={authLoading}
+              className="w-full bg-coffee-900 text-white py-5 rounded-2xl font-bold hover:bg-coffee-800 transition-all shadow-lg shadow-coffee-900/20 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed mt-4"
+            >
+              {authLoading ? (
+                <Loader2 size={24} className="animate-spin" />
+              ) : (
+                <>
+                  {authMode === 'login' ? 'Acessar Plataforma' : 'Criar minha Conta'}
+                  <ChevronRight size={20} />
+                </>
+              )}
+            </button>
+          </form>
+
+
+          <div className="mt-10 text-center">
+            <p className="text-xs text-coffee-400 font-medium">
+              Ao continuar, você concorda com nossos <br />
+              <span className="text-coffee-900 underline cursor-pointer">Termos de Uso</span> e <span className="text-coffee-900 underline cursor-pointer">Privacidade</span>.
+            </p>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen pb-24">
       {/* Header */}
@@ -487,24 +691,31 @@ export default function App() {
             <h1 className="text-xl font-serif font-bold text-coffee-900 leading-none">Cheirinho Mineiro</h1>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {isLoadingSupabase && (
-            <div className="flex items-center gap-1.5 text-coffee-400 mr-2">
+            <div className="hidden sm:flex items-center gap-1.5 text-coffee-400 mr-2">
               <Loader2 size={14} className="animate-spin" />
               <span className="text-[10px] font-bold uppercase tracking-widest">Sincronizando</span>
             </div>
           )}
-          {supabaseError && (
-            <div className="flex items-center gap-1.5 text-red-400 mr-2">
-              <Zap size={14} />
-              <span className="text-[10px] font-bold uppercase tracking-widest">Erro DB</span>
+          
+          <div className="flex items-center gap-3">
+            <div className="hidden md:flex flex-col items-end">
+              <span className="text-[10px] font-bold text-coffee-900 uppercase tracking-widest truncate max-w-[120px]">
+                {user.email?.split('@')[0]}
+              </span>
+              <span className="text-[8px] font-bold text-amber-600 uppercase tracking-[0.1em] bg-amber-50 px-1.5 py-0.5 rounded">
+                Acesso Vitalício
+              </span>
             </div>
-          )}
-          {activeTab === 'favorites' && (
-            <div className="bg-coffee-100 text-coffee-800 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border border-coffee-200">
-              Favoritos
-            </div>
-          )}
+            <button 
+              onClick={handleSignOut}
+              className="p-2.5 rounded-full bg-coffee-100 text-coffee-600 hover:bg-coffee-200 transition-all border border-coffee-200"
+              title="Sair"
+            >
+              <LogOut size={18} />
+            </button>
+          </div>
         </div>
         </div>
       </header>
