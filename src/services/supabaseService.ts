@@ -27,7 +27,8 @@ export const fetchRecipesFromSupabase = async (): Promise<Recipe[]> => {
     })) : [],
     steps: Array.isArray(item.modo_preparo) ? item.modo_preparo.map((s: any) => ({
       title: s.title || s.titulo || '',
-      description: s.description || s.descricao || ''
+      description: s.description || s.descricao || '',
+      image: s.image || ''
     })) : [],
     weatherSuitability: item.clima_adequado || ['neutral'],
     category: item.categoria || 'Specialty',
@@ -68,21 +69,23 @@ export const deleteRecipeFromSupabase = async (id: string) => {
 };
 
 export const updateRecipeInSupabase = async (id: string, recipe: Partial<Recipe>) => {
+  const updateData: any = {};
+  
+  if (recipe.name !== undefined) updateData.nome = recipe.name;
+  if (recipe.country !== undefined) updateData.pais = recipe.country;
+  if (recipe.description !== undefined) updateData.descricao = recipe.description;
+  if (recipe.image !== undefined) updateData.imagem = recipe.image;
+  if (recipe.category !== undefined) updateData.categoria = recipe.category;
+  if (recipe.prepTime !== undefined) updateData.tempo_preparo = recipe.prepTime;
+  if (recipe.difficulty !== undefined) updateData.dificuldade = recipe.difficulty;
+  if (recipe.detailedIngredients !== undefined) updateData.ingredientes = recipe.detailedIngredients;
+  if (recipe.steps !== undefined) updateData.modo_preparo = recipe.steps;
+  if (recipe.equipment !== undefined) updateData.equipamentos = recipe.equipment;
+  if (recipe.weatherSuitability !== undefined) updateData.clima_adequado = recipe.weatherSuitability;
+
   const { data, error } = await supabase
     .from('receitas_cafe')
-    .update({
-      nome: recipe.name,
-      pais: recipe.country,
-      descricao: recipe.description,
-      imagem: recipe.image,
-      categoria: recipe.category,
-      tempo_preparo: recipe.prepTime,
-      dificuldade: recipe.difficulty,
-      ingredientes: recipe.detailedIngredients,
-      modo_preparo: recipe.steps,
-      equipamentos: recipe.equipment,
-      clima_adequado: recipe.weatherSuitability
-    })
+    .update(updateData)
     .eq('id', id)
     .select();
 

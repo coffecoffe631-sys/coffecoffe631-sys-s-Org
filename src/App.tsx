@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Search, Filter, MapPin, Cloud, Sun, Clock, ChevronRight, X, Heart, Share2, Coffee, Droplets, Zap, Loader2, Settings, Plus, Trash2, Lock, Sparkles, Edit, RotateCcw, Upload, Image as ImageIcon } from 'lucide-react';
+import { Search, Filter, MapPin, Cloud, Sun, Clock, ChevronRight, ChevronLeft, X, Heart, Share2, Coffee, Droplets, Zap, Loader2, Settings, Plus, Trash2, Lock, Sparkles, Edit, RotateCcw, Upload, Image as ImageIcon, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Recipe, Ingredient, Step, WeatherCondition } from './data/recipes';
 import { useWeather } from './hooks/useWeather';
@@ -23,9 +23,10 @@ export default function App() {
   const [editingRecipeId, setEditingRecipeId] = useState<string | null>(null);
   
   // Temp states for dynamic fields
-  const [tempIngredient, setTempIngredient] = useState({ name: '', amount: '' });
+  const [tempIngredient, setTempIngredient] = useState<Ingredient>({ name: '', amount: '' });
   const [tempEquipment, setTempEquipment] = useState('');
-  const [tempStep, setTempStep] = useState({ title: '', description: '' });
+  const [tempStep, setTempStep] = useState<Step>({ title: '', description: '', image: '' });
+  const [editingStepIndex, setEditingStepIndex] = useState<number | null>(null);
   
   const [newRecipe, setNewRecipe] = useState<Partial<Recipe>>({
     name: '',
@@ -48,6 +49,8 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
+  const [isStepByStepOpen, setIsStepByStepOpen] = useState(false);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [isExplainingRecommendation, setIsExplainingRecommendation] = useState(false);
   const [recommendation, setRecommendation] = useState<{ recipeId: string, reason: string } | null>(null);
   const [showFilters, setShowFilters] = useState(false);
@@ -211,6 +214,8 @@ export default function App() {
 
   const handleEditClick = (recipe: Recipe) => {
     setEditingRecipeId(recipe.id);
+    setEditingStepIndex(null);
+    setTempStep({ title: '', description: '', image: '' });
     setNewRecipe({
       name: recipe.name,
       country: recipe.country,
@@ -231,6 +236,8 @@ export default function App() {
 
   const handleCancelEdit = () => {
     setEditingRecipeId(null);
+    setEditingStepIndex(null);
+    setTempStep({ title: '', description: '', image: '' });
     setNewRecipe({
       name: '',
       country: 'Brasil',
@@ -245,6 +252,26 @@ export default function App() {
       steps: [],
       weatherSuitability: ['neutral']
     });
+  };
+
+  const startPreparation = () => {
+    setCurrentStepIndex(0);
+    setIsStepByStepOpen(true);
+  };
+
+  const nextStep = () => {
+    if (selectedRecipe && currentStepIndex < selectedRecipe.steps.length - 1) {
+      setCurrentStepIndex(prev => prev + 1);
+    } else {
+      setIsStepByStepOpen(false);
+      setCurrentStepIndex(0);
+    }
+  };
+
+  const prevStep = () => {
+    if (currentStepIndex > 0) {
+      setCurrentStepIndex(prev => prev - 1);
+    }
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -320,18 +347,48 @@ export default function App() {
 
   const addStep = () => {
     if (!tempStep.title || !tempStep.description) return;
-    setNewRecipe(prev => ({
-      ...prev,
-      steps: [...(prev.steps || []), { ...tempStep }]
-    }));
-    setTempStep({ title: '', description: '' });
+    setNewRecipe(prev => {
+      const updatedSteps = [...(prev.steps || [])];
+      if (editingStepIndex !== null) {
+        updatedSteps[editingStepIndex] = { ...tempStep };
+      } else {
+        updatedSteps.push({ ...tempStep });
+      }
+      return { ...prev, steps: updatedSteps };
+    });
+    setTempStep({ title: '', description: '', image: '' });
+    setEditingStepIndex(null);
+  };
+
+  const startEditStep = (index: number) => {
+    setTempStep(newRecipe.steps?.[index] || { title: '', description: '', image: '' });
+    setEditingStepIndex(index);
   };
 
   const removeStep = (index: number) => {
     setNewRecipe(prev => ({
       ...prev,
-      steps: prev.steps?.filter((_, i) => i !== index)
+      steps: prev.steps?.filter((_, i) => i !== index) || []
     }));
+    if (editingStepIndex === index) {
+      setEditingStepIndex(null);
+      setTempStep({ title: '', description: '', image: '' });
+    }
+  };
+
+  const handleStepImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 1 * 1024 * 1024) {
+        alert('A imagem do passo deve ter no máximo 1MB');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setTempStep(prev => ({ ...prev, image: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleDeleteRecipe = async (id: string) => {
@@ -1065,36 +1122,92 @@ export default function App() {
 
                     {/* Dynamic Steps */}
                     <div className="md:col-span-2 space-y-3">
-                      <label className="block text-[10px] font-bold text-coffee-400 uppercase tracking-widest">Passo a Passo</label>
-                      <div className="space-y-2">
-                        <input 
-                          value={tempStep.title}
-                          onChange={(e) => setTempStep({...tempStep, title: e.target.value})}
-                          placeholder="Título do Passo (Ex: Moagem)"
-                          className="w-full bg-white border border-coffee-100 rounded-xl py-2 px-3 text-sm"
-                        />
-                        <div className="flex gap-2">
-                          <textarea 
-                            value={tempStep.description}
-                            onChange={(e) => setTempStep({...tempStep, description: e.target.value})}
-                            placeholder="Descrição detalhada..."
-                            className="flex-1 bg-white border border-coffee-100 rounded-xl py-2 px-3 text-sm h-16 resize-none"
-                          />
-                          <button type="button" onClick={addStep} className="bg-coffee-100 text-coffee-700 p-2 rounded-xl hover:bg-coffee-200 self-end">
-                            <Plus size={20} />
-                          </button>
+                      <label className="block text-[10px] font-bold text-coffee-400 uppercase tracking-widest">
+                        {editingStepIndex !== null ? 'Editando Passo ' + (editingStepIndex + 1) : 'Passo a Passo'}
+                      </label>
+                      <div className="space-y-3 bg-white p-4 rounded-2xl border border-coffee-100 shadow-sm">
+                        <div className="flex gap-4">
+                          <div className="flex-1 space-y-3">
+                            <input 
+                              value={tempStep.title}
+                              onChange={(e) => setTempStep({...tempStep, title: e.target.value})}
+                              placeholder="Título do Passo (Ex: Moagem)"
+                              className="w-full bg-coffee-50 border border-coffee-100 rounded-xl py-2 px-3 text-sm"
+                            />
+                            <textarea 
+                              value={tempStep.description}
+                              onChange={(e) => setTempStep({...tempStep, description: e.target.value})}
+                              placeholder="Descrição detalhada..."
+                              className="w-full bg-coffee-50 border border-coffee-100 rounded-xl py-2 px-3 text-sm h-20 resize-none"
+                            />
+                          </div>
+                          <div className="w-24 flex flex-col gap-2">
+                            <div className="w-24 h-24 rounded-xl bg-coffee-50 border border-dashed border-coffee-200 flex items-center justify-center overflow-hidden relative group">
+                              {tempStep.image ? (
+                                <>
+                                  <img src={tempStep.image} alt="Step" className="w-full h-full object-cover" />
+                                  <button 
+                                    type="button"
+                                    onClick={() => setTempStep({...tempStep, image: ''})}
+                                    className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity"
+                                  >
+                                    <X size={16} />
+                                  </button>
+                                </>
+                              ) : (
+                                <label className="cursor-pointer flex flex-col items-center gap-1 text-coffee-300 hover:text-coffee-500 transition-colors">
+                                  <ImageIcon size={20} />
+                                  <span className="text-[8px] font-bold uppercase">Imagem</span>
+                                  <input type="file" accept="image/*" onChange={handleStepImageUpload} className="hidden" />
+                                </label>
+                              )}
+                            </div>
+                            <button 
+                              type="button" 
+                              onClick={addStep} 
+                              className={cn(
+                                "w-full py-2 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-all shadow-sm",
+                                editingStepIndex !== null 
+                                  ? "bg-amber-400 text-coffee-950 hover:bg-amber-300" 
+                                  : "bg-coffee-100 text-coffee-700 hover:bg-coffee-200"
+                              )}
+                            >
+                              {editingStepIndex !== null ? 'Salvar' : 'Adicionar'}
+                            </button>
+                          </div>
                         </div>
                       </div>
-                      <div className="space-y-2">
+                      
+                      <div className="space-y-2 max-h-60 overflow-y-auto no-scrollbar">
                         {newRecipe.steps?.map((step, i) => (
-                          <div key={i} className="bg-white border border-coffee-100 p-3 rounded-xl text-xs flex justify-between items-start gap-4">
-                            <div>
-                              <p className="font-bold text-coffee-900 mb-1">{i + 1}. {step.title}</p>
-                              <p className="text-coffee-500">{step.description}</p>
+                          <div key={i} className="bg-white border border-coffee-100 p-3 rounded-xl text-xs flex justify-between items-start gap-4 hover:border-coffee-200 transition-all group">
+                            <div className="flex gap-3 min-w-0">
+                              {step.image && (
+                                <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 border border-coffee-100">
+                                  <img src={step.image} alt="Step" className="w-full h-full object-cover" />
+                                </div>
+                              )}
+                              <div className="min-w-0">
+                                <p className="font-bold text-coffee-900 mb-1 truncate">{i + 1}. {step.title}</p>
+                                <p className="text-coffee-500 line-clamp-2">{step.description}</p>
+                              </div>
                             </div>
-                            <button type="button" onClick={() => removeStep(i)} className="text-red-400 hover:text-red-600 shrink-0">
-                              <X size={16} />
-                            </button>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button 
+                                type="button" 
+                                onClick={() => startEditStep(i)} 
+                                className="p-1.5 text-coffee-300 hover:text-coffee-600 hover:bg-coffee-50 rounded-lg transition-all"
+                              >
+                                <Edit size={14} />
+                              </button>
+                              <button 
+                                type="button" 
+                                onClick={() => removeStep(i)} 
+                                className="p-1.5 text-coffee-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -1271,7 +1384,16 @@ export default function App() {
                   </div>
 
                   <div className="space-y-4">
-                    <h3 className="text-xl font-serif font-bold text-coffee-950">Modo de Preparo</h3>
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-xl font-serif font-bold text-coffee-950">Modo de Preparo</h3>
+                      <button 
+                        onClick={startPreparation}
+                        className="flex items-center gap-2 px-4 py-2 bg-coffee-900 text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-coffee-800 transition-all shadow-lg shadow-coffee-900/20"
+                      >
+                        <Zap size={14} fill="currentColor" />
+                        Iniciar Preparo
+                      </button>
+                    </div>
                     <div className="space-y-6">
                       {selectedRecipe.steps.map((step, i) => (
                         <div key={i} className="flex gap-4">
@@ -1289,6 +1411,77 @@ export default function App() {
                 </div>
               </div>
             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Step by Step Overlay */}
+      <AnimatePresence>
+        {isStepByStepOpen && selectedRecipe && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-coffee-50 flex flex-col"
+          >
+            {/* Header */}
+            <div className="px-6 pt-8 pb-4 flex items-center justify-between">
+              <button 
+                onClick={() => setIsStepByStepOpen(false)}
+                className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-coffee-400 hover:text-coffee-600 border border-coffee-100 shadow-sm"
+              >
+                <ChevronLeft size={24} />
+              </button>
+              
+              <div className="w-12 h-12 rounded-full border border-coffee-100 flex items-center justify-center bg-white shadow-sm">
+                <span className="text-sm font-serif font-bold text-coffee-900">
+                  {currentStepIndex + 1}<span className="text-[10px] text-coffee-300 font-sans">/{selectedRecipe.steps.length}</span>
+                </span>
+              </div>
+              
+              <div className="w-10" /> {/* Spacer */}
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto no-scrollbar px-6 py-8 sm:px-8 sm:py-12">
+              <div className="min-h-full flex flex-col items-center justify-center">
+                <motion.div 
+                  key={currentStepIndex}
+                  initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  className="w-full max-w-lg flex flex-col items-center text-center"
+                >
+                  {/* Illustration Area */}
+                  <div className="relative w-full max-w-[320px] sm:max-w-none aspect-[4/5] sm:aspect-[4/5] rounded-[2.5rem] sm:rounded-[3rem] overflow-hidden mb-8 sm:mb-12 shadow-xl border border-coffee-100/50">
+                    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-coffee-50" />
+                    <img 
+                      src={selectedRecipe.steps[currentStepIndex].image || selectedRecipe.image} 
+                      alt={selectedRecipe.steps[currentStepIndex].title} 
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full object-cover mix-blend-multiply opacity-80"
+                    />
+                  </div>
+
+                  {/* Instruction Text */}
+                  <div className="space-y-4 mb-8 sm:mb-12 px-2">
+                    <p className="text-xl sm:text-3xl font-serif font-medium text-coffee-800 leading-tight">
+                      {selectedRecipe.steps[currentStepIndex].description}
+                    </p>
+                  </div>
+
+                  {/* Action Button */}
+                  <button 
+                    onClick={nextStep}
+                    className="inline-flex items-center gap-3 bg-white border border-coffee-200 px-8 py-3.5 sm:px-10 sm:py-4 rounded-full shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all group active:scale-95"
+                  >
+                    <span className="text-xs sm:text-sm font-bold text-coffee-600 uppercase tracking-widest group-hover:text-coffee-900">
+                      {currentStepIndex === selectedRecipe.steps.length - 1 ? 'Finalizar' : 'Continuar'}
+                    </span>
+                    <ChevronRight size={18} className="text-coffee-400 group-hover:text-coffee-900 group-hover:translate-x-1 transition-all" />
+                  </button>
+                </motion.div>
+              </div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
