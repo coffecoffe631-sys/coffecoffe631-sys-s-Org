@@ -5,15 +5,65 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
+console.log(">>> SERVIDOR EXPRESS INICIANDO...");
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "");
 const app = express();
 const PORT = 3000;
 
+// Logger de requisições
+app.use((req, res, next) => {
+  console.log(`>>> [${new Date().toISOString()}] ${req.method} ${req.url}`);
+  next();
+});
+
 // API routes FIRST
+// Importante: O webhook do Stripe precisa do corpo bruto (raw body) para verificar a assinatura.
+// Por isso, definimos ele ANTES do express.json().
+app.post("/api/webhook", express.raw({ type: "application/json" }), async (req, res) => {
+  const sig = req.headers["stripe-signature"] as string;
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(
+      req.body,
+      sig,
+      process.env.STRIPE_WEBHOOK_SECRET || ""
+    );
+  } catch (err: any) {
+    console.error(`Webhook Error: ${err.message}`);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  if (event.type === "checkout.session.completed") {
+    const session = event.data.object as Stripe.Checkout.Session;
+    const customerEmail = session.customer_email;
+    console.log(`Pagamento confirmado para: ${customerEmail}`);
+  }
+
+  res.json({ received: true });
+});
+
+// Agora usamos express.json() para as outras rotas
 app.use(express.json());
 
+// Rota de teste para verificar se o servidor está respondendo
+app.get("/api/health", (req, res) => {
+  res.json({ status: "ok", message: "Servidor está rodando!" });
+});
+
+// Rota genérica para capturar qualquer requisição /api/ que não tenha sido tratada
+app.all("/api/*", (req, res, next) => {
+  console.log(`>>> [API CATCH-ALL] ${req.method} ${req.url}`);
+  // Se for um método que não tratamos, podemos retornar uma mensagem melhor
+  if (req.method !== "POST" && req.url.includes("create-checkout-session")) {
+    return res.status(405).json({ error: `Método ${req.method} não permitido para esta rota. Use POST.` });
+  }
+  next();
+});
+
 // Endpoint para criar a sessão de checkout do Stripe
-app.post("/api/create-checkout-session", async (req, res) => {
+app.post(["/api/create-checkout-session", "/api/create-checkout-session/"], async (req, res) => {
   const { email, priceId } = req.body;
 
   try {
@@ -65,32 +115,6 @@ app.post("/api/create-checkout-session", async (req, res) => {
     console.error("Erro ao criar sessão do Stripe:", error);
     res.status(500).json({ error: error.message || "Erro interno ao processar checkout" });
   }
-});
-
-// Webhook para receber confirmação de pagamento do Stripe
-app.post("/api/webhook", express.raw({ type: "application/json" }), async (req, res) => {
-  const sig = req.headers["stripe-signature"] as string;
-  let event;
-
-  try {
-    event = stripe.webhooks.constructEvent(
-      req.body,
-      sig,
-      process.env.STRIPE_WEBHOOK_SECRET || ""
-    );
-  } catch (err: any) {
-    return res.status(400).send(`Webhook Error: ${err.message}`);
-  }
-
-  // Lógica para atualizar o status do usuário no banco de dados (Supabase)
-  if (event.type === "checkout.session.completed") {
-    const session = event.data.object as Stripe.Checkout.Session;
-    const customerEmail = session.customer_email;
-    console.log(`Pagamento confirmado para: ${customerEmail}`);
-    // Aqui você faria uma chamada ao Supabase para marcar o usuário como "Premium"
-  }
-
-  res.json({ received: true });
 });
 
 // Vite middleware para desenvolvimento
