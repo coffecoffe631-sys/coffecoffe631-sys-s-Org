@@ -5,7 +5,16 @@ import cors from "cors";
 
 dotenv.config();
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "");
+let stripeInstance: Stripe | null = null;
+
+const getStripe = () => {
+  const key = process.env.STRIPE_SECRET_KEY || process.env.CHAVE_SECRETA || "";
+  if (!stripeInstance && key) {
+    stripeInstance = new Stripe(key);
+  }
+  return stripeInstance;
+};
+
 const app = express();
 
 // Habilitar CORS
@@ -24,6 +33,9 @@ app.use((req, res, next) => {
 app.post("/api/webhook", express.raw({ type: "application/json" }), async (req, res) => {
   const sig = req.headers["stripe-signature"] as string;
   let event;
+
+  const stripe = getStripe();
+  if (!stripe) return res.status(500).send("Stripe não configurado");
 
   try {
     event = stripe.webhooks.constructEvent(
@@ -57,8 +69,11 @@ app.all("/api/create-checkout-session", async (req, res) => {
   const { email, priceId } = req.body;
 
   try {
-    const stripeKey = process.env.STRIPE_SECRET_KEY;
-    const stripePriceId = priceId || process.env.STRIPE_PRICE_ID;
+    const stripeKey = process.env.STRIPE_SECRET_KEY || process.env.CHAVE_SECRETA;
+    const stripePriceId = priceId || process.env.STRIPE_PRICE_ID || process.env.ID_DO_PRECO;
+
+    console.log('>>> [SERVER] Stripe Key encontrada:', stripeKey ? 'SIM (termina em ' + stripeKey.slice(-4) + ')' : 'NÃO');
+    console.log('>>> [SERVER] Price ID encontrado:', stripePriceId ? 'SIM (' + stripePriceId + ')' : 'NÃO');
 
     if (!stripeKey || !stripePriceId) {
       return res.status(500).json({ error: "Configuração do Stripe ausente no servidor." });
@@ -71,6 +86,9 @@ app.all("/api/create-checkout-session", async (req, res) => {
     if (!origin) {
       return res.status(400).json({ error: "Não foi possível determinar a origem da requisição para as URLs de retorno." });
     }
+
+    const stripe = getStripe();
+    if (!stripe) throw new Error("Stripe não configurado no servidor.");
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
