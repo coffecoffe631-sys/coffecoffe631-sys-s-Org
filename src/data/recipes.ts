@@ -25,6 +25,7 @@ export interface Recipe {
   category: 'Espresso' | 'Latte' | 'Cappuccino' | 'Cold Brew' | 'Specialty';
   difficulty: 'Easy' | 'Medium' | 'Hard';
   prepTime: string;
+  premium?: boolean;
 }
 
 export const recipes: Recipe[] = [
@@ -51,7 +52,8 @@ export const recipes: Recipe[] = [
     weatherSuitability: ['cold', 'neutral'],
     category: 'Latte',
     difficulty: 'Medium',
-    prepTime: '5 min'
+    prepTime: '5 min',
+    premium: true
   },
   {
     id: '2',
@@ -145,6 +147,7 @@ export const recipes: Recipe[] = [
     weatherSuitability: ['hot', 'neutral'],
     category: 'Specialty',
     difficulty: 'Easy',
-    prepTime: '3 min'
+    prepTime: '3 min',
+    premium: true
   }
 ];

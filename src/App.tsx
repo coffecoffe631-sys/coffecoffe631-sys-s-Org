@@ -65,6 +65,8 @@ export default function App() {
   const [authPassword, setAuthPassword] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [isPremium, setIsPremium] = useState(false);
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [activeIngredients, setActiveIngredients] = useState<string[]>([]);
   const [activeEquipment, setActiveEquipment] = useState<string[]>([]);
   const [pendingIngredients, setPendingIngredients] = useState<string[]>([]);
@@ -123,6 +125,43 @@ export default function App() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    // Check for Stripe success/cancel in URL
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('success')) {
+      alert('Parabéns! Sua assinatura foi ativada com sucesso.');
+      setIsPremium(true);
+      // Aqui você poderia atualizar o Supabase também
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+    if (params.get('canceled')) {
+      alert('A assinatura foi cancelada.');
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
+
+  const handleSubscribe = async () => {
+    if (!user) return;
+    setAuthLoading(true);
+    try {
+      const response = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: user.email }),
+      });
+      const data = await response.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error(data.error || 'Erro ao iniciar checkout');
+      }
+    } catch (err: any) {
+      alert('Erro: ' + err.message);
+    } finally {
+      setAuthLoading(false);
+    }
+  };
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -704,10 +743,22 @@ export default function App() {
               <span className="text-[10px] font-bold text-coffee-900 uppercase tracking-widest truncate max-w-[120px]">
                 {user.email?.split('@')[0]}
               </span>
-              <span className="text-[8px] font-bold text-amber-600 uppercase tracking-[0.1em] bg-amber-50 px-1.5 py-0.5 rounded">
-                Acesso Vitalício
+              <span className={cn(
+                "text-[8px] font-bold uppercase tracking-[0.1em] px-1.5 py-0.5 rounded",
+                isPremium ? "text-amber-600 bg-amber-50" : "text-coffee-400 bg-coffee-100"
+              )}>
+                {isPremium ? "Plano Premium" : "Plano Gratuito"}
               </span>
             </div>
+            {!isPremium && (
+              <button 
+                onClick={() => setShowSubscriptionModal(true)}
+                className="hidden sm:flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-xl text-xs font-bold hover:bg-amber-600 transition-all shadow-lg shadow-amber-500/20"
+              >
+                <Sparkles size={14} />
+                Assinar
+              </button>
+            )}
             <button 
               onClick={handleSignOut}
               className="p-2.5 rounded-full bg-coffee-100 text-coffee-600 hover:bg-coffee-200 transition-all border border-coffee-200"
@@ -859,9 +910,25 @@ export default function App() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.1 }}
-                onClick={() => setSelectedRecipe(recipe)}
-                className="group bg-white rounded-[2.5rem] p-4 border border-coffee-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer overflow-hidden"
+                onClick={() => {
+                  if (recipe.premium && !isPremium) {
+                    setShowSubscriptionModal(true);
+                  } else {
+                    setSelectedRecipe(recipe);
+                  }
+                }}
+                className="group bg-white rounded-[2.5rem] p-4 border border-coffee-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer overflow-hidden relative"
               >
+                {recipe.premium && !isPremium && (
+                  <div className="absolute inset-0 z-10 bg-coffee-900/5 backdrop-blur-[2px] flex items-center justify-center rounded-[2.5rem]">
+                    <div className="bg-white/90 p-4 rounded-3xl shadow-xl border border-coffee-100 flex flex-col items-center gap-2 scale-90 sm:scale-100">
+                      <div className="w-10 h-10 rounded-2xl bg-amber-100 flex items-center justify-center text-amber-600">
+                        <Lock size={20} />
+                      </div>
+                      <span className="text-[10px] font-bold text-coffee-900 uppercase tracking-widest">Premium</span>
+                    </div>
+                  </div>
+                )}
                 <div className="relative aspect-square rounded-[2rem] overflow-hidden mb-4">
                   <img 
                     src={recipe.image} 
@@ -942,6 +1009,76 @@ export default function App() {
           )}
         </section>
       </main>
+
+      {/* Subscription Modal */}
+      <AnimatePresence>
+        {showSubscriptionModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowSubscriptionModal(false)}
+              className="absolute inset-0 bg-coffee-900/60 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="bg-white rounded-[2.5rem] p-8 w-full max-w-sm relative z-10 shadow-2xl border border-coffee-100"
+            >
+              <button 
+                onClick={() => setShowSubscriptionModal(false)}
+                className="absolute top-6 right-6 p-2 rounded-full hover:bg-coffee-50 text-coffee-400 transition-colors"
+              >
+                <X size={20} />
+              </button>
+
+              <div className="text-center space-y-4">
+                <div className="w-16 h-16 rounded-2xl bg-amber-100 flex items-center justify-center mx-auto mb-6 rotate-3">
+                  <Sparkles size={32} className="text-amber-600" />
+                </div>
+                <h2 className="text-2xl font-serif font-bold text-coffee-900">Seja Premium</h2>
+                <p className="text-sm text-coffee-500">
+                  Libere receitas exclusivas, dicas de baristas e suporte prioritário por apenas <span className="font-bold text-coffee-900">R$ 29,90/mês</span>.
+                </p>
+                
+                <div className="py-6 space-y-3">
+                  <div className="flex items-center gap-3 text-left text-xs font-medium text-coffee-600">
+                    <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
+                      <Zap size={12} />
+                    </div>
+                    Receitas ilimitadas
+                  </div>
+                  <div className="flex items-center gap-3 text-left text-xs font-medium text-coffee-600">
+                    <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
+                      <Zap size={12} />
+                    </div>
+                    Acesso a vídeos de preparo
+                  </div>
+                  <div className="flex items-center gap-3 text-left text-xs font-medium text-coffee-600">
+                    <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
+                      <Zap size={12} />
+                    </div>
+                    Sem anúncios (em breve)
+                  </div>
+                </div>
+
+                <button 
+                  onClick={handleSubscribe}
+                  disabled={authLoading}
+                  className="w-full bg-coffee-900 text-white py-4 rounded-2xl font-bold hover:bg-coffee-800 transition-all shadow-lg shadow-coffee-900/20 flex items-center justify-center gap-2 disabled:opacity-70"
+                >
+                  {authLoading ? <Loader2 size={20} className="animate-spin" /> : "Assinar Agora"}
+                </button>
+                <p className="text-[10px] text-coffee-400 uppercase tracking-widest font-bold">
+                  Cancele quando quiser
+                </p>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Integrated Bottom Navigation & Recommendation */}
       <AnimatePresence>
@@ -1225,6 +1362,20 @@ export default function App() {
                     )}
                   </div>
                   <form onSubmit={handleAddRecipe} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="md:col-span-2 flex items-center gap-4 mb-2">
+                      <label className="flex items-center gap-2 cursor-pointer group">
+                        <input 
+                          type="checkbox" 
+                          checked={newRecipe.premium || false}
+                          onChange={(e) => setNewRecipe({...newRecipe, premium: e.target.checked})}
+                          className="w-4 h-4 rounded border-coffee-200 text-amber-600 focus:ring-amber-500"
+                        />
+                        <span className="text-[10px] font-bold text-coffee-900 uppercase tracking-widest group-hover:text-amber-600 transition-colors flex items-center gap-1">
+                          <Sparkles size={12} className="text-amber-500" />
+                          Receita Premium
+                        </span>
+                      </label>
+                    </div>
                     <div className="md:col-span-2">
                       <label className="block text-[10px] font-bold text-coffee-400 uppercase tracking-widest mb-1.5">Nome da Receita</label>
                       <input 
