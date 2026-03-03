@@ -915,6 +915,7 @@ export default function App() {
                     setShowSubscriptionModal(true);
                   } else {
                     setSelectedRecipe(recipe);
+                    setCurrentStepIndex(0);
                   }
                 }}
                 className="group bg-white rounded-[2.5rem] p-4 border border-coffee-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer overflow-hidden relative"
@@ -1207,6 +1208,7 @@ export default function App() {
                     onClick={() => {
                       setIsExplainingRecommendation(false);
                       setSelectedRecipe(recommendedRecipe);
+                      setCurrentStepIndex(0);
                     }}
                     className="w-full bg-amber-400 text-coffee-950 font-bold py-5 rounded-[1.5rem] flex items-center justify-center gap-3 hover:bg-amber-300 transition-all shadow-lg hover:scale-[1.02] active:scale-[0.98]"
                   >
@@ -1861,82 +1863,96 @@ export default function App() {
                   <div className="space-y-4">
                     <h3 className="text-xl font-serif font-bold text-coffee-950">Ingredientes</h3>
                     <div className="grid grid-cols-1 gap-3">
-                      {selectedRecipe.detailedIngredients.map((ing, i) => (
-                        <div key={i} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-coffee-100 shadow-sm">
-                          <span className="text-sm font-medium text-coffee-800">{ing.name}</span>
-                          <span className="text-xs font-bold text-coffee-400 bg-coffee-50 px-3 py-1 rounded-lg uppercase tracking-wider">{ing.amount}</span>
-                        </div>
-                      ))}
+                      {selectedRecipe.detailedIngredients && selectedRecipe.detailedIngredients.length > 0 ? (
+                        selectedRecipe.detailedIngredients.map((ing, i) => (
+                          <div key={i} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-coffee-100 shadow-sm">
+                            <span className="text-sm font-medium text-coffee-800">{ing.name}</span>
+                            <span className="text-xs font-bold text-coffee-400 bg-coffee-50 px-3 py-1 rounded-lg uppercase tracking-wider">{ing.amount}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-coffee-400 italic text-sm px-2">Nenhum ingrediente listado.</p>
+                      )}
                     </div>
                   </div>
 
                   <div className="space-y-8 pt-4">
                     <div className="flex items-center justify-between relative">
                       <h3 className="text-xl font-serif font-bold text-coffee-950">Modo de Preparo</h3>
-                      <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-coffee-100 shadow-sm">
-                        <span className="text-coffee-900 font-bold text-sm">{currentStepIndex + 1}</span>
-                        <span className="text-coffee-300 text-[10px]">/</span>
-                        <span className="text-coffee-400 text-[10px]">{selectedRecipe.steps.length}</span>
-                      </div>
+                      {selectedRecipe.steps && selectedRecipe.steps.length > 0 && (
+                        <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-coffee-100 shadow-sm">
+                          <span className="text-coffee-900 font-bold text-sm">{currentStepIndex + 1}</span>
+                          <span className="text-coffee-300 text-[10px]">/</span>
+                          <span className="text-coffee-400 text-[10px]">{selectedRecipe.steps.length}</span>
+                        </div>
+                      )}
                     </div>
 
-                    <div className="bg-white rounded-[3rem] p-8 border border-coffee-100 shadow-sm space-y-10 text-center relative overflow-hidden">
-                      {/* Background decoration */}
-                      <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-coffee-50/30 to-transparent pointer-events-none" />
-                      
-                      <AnimatePresence mode="wait">
-                        <motion.div 
-                          key={currentStepIndex}
-                          initial={{ opacity: 0, scale: 0.95 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 1.05 }}
-                          transition={{ duration: 0.3 }}
-                          className="space-y-8"
-                        >
-                          <div className="w-full max-w-[280px] aspect-[4/5] mx-auto relative">
-                            <img 
-                              src={selectedRecipe.steps[currentStepIndex].image || `https://picsum.photos/seed/${selectedRecipe.steps[currentStepIndex].title + currentStepIndex}/600/750`} 
-                              alt={selectedRecipe.steps[currentStepIndex].title}
-                              referrerPolicy="no-referrer"
-                              className="w-full h-full object-contain mix-blend-multiply opacity-90 filter contrast-[1.02]"
-                            />
-                          </div>
+                    {selectedRecipe.steps && selectedRecipe.steps.length > 0 ? (
+                      <div className="bg-white rounded-[3rem] p-8 border border-coffee-100 shadow-sm space-y-10 text-center relative overflow-hidden">
+                        {/* Background decoration */}
+                        <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-coffee-50/30 to-transparent pointer-events-none" />
+                        
+                        <AnimatePresence mode="wait">
+                          {selectedRecipe.steps[currentStepIndex] && (
+                            <motion.div 
+                              key={currentStepIndex}
+                              initial={{ opacity: 0, scale: 0.95 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              exit={{ opacity: 0, scale: 1.05 }}
+                              transition={{ duration: 0.3 }}
+                              className="space-y-8"
+                            >
+                              <div className="w-full max-w-[280px] aspect-[4/5] mx-auto relative">
+                                <img 
+                                  src={selectedRecipe.steps[currentStepIndex].image || `https://picsum.photos/seed/${selectedRecipe.steps[currentStepIndex].title + currentStepIndex}/600/750`} 
+                                  alt={selectedRecipe.steps[currentStepIndex].title}
+                                  referrerPolicy="no-referrer"
+                                  className="w-full h-full object-contain mix-blend-multiply opacity-90 filter contrast-[1.02]"
+                                />
+                              </div>
 
-                          <div className="max-w-xs mx-auto">
-                            <p className="text-lg sm:text-xl font-serif text-coffee-800/90 leading-relaxed italic">
-                              {selectedRecipe.steps[currentStepIndex].description}
-                            </p>
-                          </div>
-                        </motion.div>
-                      </AnimatePresence>
+                              <div className="max-w-xs mx-auto">
+                                <p className="text-lg sm:text-xl font-serif text-coffee-800/90 leading-relaxed italic">
+                                  {selectedRecipe.steps[currentStepIndex].description}
+                                </p>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
 
-                      <div className="flex flex-col items-center gap-4 pt-4">
-                        <button 
-                          onClick={() => {
-                            if (currentStepIndex < selectedRecipe.steps.length - 1) {
-                              setCurrentStepIndex(prev => prev + 1);
-                            } else {
-                              setCurrentStepIndex(0);
-                            }
-                          }}
-                          className="bg-white border border-coffee-100 px-10 py-4 rounded-full shadow-sm flex items-center gap-3 group hover:bg-coffee-900 hover:text-white transition-all active:scale-95"
-                        >
-                          <span className="text-xs font-bold uppercase tracking-[0.2em] text-coffee-800 group-hover:text-white">
-                            {currentStepIndex < selectedRecipe.steps.length - 1 ? 'Continuar' : 'Reiniciar'}
-                          </span>
-                          <ChevronRight size={16} className="text-coffee-400 group-hover:text-white transition-colors" />
-                        </button>
-
-                        {currentStepIndex > 0 && (
+                        <div className="flex flex-col items-center gap-4 pt-4">
                           <button 
-                            onClick={() => setCurrentStepIndex(prev => prev - 1)}
-                            className="text-[10px] font-bold text-coffee-300 uppercase tracking-widest hover:text-coffee-500 transition-colors"
+                            onClick={() => {
+                              if (currentStepIndex < selectedRecipe.steps.length - 1) {
+                                setCurrentStepIndex(prev => prev + 1);
+                              } else {
+                                setCurrentStepIndex(0);
+                              }
+                            }}
+                            className="bg-white border border-coffee-100 px-10 py-4 rounded-full shadow-sm flex items-center gap-3 group hover:bg-coffee-900 hover:text-white transition-all active:scale-95"
                           >
-                            Voltar passo anterior
+                            <span className="text-xs font-bold uppercase tracking-[0.2em] text-coffee-800 group-hover:text-white">
+                              {currentStepIndex < selectedRecipe.steps.length - 1 ? 'Continuar' : 'Reiniciar'}
+                            </span>
+                            <ChevronRight size={16} className="text-coffee-400 group-hover:text-white transition-colors" />
                           </button>
-                        )}
+
+                          {currentStepIndex > 0 && (
+                            <button 
+                              onClick={() => setCurrentStepIndex(prev => prev - 1)}
+                              className="text-[10px] font-bold text-coffee-300 uppercase tracking-widest hover:text-coffee-500 transition-colors"
+                            >
+                              Voltar passo anterior
+                            </button>
+                          )}
+                        </div>
                       </div>
-                    </div>
+                    ) : (
+                      <div className="bg-white rounded-[3rem] p-12 border border-coffee-100 shadow-sm text-center">
+                        <p className="text-coffee-400 italic">Modo de preparo não disponível para esta receita.</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
