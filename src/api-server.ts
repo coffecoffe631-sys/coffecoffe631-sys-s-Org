@@ -61,7 +61,7 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok", message: "Servidor está rodando!" });
 });
 
-app.all("/api/create-checkout-session", async (req, res) => {
+app.post("/api/create-checkout-session", async (req, res) => {
   if (req.method !== "POST") {
     return res.status(405).json({ error: `Método ${req.method} não permitido. Use POST.` });
   }
@@ -69,6 +69,9 @@ app.all("/api/create-checkout-session", async (req, res) => {
   const { email, priceId } = req.body;
 
   try {
+    console.log('>>> [SERVER] Recebida requisição para create-checkout-session');
+    console.log('>>> [SERVER] Body:', req.body);
+
     const stripeKey = process.env.STRIPE_SECRET_KEY || process.env.CHAVE_SECRETA;
     const stripePriceId = priceId || process.env.STRIPE_PRICE_ID || process.env.ID_DO_PRECO;
 
@@ -76,6 +79,7 @@ app.all("/api/create-checkout-session", async (req, res) => {
     console.log('>>> [SERVER] Price ID encontrado:', stripePriceId ? 'SIM (' + stripePriceId + ')' : 'NÃO');
 
     if (!stripeKey || !stripePriceId) {
+      console.warn('>>> [SERVER] Configuração do Stripe ausente!');
       return res.status(500).json({ error: "Configuração do Stripe ausente no servidor." });
     }
 
@@ -83,13 +87,20 @@ app.all("/api/create-checkout-session", async (req, res) => {
     const host = req.headers.host;
     const origin = req.headers.origin || (host ? `${protocol}://${host}` : process.env.APP_URL) || "";
 
+    console.log('>>> [SERVER] Origin determinada:', origin);
+
     if (!origin) {
+      console.warn('>>> [SERVER] Não foi possível determinar a origem!');
       return res.status(400).json({ error: "Não foi possível determinar a origem da requisição para as URLs de retorno." });
     }
 
     const stripe = getStripe();
-    if (!stripe) throw new Error("Stripe não configurado no servidor.");
+    if (!stripe) {
+      console.error('>>> [SERVER] Falha ao inicializar instância do Stripe!');
+      throw new Error("Stripe não configurado no servidor.");
+    }
 
+    console.log('>>> [SERVER] Criando sessão no Stripe...');
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       line_items: [
@@ -106,9 +117,18 @@ app.all("/api/create-checkout-session", async (req, res) => {
 
     res.json({ url: session.url });
   } catch (error: any) {
-    console.error("Erro ao criar sessão do Stripe:", error);
-    res.status(500).json({ error: error.message || "Erro interno ao processar checkout" });
+    console.error(">>> [SERVER] Erro ao criar sessão do Stripe:", error);
+    res.status(500).json({ 
+      error: error.message || "Erro interno ao processar checkout",
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
+});
+
+// Manipulador de erros global
+app.use((err: any, req: any, res: any, next: any) => {
+  console.error(">>> [SERVER FATAL ERROR]", err);
+  res.status(500).json({ error: err.message || "Erro fatal no servidor" });
 });
 
 export default app;

@@ -4,7 +4,10 @@ import express from "express";
 
 const PORT = 3000;
 
+console.log('>>> [SERVER] Inicializando servidor...');
+
 async function startServer() {
+  console.log('>>> [SERVER] Configurando middleware do Vite...');
   // Vite middleware para desenvolvimento no AI Studio
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
@@ -16,10 +19,16 @@ async function startServer() {
     app.use(express.static("dist"));
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Servidor rodando em http://localhost:${PORT}`);
-  });
+  try {
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`>>> [SERVER] Servidor rodando em http://localhost:${PORT}`);
+    });
+  } catch (listenError) {
+    console.error(">>> [SERVER] Erro ao iniciar listen:", listenError);
+  }
 }
 
-startServer();
+startServer().catch(err => {
+  console.error(">>> [SERVER] Erro fatal na inicialização:", err);
+});
 

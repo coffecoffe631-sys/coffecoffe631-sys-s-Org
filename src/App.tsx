@@ -183,16 +183,26 @@ export default function App() {
       if (data.url) {
         window.location.href = data.url;
       } else {
-        throw new Error(data.error || 'Erro ao iniciar checkout');
+        const errorDetail = data.error || data.message || JSON.stringify(data);
+        throw new Error(errorDetail);
       }
     } catch (err: any) {
       console.error('Erro na assinatura:', err);
-      const displayError = typeof err === 'string' 
-        ? err 
-        : err.message 
-          ? err.message 
-          : JSON.stringify(err);
-      alert('Erro: ' + displayError);
+      let displayError = 'Erro desconhecido';
+      
+      if (typeof err === 'string') {
+        displayError = err;
+      } else if (err.message) {
+        displayError = err.message;
+      } else {
+        try {
+          displayError = JSON.stringify(err);
+        } catch (e) {
+          displayError = String(err);
+        }
+      }
+      
+      alert('Erro ao processar pagamento: ' + displayError);
     } finally {
       setAuthLoading(false);
     }
