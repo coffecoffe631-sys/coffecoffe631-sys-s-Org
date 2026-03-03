@@ -2,8 +2,16 @@ import express from "express";
 import Stripe from "stripe";
 import dotenv from "dotenv";
 import cors from "cors";
+import fs from "fs";
 
 dotenv.config();
+
+const logToFile = (message: string) => {
+  const timestamp = new Date().toISOString();
+  fs.appendFileSync("server.log", `[${timestamp}] ${message}\n`);
+};
+
+logToFile("Servidor api-server.ts carregado");
 
 let stripeInstance: Stripe | null = null;
 
@@ -17,12 +25,20 @@ const getStripe = () => {
 
 const app = express();
 
+// Logger global para todas as requisições
+app.use((req, res, next) => {
+  const logMsg = `[REQUEST] ${req.method} ${req.url} - IP: ${req.ip}`;
+  console.log(`>>> ${logMsg}`);
+  logToFile(logMsg);
+  next();
+});
+
 // Habilitar CORS
 app.use(cors());
 
-// Middleware para JSON (exceto para o webhook)
+// Middleware para JSON (exceto para o webhook que precisa do corpo bruto)
 app.use((req, res, next) => {
-  if (req.originalUrl === "/api/webhook") {
+  if (req.path === "/api/webhook") {
     next();
   } else {
     express.json()(req, res, next);
@@ -62,6 +78,7 @@ app.get("/api/health", (req, res) => {
 });
 
 app.post("/api/create-checkout-session", async (req, res) => {
+  logToFile(`Recebida requisição POST /api/create-checkout-session de ${req.ip}`);
   if (req.method !== "POST") {
     return res.status(405).json({ error: `Método ${req.method} não permitido. Use POST.` });
   }
@@ -72,8 +89,12 @@ app.post("/api/create-checkout-session", async (req, res) => {
     console.log('>>> [SERVER] Recebida requisição para create-checkout-session');
     console.log('>>> [SERVER] Body:', req.body);
 
+    logToFile(`Iniciando checkout para email: ${email}`);
+    
     const stripeKey = process.env.STRIPE_SECRET_KEY || process.env.CHAVE_SECRETA;
     const stripePriceId = priceId || process.env.STRIPE_PRICE_ID || process.env.ID_DO_PRECO;
+
+    logToFile(`Stripe Key presente: ${!!stripeKey}, Price ID: ${stripePriceId}`);
 
     console.log('>>> [SERVER] Stripe Key encontrada:', stripeKey ? 'SIM (termina em ' + stripeKey.slice(-4) + ')' : 'NÃO');
     console.log('>>> [SERVER] Price ID encontrado:', stripePriceId ? 'SIM (' + stripePriceId + ')' : 'NÃO');
@@ -96,8 +117,8 @@ app.post("/api/create-checkout-session", async (req, res) => {
 
     const stripe = getStripe();
     if (!stripe) {
-      console.error('>>> [SERVER] Falha ao inicializar instância do Stripe!');
-      throw new Error("Stripe não configurado no servidor.");
+      console.error('>>> [SERVER] Falha ao inicializar instância do Stripe! Verifique a chave.');
+      return res.status(500).json({ error: "Stripe não configurado no servidor. Verifique as chaves de API." });
     }
 
     console.log('>>> [SERVER] Criando sessão no Stripe...');
@@ -115,8 +136,10 @@ app.post("/api/create-checkout-session", async (req, res) => {
       cancel_url: `${origin}/?canceled=true`,
     });
 
+    logToFile(`Sessão criada: ${session.id}`);
     res.json({ url: session.url });
   } catch (error: any) {
+    logToFile(`ERRO no checkout: ${error.message}`);
     console.error(">>> [SERVER] Erro ao criar sessão do Stripe:", error);
     res.status(500).json({ 
       error: error.message || "Erro interno ao processar checkout",
