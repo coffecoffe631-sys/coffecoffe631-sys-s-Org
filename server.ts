@@ -30,6 +30,13 @@ app.post("/api/create-checkout-session", async (req, res) => {
       return res.status(500).json({ error: "Configuração do Stripe ausente no servidor (ID do preço)." });
     }
 
+    if (stripePriceId.startsWith('prod_')) {
+      console.error("Erro: Foi fornecido um Product ID (prod_...) em vez de um Price ID (price_...)");
+      return res.status(400).json({ 
+        error: "Você forneceu um Product ID (prod_...). No Stripe Checkout, você deve usar o Price ID (price_...). Procure no Dashboard do Stripe pelo ID que começa com 'price_' dentro do seu produto." 
+      });
+    }
+
     // Fallback para origin se não estiver presente nos headers
     const origin = req.headers.origin || process.env.APP_URL || `http://localhost:${PORT}`;
 
