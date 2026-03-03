@@ -141,6 +141,25 @@ export default function App() {
     }
   }, []);
 
+  const [configError, setConfigError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const checkConfig = async () => {
+      try {
+        const res = await fetch(`${window.location.origin}/api/config-status`);
+        if (res.ok) {
+          const data = await res.json();
+          if (!data.stripe.hasSecretKey || !data.stripe.hasPriceId) {
+            setConfigError('Configuração do Stripe ausente! Defina STRIPE_SECRET_KEY e STRIPE_PRICE_ID nas variáveis de ambiente.');
+          }
+        }
+      } catch (err) {
+        console.warn('Erro ao verificar configuração do servidor:', err);
+      }
+    };
+    checkConfig();
+  }, []);
+
   const handleSubscribe = async () => {
     if (!user) return;
     setAuthLoading(true);
@@ -758,6 +777,11 @@ export default function App() {
 
   return (
     <div className="min-h-screen pb-24">
+      {configError && (
+        <div className="bg-red-600 text-white px-4 py-2 text-center text-sm font-bold sticky top-0 z-[100] shadow-lg animate-pulse">
+          ⚠️ {configError}
+        </div>
+      )}
       {/* Header */}
       <header className="sticky top-0 bg-coffee-50/80 backdrop-blur-md z-30 border-b border-coffee-100/50">
         <div className="max-w-5xl mx-auto px-6 pt-8 pb-4 flex items-center justify-between">

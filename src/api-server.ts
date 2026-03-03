@@ -77,6 +77,17 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok", message: "Servidor está rodando!" });
 });
 
+app.get("/api/config-status", (req, res) => {
+  res.json({
+    stripe: {
+      hasSecretKey: !!(process.env.STRIPE_SECRET_KEY || process.env.CHAVE_SECRETA),
+      hasPriceId: !!(process.env.STRIPE_PRICE_ID || process.env.ID_DO_PRECO),
+      hasWebhookSecret: !!process.env.STRIPE_WEBHOOK_SECRET
+    },
+    env: process.env.NODE_ENV
+  });
+});
+
 app.post("/api/create-checkout-session", async (req, res) => {
   logToFile(`Recebida requisição POST /api/create-checkout-session de ${req.ip}`);
   if (req.method !== "POST") {
