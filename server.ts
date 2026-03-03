@@ -2,14 +2,28 @@ import express from "express";
 import { createServer as createViteServer } from "vite";
 import Stripe from "stripe";
 import dotenv from "dotenv";
+import cors from "cors";
 
 dotenv.config();
 
 console.log(">>> SERVIDOR EXPRESS INICIANDO...");
+console.log(">>> APP_URL:", process.env.APP_URL);
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "");
 const app = express();
 const PORT = 3000;
+
+// Habilitar CORS para todas as rotas
+app.use(cors());
+
+// Middleware para JSON (exceto para o webhook que usa raw body)
+app.use((req, res, next) => {
+  if (req.originalUrl === "/api/webhook") {
+    next();
+  } else {
+    express.json()(req, res, next);
+  }
+});
 
 // Logger de requisições
 app.use((req, res, next) => {
@@ -44,27 +58,22 @@ app.post("/api/webhook", express.raw({ type: "application/json" }), async (req, 
   res.json({ received: true });
 });
 
-// Agora usamos express.json() para as outras rotas
-app.use(express.json());
-
 // Rota de teste para verificar se o servidor está respondendo
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", message: "Servidor está rodando!" });
 });
 
-// Rota genérica para capturar qualquer requisição /api/ que não tenha sido tratada
-app.all("/api/*", (req, res, next) => {
-  console.log(`>>> [API CATCH-ALL] ${req.method} ${req.url}`);
-  // Se for um método que não tratamos, podemos retornar uma mensagem melhor
-  if (req.method !== "POST" && req.url.includes("create-checkout-session")) {
-    return res.status(405).json({ error: `Método ${req.method} não permitido para esta rota. Use POST.` });
-  }
-  next();
-});
-
 // Endpoint para criar a sessão de checkout do Stripe
-app.post(["/api/create-checkout-session", "/api/create-checkout-session/"], async (req, res) => {
+app.all("/api/create-checkout-session", async (req, res) => {
+  console.log(`>>> RECEBIDO ${req.method} EM /api/create-checkout-session`);
+  
+  if (req.method !== "POST") {
+    console.log(`>>> [ERRO] Método ${req.method} não permitido. Use POST.`);
+    return res.status(405).json({ error: `Método ${req.method} não permitido. Use POST.` });
+  }
+
   const { email, priceId } = req.body;
+  console.log(">>> BODY:", req.body);
 
   try {
     const stripeKey = process.env.STRIPE_SECRET_KEY;
@@ -115,6 +124,12 @@ app.post(["/api/create-checkout-session", "/api/create-checkout-session/"], asyn
     console.error("Erro ao criar sessão do Stripe:", error);
     res.status(500).json({ error: error.message || "Erro interno ao processar checkout" });
   }
+});
+
+// Catch-all para rotas de API não encontradas
+app.all("/api/*", (req, res) => {
+  console.log(`>>> [API 404] ${req.method} ${req.url}`);
+  res.status(404).json({ error: `Rota da API não encontrada: ${req.method} ${req.url}` });
 });
 
 // Vite middleware para desenvolvimento

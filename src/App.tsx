@@ -145,9 +145,15 @@ export default function App() {
     if (!user) return;
     setAuthLoading(true);
     try {
-      const response = await fetch('/api/create-checkout-session', {
+      const apiUrl = `${window.location.origin}/api/create-checkout-session`;
+      console.log('>>> [FRONTEND] Enviando POST para:', apiUrl);
+      
+      const response = await fetch(apiUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
         body: JSON.stringify({ email: user.email }),
       });
       
