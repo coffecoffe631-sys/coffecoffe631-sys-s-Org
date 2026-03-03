@@ -162,7 +162,11 @@ export default function App() {
         let errorMessage = `Erro do servidor (${response.status})`;
         if (contentType && contentType.includes('application/json')) {
           const errorData = await response.json();
-          errorMessage = errorData.error || errorMessage;
+          errorMessage = typeof errorData.error === 'string' 
+            ? errorData.error 
+            : typeof errorData.error === 'object' 
+              ? JSON.stringify(errorData.error)
+              : errorMessage;
         } else {
           const text = await response.text();
           errorMessage = `${errorMessage}: ${text.slice(0, 100)}${text.length > 100 ? '...' : ''}`;
@@ -183,7 +187,12 @@ export default function App() {
       }
     } catch (err: any) {
       console.error('Erro na assinatura:', err);
-      alert('Erro: ' + err.message);
+      const displayError = typeof err === 'string' 
+        ? err 
+        : err.message 
+          ? err.message 
+          : JSON.stringify(err);
+      alert('Erro: ' + displayError);
     } finally {
       setAuthLoading(false);
     }

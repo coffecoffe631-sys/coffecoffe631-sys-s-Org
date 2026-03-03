@@ -64,7 +64,13 @@ app.all("/api/create-checkout-session", async (req, res) => {
       return res.status(500).json({ error: "Configuração do Stripe ausente no servidor." });
     }
 
-    const origin = req.headers.origin || process.env.APP_URL || "";
+    const protocol = req.headers['x-forwarded-proto'] || 'http';
+    const host = req.headers.host;
+    const origin = req.headers.origin || (host ? `${protocol}://${host}` : process.env.APP_URL) || "";
+
+    if (!origin) {
+      return res.status(400).json({ error: "Não foi possível determinar a origem da requisição para as URLs de retorno." });
+    }
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
