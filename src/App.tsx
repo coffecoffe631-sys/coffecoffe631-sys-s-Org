@@ -150,6 +150,25 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: user.email }),
       });
+      
+      const contentType = response.headers.get('content-type');
+      if (!response.ok) {
+        let errorMessage = `Erro do servidor (${response.status})`;
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } else {
+          const text = await response.text();
+          errorMessage = `${errorMessage}: ${text.slice(0, 100)}${text.length > 100 ? '...' : ''}`;
+        }
+        throw new Error(errorMessage);
+      }
+
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        throw new Error(`Resposta inválida do servidor: ${text.slice(0, 100)}`);
+      }
+
       const data = await response.json();
       if (data.url) {
         window.location.href = data.url;
@@ -157,6 +176,7 @@ export default function App() {
         throw new Error(data.error || 'Erro ao iniciar checkout');
       }
     } catch (err: any) {
+      console.error('Erro na assinatura:', err);
       alert('Erro: ' + err.message);
     } finally {
       setAuthLoading(false);

@@ -17,24 +17,46 @@ app.post("/api/create-checkout-session", async (req, res) => {
   const { email, priceId } = req.body;
 
   try {
+    const stripeKey = process.env.STRIPE_SECRET_KEY;
+    const stripePriceId = priceId || process.env.STRIPE_PRICE_ID;
+
+    if (!stripeKey) {
+      console.error("STRIPE_SECRET_KEY não configurada");
+      return res.status(500).json({ error: "Configuração do Stripe ausente no servidor (chave secreta)." });
+    }
+
+    if (!stripePriceId) {
+      console.error("STRIPE_PRICE_ID não configurada");
+      return res.status(500).json({ error: "Configuração do Stripe ausente no servidor (ID do preço)." });
+    }
+
+    // Fallback para origin se não estiver presente nos headers
+    const origin = req.headers.origin || process.env.APP_URL || `http://localhost:${PORT}`;
+
+    console.log(`Iniciando checkout para ${email} com preço ${stripePriceId} em ${origin}`);
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       line_items: [
         {
-          price: priceId || process.env.STRIPE_PRICE_ID, // ID do preço do plano mensal no Stripe
+          price: stripePriceId,
           quantity: 1,
         },
       ],
       mode: "subscription",
       customer_email: email,
-      success_url: `${req.headers.origin}/?success=true`,
-      cancel_url: `${req.headers.origin}/?canceled=true`,
+      success_url: `${origin}/?success=true`,
+      cancel_url: `${origin}/?canceled=true`,
     });
+
+    if (!session.url) {
+      throw new Error("Sessão do Stripe criada sem URL de redirecionamento.");
+    }
 
     res.json({ url: session.url });
   } catch (error: any) {
     console.error("Erro ao criar sessão do Stripe:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error.message || "Erro interno ao processar checkout" });
   }
 });
 
