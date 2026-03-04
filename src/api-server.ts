@@ -45,6 +45,10 @@ app.use((req, res, next) => {
   }
 });
 
+app.get("/ping", (req, res) => {
+  res.send("pong");
+});
+
 // API routes
 app.get("/api/checkout", async (req, res) => {
   const stripe = getStripe();
@@ -56,7 +60,7 @@ app.get("/api/checkout", async (req, res) => {
 
   const protocol = req.headers['x-forwarded-proto'] || 'http';
   const host = req.headers.host;
-  const origin = (host ? `${protocol}://${host}` : process.env.APP_URL) || "";
+  const origin = process.env.APP_URL || (host ? `${protocol}://${host}` : "");
 
   try {
     const session = await stripe.checkout.sessions.create({
@@ -148,7 +152,7 @@ app.post("/api/create-checkout-session", async (req, res) => {
 
     const protocol = req.headers['x-forwarded-proto'] || 'http';
     const host = req.headers.host;
-    const origin = req.headers.origin || (host ? `${protocol}://${host}` : process.env.APP_URL) || "";
+    const origin = process.env.APP_URL || req.headers.origin || (host ? `${protocol}://${host}` : "");
 
     console.log('>>> [SERVER] Origin determinada:', origin);
 

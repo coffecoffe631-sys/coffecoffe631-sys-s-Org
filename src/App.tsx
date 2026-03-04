@@ -67,6 +67,8 @@ export default function App() {
   const [authError, setAuthError] = useState<string | null>(null);
   const [isPremium, setIsPremium] = useState(false);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [view, setView] = useState<'landing' | 'auth'>('landing');
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [activeIngredients, setActiveIngredients] = useState<string[]>([]);
   const [activeEquipment, setActiveEquipment] = useState<string[]>([]);
   const [pendingIngredients, setPendingIngredients] = useState<string[]>([]);
@@ -132,7 +134,9 @@ export default function App() {
     if (params.get('success')) {
       const sessionId = params.get('session_id');
       console.log('>>> [FRONTEND] Checkout concluído. Session:', sessionId);
-      alert('Parabéns! Seu pagamento foi processado. Se você ainda não tem uma conta, cadastre-se com o mesmo e-mail usado no pagamento para liberar o acesso Premium.');
+      setSuccessMessage('Pagamento confirmado! Agora crie sua conta usando o MESMO e-mail que você usou na compra para liberar seu acesso.');
+      setView('auth');
+      setAuthMode('signup');
       setIsPremium(true);
       window.history.replaceState({}, '', window.location.pathname);
     }
@@ -145,9 +149,9 @@ export default function App() {
     if (params.get('action') === 'checkout') {
       window.history.replaceState({}, '', window.location.pathname);
       if (user) {
-        handleCheckout();
+        handleSubscribe();
       } else {
-        setShowAuthModal(true);
+        setView('auth');
       }
     }
   }, [user]);
@@ -673,6 +677,68 @@ export default function App() {
   }
 
   if (!user) {
+    if (view === 'landing') {
+      return (
+        <div className="min-h-screen bg-coffee-50 flex flex-col items-center justify-center p-6 relative overflow-hidden">
+          {/* Background Decorations */}
+          <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+            <div className="absolute -top-24 -left-24 w-96 h-96 bg-coffee-100 rounded-full blur-3xl opacity-60" />
+            <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-coffee-200 rounded-full blur-3xl opacity-40" />
+          </div>
+
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            className="bg-white rounded-[3rem] p-10 w-full max-w-2xl shadow-2xl border border-coffee-100 relative z-10 text-center"
+          >
+            <div className="flex flex-col items-center mb-8">
+              <div className="w-20 h-20 rounded-[2rem] bg-coffee-900 flex items-center justify-center mb-6 shadow-xl shadow-coffee-900/20 rotate-3">
+                <Coffee size={40} className="text-white" />
+              </div>
+              <h1 className="text-4xl font-serif font-bold text-coffee-900 mb-4">Cheirinho Mineiro</h1>
+              <p className="text-lg text-coffee-600 max-w-md mx-auto">
+                Descubra os segredos do café artesanal com receitas exclusivas e dicas de especialistas.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+              <div className="p-6 rounded-3xl bg-coffee-50 border border-coffee-100">
+                <Sparkles className="text-coffee-700 mb-3 mx-auto" size={24} />
+                <h3 className="text-sm font-bold text-coffee-900 mb-1">Receitas Premium</h3>
+                <p className="text-xs text-coffee-500">Acesso a métodos de preparo profissionais.</p>
+              </div>
+              <div className="p-6 rounded-3xl bg-coffee-50 border border-coffee-100">
+                <Cloud className="text-coffee-700 mb-3 mx-auto" size={24} />
+                <h3 className="text-sm font-bold text-coffee-900 mb-1">Dicas por Clima</h3>
+                <p className="text-xs text-coffee-500">Sugestões baseadas na temperatura local.</p>
+              </div>
+              <div className="p-6 rounded-3xl bg-coffee-50 border border-coffee-100">
+                <Lock className="text-coffee-700 mb-3 mx-auto" size={24} />
+                <h3 className="text-sm font-bold text-coffee-900 mb-1">Conteúdo Exclusivo</h3>
+                <p className="text-xs text-coffee-500">Área restrita para assinantes apaixonados.</p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <a 
+                href="/api/checkout"
+                className="block w-full bg-coffee-900 text-white py-5 rounded-2xl font-bold hover:bg-coffee-800 transition-all shadow-lg shadow-coffee-900/20 text-lg"
+              >
+                Assinar Agora - R$ 29,90/mês
+              </a>
+              
+              <button 
+                onClick={() => setView('auth')}
+                className="text-sm font-bold text-coffee-500 hover:text-coffee-900 transition-colors uppercase tracking-widest"
+              >
+                Já sou assinante? Fazer Login
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen bg-coffee-50 flex items-center justify-center p-6 relative overflow-hidden">
         {/* Background Decorations */}
@@ -687,6 +753,12 @@ export default function App() {
           className="bg-white rounded-[3rem] p-10 w-full max-w-md shadow-2xl border border-coffee-100 relative z-10"
         >
           <div className="flex flex-col items-center text-center mb-10">
+            <button 
+              onClick={() => setView('landing')}
+              className="absolute top-8 left-8 text-coffee-400 hover:text-coffee-900 transition-colors"
+            >
+              <RotateCcw size={20} />
+            </button>
             <div className="w-20 h-20 rounded-[2rem] bg-coffee-900 flex items-center justify-center mb-6 shadow-xl shadow-coffee-900/20 rotate-3">
               <Coffee size={40} className="text-white" />
             </div>
@@ -714,6 +786,17 @@ export default function App() {
               Cadastrar
             </button>
           </div>
+
+          {successMessage && (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-emerald-50 border border-emerald-100 text-emerald-700 p-4 rounded-2xl text-xs font-bold mb-6 flex items-start gap-3"
+            >
+              <Sparkles size={18} className="shrink-0 mt-0.5" />
+              {successMessage}
+            </motion.div>
+          )}
 
           {authError && (
             <motion.div 
