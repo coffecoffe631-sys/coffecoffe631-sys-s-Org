@@ -130,9 +130,10 @@ export default function App() {
     // Check for Stripe success/cancel in URL
     const params = new URLSearchParams(window.location.search);
     if (params.get('success')) {
-      alert('Parabéns! Sua assinatura foi ativada com sucesso.');
+      const sessionId = params.get('session_id');
+      console.log('>>> [FRONTEND] Checkout concluído. Session:', sessionId);
+      alert('Parabéns! Seu pagamento foi processado. Se você ainda não tem uma conta, cadastre-se com o mesmo e-mail usado no pagamento para liberar o acesso Premium.');
       setIsPremium(true);
-      // Aqui você poderia atualizar o Supabase também
       window.history.replaceState({}, '', window.location.pathname);
     }
     if (params.get('canceled')) {

@@ -46,6 +46,33 @@ app.use((req, res, next) => {
 });
 
 // API routes
+app.get("/api/checkout", async (req, res) => {
+  const stripe = getStripe();
+  const stripePriceId = process.env.STRIPE_PRICE_ID || process.env.ID_DO_PRECO;
+  
+  if (!stripe || !stripePriceId) {
+    return res.status(500).send("Configuração do Stripe ausente no servidor.");
+  }
+
+  const protocol = req.headers['x-forwarded-proto'] || 'http';
+  const host = req.headers.host;
+  const origin = (host ? `${protocol}://${host}` : process.env.APP_URL) || "";
+
+  try {
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      line_items: [{ price: stripePriceId, quantity: 1 }],
+      mode: "subscription",
+      success_url: `${origin}/?success=true&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/?canceled=true`,
+    });
+
+    res.redirect(303, session.url!);
+  } catch (error: any) {
+    res.status(500).send("Erro ao iniciar checkout: " + error.message);
+  }
+});
+
 app.post("/api/webhook", express.raw({ type: "application/json" }), async (req, res) => {
   const sig = req.headers["stripe-signature"] as string;
   let event;
@@ -66,8 +93,11 @@ app.post("/api/webhook", express.raw({ type: "application/json" }), async (req, 
 
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
-    const customerEmail = session.customer_email;
-    console.log(`Pagamento confirmado para: ${customerEmail}`);
+    const customerEmail = session.customer_email || session.customer_details?.email;
+    logToFile(`PAGAMENTO CONFIRMADO: ${customerEmail} - Session: ${session.id}`);
+    console.log(`>>> [WEBHOOK] Pagamento confirmado para: ${customerEmail}`);
+    // Aqui você pode adicionar o código para atualizar o Supabase:
+    // supabase.from('profiles').update({ is_premium: true }).eq('email', customerEmail)
   }
 
   res.json({ received: true });
