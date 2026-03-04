@@ -146,9 +146,10 @@ export default function App() {
   useEffect(() => {
     const checkConfig = async () => {
       try {
-        const res = await fetch(`${window.location.origin}/api/config-status`);
+        const res = await fetch(`/api/config-status`);
         if (res.ok) {
           const data = await res.json();
+          console.log('>>> [FRONTEND] Config Status:', data);
           if (!data.stripe.hasSecretKey || !data.stripe.hasPriceId) {
             setConfigError('Configuração do Stripe ausente! Defina STRIPE_SECRET_KEY e STRIPE_PRICE_ID nas variáveis de ambiente.');
           }
@@ -164,8 +165,9 @@ export default function App() {
     if (!user) return;
     setAuthLoading(true);
     try {
-      const apiUrl = `${window.location.origin}/api/create-checkout-session`;
+      const apiUrl = `/api/create-checkout-session`;
       console.log('>>> [FRONTEND] Iniciando checkout via:', apiUrl);
+      console.log('>>> [FRONTEND] Origin:', window.location.origin);
       console.log('>>> [FRONTEND] Email do usuário:', user.email);
       
       const response = await fetch(apiUrl, {
@@ -177,19 +179,20 @@ export default function App() {
         body: JSON.stringify({ email: user.email }),
       });
       
+      console.log('>>> [FRONTEND] Resposta recebida. Status:', response.status);
       const contentType = response.headers.get('content-type');
+      console.log('>>> [FRONTEND] Content-Type:', contentType);
+
       if (!response.ok) {
+        const text = await response.text();
+        console.error('>>> [FRONTEND] Erro do servidor (texto):', text);
+        
         let errorMessage = `Erro do servidor (${response.status})`;
-        if (contentType && contentType.includes('application/json')) {
-          const errorData = await response.json();
-          errorMessage = typeof errorData.error === 'string' 
-            ? errorData.error 
-            : typeof errorData.error === 'object' 
-              ? JSON.stringify(errorData.error)
-              : errorMessage;
-        } else {
-          const text = await response.text();
-          errorMessage = `${errorMessage}: ${text.slice(0, 100)}${text.length > 100 ? '...' : ''}`;
+        try {
+          const errorData = JSON.parse(text);
+          errorMessage = errorData.error || errorData.message || JSON.stringify(errorData);
+        } catch (e) {
+          errorMessage = text || errorMessage;
         }
         throw new Error(errorMessage);
       }

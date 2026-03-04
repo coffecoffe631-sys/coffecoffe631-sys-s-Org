@@ -99,6 +99,7 @@ app.post("/api/create-checkout-session", async (req, res) => {
   try {
     console.log('>>> [SERVER] Recebida requisição para create-checkout-session');
     console.log('>>> [SERVER] Body:', req.body);
+    console.log('>>> [SERVER] Env Keys:', Object.keys(process.env).filter(k => k.includes('STRIPE') || k.includes('CHAVE') || k.includes('ID')));
 
     logToFile(`Iniciando checkout para email: ${email}`);
     
