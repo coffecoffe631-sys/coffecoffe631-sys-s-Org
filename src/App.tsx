@@ -140,7 +140,17 @@ export default function App() {
       alert('A assinatura foi cancelada.');
       window.history.replaceState({}, '', window.location.pathname);
     }
-  }, []);
+
+    // Check for action=checkout
+    if (params.get('action') === 'checkout') {
+      window.history.replaceState({}, '', window.location.pathname);
+      if (user) {
+        handleCheckout();
+      } else {
+        setShowAuthModal(true);
+      }
+    }
+  }, [user]);
 
   const [configError, setConfigError] = useState<string | null>(null);
 
