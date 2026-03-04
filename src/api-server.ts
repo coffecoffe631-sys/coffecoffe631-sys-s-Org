@@ -194,6 +194,32 @@ app.post("/api/create-checkout-session", async (req, res) => {
   }
 });
 
+app.get("/api/check-subscription", async (req, res) => {
+  const email = req.query.email as string;
+  if (!email) return res.status(400).json({ error: "Email é obrigatório" });
+
+  const stripe = getStripe();
+  if (!stripe) return res.status(500).json({ error: "Stripe não configurado" });
+
+  try {
+    const customers = await stripe.customers.list({ email, limit: 1 });
+    if (customers.data.length === 0) {
+      return res.json({ isPremium: false });
+    }
+
+    const subscriptions = await stripe.subscriptions.list({
+      customer: customers.data[0].id,
+      status: "active",
+      limit: 1,
+    });
+
+    res.json({ isPremium: subscriptions.data.length > 0 });
+  } catch (error: any) {
+    console.error("Erro ao verificar assinatura:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Manipulador de erros global
 app.use((err: any, req: any, res: any, next: any) => {
   console.error(">>> [SERVER FATAL ERROR]", err);

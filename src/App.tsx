@@ -66,6 +66,8 @@ export default function App() {
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [isPremium, setIsPremium] = useState(false);
+  const [isCheckingSubscription, setIsCheckingSubscription] = useState(false);
+  const [subscriptionChecked, setSubscriptionChecked] = useState(false);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [view, setView] = useState<'landing' | 'auth'>('landing');
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -127,6 +129,32 @@ export default function App() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    const checkUserSubscription = async () => {
+      if (!user?.email) {
+        setIsPremium(false);
+        setSubscriptionChecked(false);
+        return;
+      }
+
+      setIsCheckingSubscription(true);
+      try {
+        const res = await fetch(`/api/check-subscription?email=${encodeURIComponent(user.email)}`);
+        if (res.ok) {
+          const data = await res.json();
+          setIsPremium(data.isPremium);
+        }
+      } catch (err) {
+        console.error("Erro ao verificar assinatura:", err);
+      } finally {
+        setIsCheckingSubscription(false);
+        setSubscriptionChecked(true);
+      }
+    };
+
+    checkUserSubscription();
+  }, [user]);
 
   useEffect(() => {
     // Check for Stripe success/cancel in URL
@@ -662,7 +690,7 @@ export default function App() {
     }
   };
 
-  if (isInitialAuthCheck) {
+  if (isInitialAuthCheck || (user && isCheckingSubscription) || (user && !subscriptionChecked)) {
     return (
       <div className="min-h-screen bg-coffee-50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
@@ -670,12 +698,15 @@ export default function App() {
             <Coffee size={32} className="text-coffee-700 animate-pulse" />
           </div>
           <Loader2 className="animate-spin text-coffee-400" size={24} />
-          <span className="text-xs font-bold text-coffee-400 uppercase tracking-widest">Carregando...</span>
+          <span className="text-xs font-bold text-coffee-400 uppercase tracking-widest">
+            {isCheckingSubscription || (user && !subscriptionChecked) ? 'Verificando assinatura...' : 'Carregando...'}
+          </span>
         </div>
       </div>
     );
   }
 
+  // Se não tem usuário, mostra Landing ou Auth
   if (!user) {
     if (view === 'landing') {
       return (
@@ -849,23 +880,59 @@ export default function App() {
               disabled={authLoading}
               className="w-full bg-coffee-900 text-white py-5 rounded-2xl font-bold hover:bg-coffee-800 transition-all shadow-lg shadow-coffee-900/20 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed mt-4"
             >
-              {authLoading ? (
-                <Loader2 size={24} className="animate-spin" />
-              ) : (
-                <>
-                  {authMode === 'login' ? 'Acessar Plataforma' : 'Criar minha Conta'}
-                  <ChevronRight size={20} />
-                </>
-              )}
+              {authLoading ? <Loader2 className="animate-spin" size={20} /> : (authMode === 'login' ? 'Entrar agora' : 'Criar minha conta')}
             </button>
           </form>
+        </motion.div>
+      </div>
+    );
+  }
 
+  // Se tem usuário mas não é premium, mostra Acesso Restrito
+  if (!isPremium) {
+    return (
+      <div className="min-h-screen bg-coffee-50 flex flex-col items-center justify-center p-6 relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+          <div className="absolute -top-24 -left-24 w-96 h-96 bg-coffee-100 rounded-full blur-3xl opacity-60" />
+          <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-coffee-200 rounded-full blur-3xl opacity-40" />
+        </div>
 
-          <div className="mt-10 text-center">
-            <p className="text-xs text-coffee-400 font-medium">
-              Ao continuar, você concorda com nossos <br />
-              <span className="text-coffee-900 underline cursor-pointer">Termos de Uso</span> e <span className="text-coffee-900 underline cursor-pointer">Privacidade</span>.
+        <motion.div 
+          initial={{ scale: 0.9, opacity: 0, y: 20 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
+          className="bg-white rounded-[3rem] p-10 w-full max-w-md shadow-2xl border border-coffee-100 relative z-10 text-center"
+        >
+          <div className="flex flex-col items-center mb-8">
+            <div className="w-20 h-20 rounded-[2rem] bg-amber-100 flex items-center justify-center mb-6 shadow-xl shadow-amber-900/10">
+              <Lock size={40} className="text-amber-600" />
+            </div>
+            <h1 className="text-2xl font-serif font-bold text-coffee-900 mb-4">Acesso Restrito</h1>
+            <p className="text-sm text-coffee-600 mb-6">
+              Olá, <span className="font-bold text-coffee-900">{user.email}</span>! 
+              Identificamos que você ainda não possui uma assinatura ativa.
             </p>
+            
+            <div className="bg-coffee-50 p-4 rounded-2xl border border-coffee-100 mb-8 text-left">
+              <p className="text-xs text-coffee-500 leading-relaxed">
+                Para acessar nossas receitas exclusivas e dicas de especialistas, você precisa ser um assinante Premium.
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <a 
+              href="/api/checkout"
+              className="block w-full bg-coffee-900 text-white py-4 rounded-2xl font-bold hover:bg-coffee-800 transition-all shadow-lg shadow-coffee-900/20"
+            >
+              Assinar Agora - R$ 29,90/mês
+            </a>
+            
+            <button 
+              onClick={handleSignOut}
+              className="text-sm font-bold text-coffee-400 hover:text-coffee-600 transition-colors uppercase tracking-widest"
+            >
+              Sair da conta
+            </button>
           </div>
         </motion.div>
       </div>
