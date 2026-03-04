@@ -7,8 +7,8 @@ import fs from "fs";
 dotenv.config();
 
 const logToFile = (message: string) => {
-  const timestamp = new Date().toISOString();
-  fs.appendFileSync("server.log", `[${timestamp}] ${message}\n`);
+    const timestamp = new Date().toISOString();
+    console.log(`[${timestamp}] ${message}`); // Esto es seguro para Vercel
 };
 
 logToFile("Servidor api-server.ts carregado");
