@@ -2066,11 +2066,19 @@ export default function App() {
                   <div className="space-y-4">
                     <h3 className="text-xl font-serif font-bold text-coffee-950">Ingredientes</h3>
                     <div className="grid grid-cols-1 gap-3">
-                      {selectedRecipe.detailedIngredients && selectedRecipe.detailedIngredients.length > 0 ? (
+                      {(selectedRecipe.detailedIngredients && selectedRecipe.detailedIngredients.length > 0) ? (
                         selectedRecipe.detailedIngredients.map((ing, i) => (
                           <div key={i} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-coffee-100 shadow-sm">
                             <span className="text-sm font-medium text-coffee-800">{ing.name}</span>
-                            <span className="text-xs font-bold text-coffee-400 bg-coffee-50 px-3 py-1 rounded-lg uppercase tracking-wider">{ing.amount}</span>
+                            {ing.amount && (
+                              <span className="text-xs font-bold text-coffee-400 bg-coffee-50 px-3 py-1 rounded-lg uppercase tracking-wider">{ing.amount}</span>
+                            )}
+                          </div>
+                        ))
+                      ) : (selectedRecipe.ingredients && selectedRecipe.ingredients.length > 0) ? (
+                        selectedRecipe.ingredients.map((ing, i) => (
+                          <div key={i} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-coffee-100 shadow-sm">
+                            <span className="text-sm font-medium text-coffee-800">{ing}</span>
                           </div>
                         ))
                       ) : (
@@ -2078,6 +2086,19 @@ export default function App() {
                       )}
                     </div>
                   </div>
+
+                  {selectedRecipe.equipment && selectedRecipe.equipment.length > 0 && (
+                    <div className="space-y-4">
+                      <h3 className="text-xl font-serif font-bold text-coffee-950">Equipamentos</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedRecipe.equipment.map((eq, i) => (
+                          <div key={i} className="bg-white border border-coffee-100 px-4 py-2 rounded-xl text-xs font-bold text-coffee-600 shadow-sm">
+                            {eq}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   <div className="space-y-8 pt-4">
                     <div className="flex items-center justify-between relative">
@@ -2106,12 +2127,18 @@ export default function App() {
                               transition={{ duration: 0.3 }}
                               className="space-y-8"
                             >
-                              <div className="w-full max-w-[280px] aspect-[4/5] mx-auto relative">
+                              <div className="w-full max-w-[340px] aspect-[4/5] mx-auto relative">
+                                {/* Efeito de sombreamento/vignette para fundir com o fundo */}
+                                <div className="absolute inset-0 z-10 pointer-events-none shadow-[inset_0_0_60px_rgba(255,255,255,1)]" />
                                 <img 
                                   src={selectedRecipe.steps[currentStepIndex].image || `https://picsum.photos/seed/${selectedRecipe.steps[currentStepIndex].title + currentStepIndex}/600/750`} 
                                   alt={selectedRecipe.steps[currentStepIndex].title}
                                   referrerPolicy="no-referrer"
-                                  className="w-full h-full object-contain mix-blend-multiply opacity-90 filter contrast-[1.02]"
+                                  className="w-full h-full object-cover opacity-90 filter sepia-[0.2] contrast-[1.05]"
+                                  style={{ 
+                                    maskImage: 'radial-gradient(circle, black 40%, transparent 95%)',
+                                    WebkitMaskImage: 'radial-gradient(circle, black 40%, transparent 95%)'
+                                  }}
                                 />
                               </div>
 
