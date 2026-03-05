@@ -33,8 +33,7 @@ export const fetchRecipesFromSupabase = async (): Promise<Recipe[]> => {
     weatherSuitability: item.clima_adequado || ['neutral'],
     category: item.categoria || 'Specialty',
     difficulty: item.dificuldade || 'Medium',
-    prepTime: item.tempo_preparo || '5 min',
-    premium: item.premium || false
+    prepTime: item.tempo_preparo || '5 min'
   }));
 };
 
@@ -52,8 +51,7 @@ export const insertRecipeToSupabase = async (recipe: Omit<Recipe, 'id'>) => {
       ingredientes: recipe.detailedIngredients,
       modo_preparo: recipe.steps,
       equipamentos: recipe.equipment,
-      clima_adequado: recipe.weatherSuitability,
-      premium: recipe.premium || false
+      clima_adequado: recipe.weatherSuitability
     }])
     .select();
 
@@ -84,7 +82,6 @@ export const updateRecipeInSupabase = async (id: string, recipe: Partial<Recipe>
   if (recipe.steps !== undefined) updateData.modo_preparo = recipe.steps;
   if (recipe.equipment !== undefined) updateData.equipamentos = recipe.equipment;
   if (recipe.weatherSuitability !== undefined) updateData.clima_adequado = recipe.weatherSuitability;
-  if (recipe.premium !== undefined) updateData.premium = recipe.premium;
 
   const { data, error } = await supabase
     .from('receitas_cafe')
@@ -108,8 +105,7 @@ export const seedRecipes = async (recipes: Recipe[]) => {
     ingredientes: recipe.detailedIngredients,
     modo_preparo: recipe.steps,
     equipamentos: recipe.equipment,
-    clima_adequado: recipe.weatherSuitability,
-    premium: recipe.premium || false
+    clima_adequado: recipe.weatherSuitability
   }));
 
   const { data, error } = await supabase

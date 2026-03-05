@@ -735,7 +735,7 @@ export default function App() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
               <div className="p-6 rounded-3xl bg-coffee-50 border border-coffee-100">
                 <Sparkles className="text-coffee-700 mb-3 mx-auto" size={24} />
-                <h3 className="text-sm font-bold text-coffee-900 mb-1">Receitas Premium</h3>
+                <h3 className="text-sm font-bold text-coffee-900 mb-1">Receitas Exclusivas</h3>
                 <p className="text-xs text-coffee-500">Acesso a métodos de preparo profissionais.</p>
               </div>
               <div className="p-6 rounded-3xl bg-coffee-50 border border-coffee-100">
@@ -914,7 +914,7 @@ export default function App() {
             
             <div className="bg-coffee-50 p-4 rounded-2xl border border-coffee-100 mb-8 text-left">
               <p className="text-xs text-coffee-500 leading-relaxed">
-                Para acessar nossas receitas exclusivas e dicas de especialistas, você precisa ser um assinante Premium.
+                Para acessar nossas receitas exclusivas e dicas de especialistas, você precisa ter uma assinatura ativa.
               </p>
             </div>
           </div>
@@ -977,11 +977,8 @@ export default function App() {
               <span className="text-[10px] font-bold text-coffee-900 uppercase tracking-widest truncate max-w-[120px]">
                 {user.email?.split('@')[0]}
               </span>
-              <span className={cn(
-                "text-[8px] font-bold uppercase tracking-[0.1em] px-1.5 py-0.5 rounded",
-                isPremium ? "text-amber-600 bg-amber-50" : "text-coffee-400 bg-coffee-100"
-              )}>
-                {isPremium ? "Plano Premium" : "Plano Gratuito"}
+              <span className="text-[8px] font-bold uppercase tracking-[0.1em] px-1.5 py-0.5 rounded text-amber-600 bg-amber-50">
+                Assinatura Ativa
               </span>
             </div>
             {!isPremium && (
@@ -1145,25 +1142,11 @@ export default function App() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.1 }}
                 onClick={() => {
-                  if (recipe.premium && !isPremium) {
-                    setShowSubscriptionModal(true);
-                  } else {
-                    setSelectedRecipe(recipe);
-                    setCurrentStepIndex(0);
-                  }
+                  setSelectedRecipe(recipe);
+                  setCurrentStepIndex(0);
                 }}
                 className="group bg-white rounded-[2.5rem] p-4 border border-coffee-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer overflow-hidden relative"
               >
-                {recipe.premium && !isPremium && (
-                  <div className="absolute inset-0 z-10 bg-coffee-900/5 backdrop-blur-[2px] flex items-center justify-center rounded-[2.5rem]">
-                    <div className="bg-white/90 p-4 rounded-3xl shadow-xl border border-coffee-100 flex flex-col items-center gap-2 scale-90 sm:scale-100">
-                      <div className="w-10 h-10 rounded-2xl bg-amber-100 flex items-center justify-center text-amber-600">
-                        <Lock size={20} />
-                      </div>
-                      <span className="text-[10px] font-bold text-coffee-900 uppercase tracking-widest">Premium</span>
-                    </div>
-                  </div>
-                )}
                 <div className="relative aspect-square rounded-[2rem] overflow-hidden mb-4">
                   <img 
                     src={recipe.image} 
@@ -1273,9 +1256,9 @@ export default function App() {
                 <div className="w-16 h-16 rounded-2xl bg-amber-100 flex items-center justify-center mx-auto mb-6 rotate-3">
                   <Sparkles size={32} className="text-amber-600" />
                 </div>
-                <h2 className="text-2xl font-serif font-bold text-coffee-900">Seja Premium</h2>
+                <h2 className="text-2xl font-serif font-bold text-coffee-900">Assinatura Ativa</h2>
                 <p className="text-sm text-coffee-500">
-                  Libere receitas exclusivas, dicas de baristas e suporte prioritário por apenas <span className="font-bold text-coffee-900">R$ 29,90/mês</span>.
+                  Aproveite receitas exclusivas, dicas de baristas e suporte prioritário por apenas <span className="font-bold text-coffee-900">R$ 29,90/mês</span>.
                 </p>
                 
                 <div className="py-6 space-y-3">
@@ -1598,20 +1581,6 @@ export default function App() {
                     )}
                   </div>
                   <form onSubmit={handleAddRecipe} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="md:col-span-2 flex items-center gap-4 mb-2">
-                      <label className="flex items-center gap-2 cursor-pointer group">
-                        <input 
-                          type="checkbox" 
-                          checked={newRecipe.premium || false}
-                          onChange={(e) => setNewRecipe({...newRecipe, premium: e.target.checked})}
-                          className="w-4 h-4 rounded border-coffee-200 text-amber-600 focus:ring-amber-500"
-                        />
-                        <span className="text-[10px] font-bold text-coffee-900 uppercase tracking-widest group-hover:text-amber-600 transition-colors flex items-center gap-1">
-                          <Sparkles size={12} className="text-amber-500" />
-                          Receita Premium
-                        </span>
-                      </label>
-                    </div>
                     <div className="md:col-span-2">
                       <label className="block text-[10px] font-bold text-coffee-400 uppercase tracking-widest mb-1.5">Nome da Receita</label>
                       <input 
