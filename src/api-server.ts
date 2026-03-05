@@ -220,6 +220,35 @@ app.get("/api/check-subscription", async (req, res) => {
   }
 });
 
+app.post("/api/create-portal-session", async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: "Email é obrigatório" });
+
+  const stripe = getStripe();
+  if (!stripe) return res.status(500).json({ error: "Stripe não configurado" });
+
+  try {
+    const customers = await stripe.customers.list({ email, limit: 1 });
+    if (customers.data.length === 0) {
+      return res.status(404).json({ error: "Cliente não encontrado no Stripe." });
+    }
+
+    const protocol = req.headers['x-forwarded-proto'] || 'http';
+    const host = req.headers.host;
+    const origin = process.env.APP_URL || req.headers.origin || (host ? `${protocol}://${host}` : "");
+
+    const portalSession = await stripe.billingPortal.sessions.create({
+      customer: customers.data[0].id,
+      return_url: origin,
+    });
+
+    res.json({ url: portalSession.url });
+  } catch (error: any) {
+    console.error("Erro ao criar sessão do portal:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Manipulador de erros global
 app.use((err: any, req: any, res: any, next: any) => {
   console.error(">>> [SERVER FATAL ERROR]", err);

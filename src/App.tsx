@@ -274,6 +274,33 @@ export default function App() {
     }
   };
 
+  const handleManageSubscription = async () => {
+    if (!user) return;
+    setAuthLoading(true);
+    try {
+      const response = await fetch('/api/create-portal-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: user.email }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao abrir portal de gerenciamento');
+      }
+
+      const data = await response.json();
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (err: any) {
+      console.error('Erro ao gerenciar assinatura:', err);
+      alert('Erro ao abrir portal: ' + err.message);
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthLoading(true);
@@ -977,9 +1004,13 @@ export default function App() {
               <span className="text-[10px] font-bold text-coffee-900 uppercase tracking-widest truncate max-w-[120px]">
                 {user.email?.split('@')[0]}
               </span>
-              <span className="text-[8px] font-bold uppercase tracking-[0.1em] px-1.5 py-0.5 rounded text-amber-600 bg-amber-50">
+              <button 
+                onClick={handleManageSubscription}
+                className="text-[8px] font-bold uppercase tracking-[0.1em] px-1.5 py-0.5 rounded text-amber-600 bg-amber-50 hover:bg-amber-100 transition-colors"
+                title="Gerenciar ou cancelar assinatura"
+              >
                 Assinatura Ativa
-              </span>
+              </button>
             </div>
             {!isPremium && (
               <button 
