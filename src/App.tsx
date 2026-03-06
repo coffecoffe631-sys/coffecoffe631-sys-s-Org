@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Search, Filter, MapPin, Cloud, Sun, Clock, ChevronRight, ChevronUp, ChevronDown, X, Heart, Share2, Coffee, Droplets, Zap, Loader2, Settings, Plus, Trash2, Lock, Sparkles, Edit, RotateCcw, Upload, Image as ImageIcon, User as UserIcon, LogOut, Mail, Maximize2 } from 'lucide-react';
+import { Search, Filter, MapPin, Cloud, Sun, Clock, ChevronRight, ChevronUp, ChevronDown, X, Heart, Share2, Coffee, Droplets, Zap, Loader2, Settings, Plus, Trash2, Lock, Sparkles, Edit, RotateCcw, Upload, Image as ImageIcon, User as UserIcon, LogOut, Mail, Maximize2, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Recipe, Ingredient, Step, WeatherCondition, recipes } from './data/recipes';
 import { useWeather } from './hooks/useWeather';
@@ -1858,8 +1858,8 @@ export default function App() {
                           <textarea 
                             value={tempStep.description}
                             onChange={(e) => setTempStep({...tempStep, description: e.target.value})}
-                            placeholder="Descrição detalhada..."
-                            className="flex-1 bg-coffee-50 border border-coffee-100 rounded-xl py-2 px-3 text-sm h-16 resize-none focus:ring-2 focus:ring-coffee-200 outline-none"
+                            placeholder="Descrição detalhada... (Dica: Use 'Dica do Barista' em uma nova linha para destaque)"
+                            className="flex-1 bg-coffee-50 border border-coffee-100 rounded-xl py-2 px-3 text-sm h-24 resize-y focus:ring-2 focus:ring-coffee-200 outline-none"
                           />
                           <button 
                             type="button" 
@@ -2025,22 +2025,28 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[200] bg-white flex flex-col overflow-hidden"
+            className="fixed inset-0 z-[200] bg-coffee-50 flex flex-col overflow-hidden"
           >
-            {/* Header - Non-absolute for better stability */}
-            <div className="w-full p-6 flex items-center justify-between bg-white/80 backdrop-blur-md border-b border-coffee-50">
-              <div className="bg-coffee-50/80 backdrop-blur-sm px-4 py-2 rounded-full border border-coffee-100 text-coffee-900 font-bold text-sm shadow-sm">
+            {/* Background decoration */}
+            <div className="absolute inset-0 opacity-60 pointer-events-none">
+              <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-coffee-300/40 blur-[120px]" />
+              <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-coffee-400/30 blur-[120px]" />
+              <div className="absolute top-[40%] right-[-5%] w-[30%] h-[30%] rounded-full bg-coffee-200/40 blur-[100px]" />
+            </div>
+            {/* Header - Absolute and floating */}
+            <div className="absolute top-0 left-0 w-full p-6 flex items-center justify-between z-20 pointer-events-none">
+              <div className="px-4 py-2 rounded-full text-coffee-900 font-bold text-sm pointer-events-auto">
                 {currentStepIndex + 1} / {selectedRecipe.steps.length}
               </div>
               <button 
                 onClick={() => setIsFullScreenSteps(false)}
-                className="w-12 h-12 bg-coffee-900 text-white rounded-full flex items-center justify-center shadow-xl hover:scale-110 transition-transform"
+                className="w-12 h-12 bg-coffee-900 text-white rounded-full flex items-center justify-center shadow-xl hover:scale-110 transition-transform pointer-events-auto"
               >
                 <X size={24} />
               </button>
             </div>
 
-            <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-12 max-w-5xl mx-auto w-full overflow-y-auto">
+            <div className="flex-1 flex flex-col items-center justify-start sm:justify-center p-6 pt-24 pb-32 sm:p-12 sm:pt-24 sm:pb-32 max-w-5xl mx-auto w-full overflow-y-auto no-scrollbar relative z-10">
               <AnimatePresence mode="wait">
                 <motion.div 
                   key={currentStepIndex}
@@ -2050,68 +2056,80 @@ export default function App() {
                   transition={{ duration: 0.4 }}
                   className="w-full flex flex-col items-center gap-6 sm:gap-12"
                 >
-                  <div className="w-full max-h-[40vh] sm:max-h-[50vh] aspect-[4/3] sm:aspect-video relative rounded-[2rem] overflow-hidden">
-                    {/* Vignette effect for full screen too */}
-                    <div className="absolute inset-0 z-10 pointer-events-none shadow-[inset_0_0_150px_rgba(255,255,255,1)]" />
+                  <div className="w-full max-w-[280px] aspect-[2/3] relative rounded-[2.5rem] overflow-hidden bg-coffee-50 border-8 border-white shadow-2xl mx-auto">
                     <img 
-                      src={selectedRecipe.steps[currentStepIndex].image || `https://picsum.photos/seed/${selectedRecipe.steps[currentStepIndex].title + currentStepIndex}/1200/800`} 
+                      src={selectedRecipe.steps[currentStepIndex].image || `https://picsum.photos/seed/${selectedRecipe.steps[currentStepIndex].title + currentStepIndex}/1024/1536`} 
                       alt={selectedRecipe.steps[currentStepIndex].title}
                       referrerPolicy="no-referrer"
-                      className="w-full h-full object-contain filter contrast-[1.05]"
-                      style={{ 
-                        maskImage: 'radial-gradient(circle, black 40%, transparent 100%)',
-                        WebkitMaskImage: 'radial-gradient(circle, black 40%, transparent 100%)'
-                      }}
+                      className="w-full h-full object-cover filter contrast-[1.05]"
                     />
+                    {/* Subtle paper texture overlay */}
+                    <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/paper.png')]" />
                   </div>
 
-                  <div className="text-center space-y-6 max-w-2xl">
-                    <h2 className="text-2xl sm:text-4xl font-serif font-bold text-coffee-950">
+                  <div className="text-center space-y-8 max-w-2xl">
+                    <h2 className="text-3xl sm:text-5xl font-serif font-black text-coffee-950 tracking-tight">
                       {selectedRecipe.steps[currentStepIndex].title}
                     </h2>
-                    <p className="text-xl sm:text-3xl font-serif text-coffee-800/90 leading-relaxed italic">
-                      {selectedRecipe.steps[currentStepIndex].description}
+                    <p className="text-xl sm:text-3xl font-serif font-semibold text-coffee-900 leading-relaxed italic whitespace-pre-line">
+                      {selectedRecipe.steps[currentStepIndex].description.split('\n').map((line, i) => (
+                        <span key={i} className="block mb-4 last:mb-0">
+                          {line.includes('Dica do Barista') ? (
+                            <>
+                              <span className="font-black text-coffee-950 not-italic block mb-1">💡 Dica do Barista</span>
+                              {line.replace('Dica do Barista', '').trim()}
+                            </>
+                          ) : (
+                            line
+                          )}
+                        </span>
+                      ))}
                     </p>
                   </div>
                 </motion.div>
               </AnimatePresence>
             </div>
 
-            <div className="p-8 sm:p-12 flex items-center justify-between w-full max-w-4xl mx-auto">
-              <button 
-                onClick={() => currentStepIndex > 0 && setCurrentStepIndex(prev => prev - 1)}
-                disabled={currentStepIndex === 0}
-                className="flex items-center gap-3 px-8 py-4 rounded-full bg-coffee-50 text-coffee-900 font-bold disabled:opacity-30 hover:bg-coffee-100 transition-colors"
-              >
-                <ChevronRight size={20} className="rotate-180" />
-                <span className="hidden sm:inline">Anterior</span>
-              </button>
+            {/* Frosted Glass Navigation Panel */}
+            <div className="fixed bottom-0 left-0 right-0 border-t border-white/40 bg-white/10 backdrop-blur-[40px] z-30 shadow-[0_-10px_40px_rgba(0,0,0,0.03)]">
+              <div className="p-6 sm:p-10 flex items-center justify-between w-full max-w-4xl mx-auto">
+                <button 
+                  onClick={() => currentStepIndex > 0 && setCurrentStepIndex(prev => prev - 1)}
+                  disabled={currentStepIndex === 0}
+                  className="w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center rounded-full bg-white/15 text-coffee-900 disabled:opacity-10 hover:bg-white/30 transition-all border border-white/30 shadow-sm"
+                >
+                  <ChevronRight size={24} className="rotate-180" />
+                </button>
 
-              <div className="flex gap-2">
-                {selectedRecipe.steps.map((_, i) => (
-                  <div 
-                    key={i}
-                    className={cn(
-                      "w-2 h-2 rounded-full transition-all duration-300",
-                      i === currentStepIndex ? "w-8 bg-coffee-900" : "bg-coffee-200"
-                    )}
-                  />
-                ))}
+                <div className="flex gap-2 sm:gap-3 px-5 py-2.5 sm:px-6 sm:py-3 rounded-full bg-white/20 backdrop-blur-md border border-white/40 shadow-inner">
+                  {selectedRecipe.steps.map((_, i) => (
+                    <div 
+                      key={i}
+                      className={cn(
+                        "h-1.5 rounded-full transition-all duration-500",
+                        i === currentStepIndex ? "w-6 sm:w-8 bg-coffee-900" : "w-1.5 bg-coffee-900/20"
+                      )}
+                    />
+                  ))}
+                </div>
+
+                <button 
+                  onClick={() => {
+                    if (currentStepIndex < selectedRecipe.steps.length - 1) {
+                      setCurrentStepIndex(prev => prev + 1);
+                    } else {
+                      setIsFullScreenSteps(false);
+                    }
+                  }}
+                  className="w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center rounded-full bg-coffee-900 text-white hover:bg-coffee-800 transition-all shadow-xl border border-coffee-800/20"
+                >
+                  {currentStepIndex < selectedRecipe.steps.length - 1 ? (
+                    <ChevronRight size={24} />
+                  ) : (
+                    <Check size={24} />
+                  )}
+                </button>
               </div>
-
-              <button 
-                onClick={() => {
-                  if (currentStepIndex < selectedRecipe.steps.length - 1) {
-                    setCurrentStepIndex(prev => prev + 1);
-                  } else {
-                    setIsFullScreenSteps(false);
-                  }
-                }}
-                className="flex items-center gap-3 px-8 py-4 rounded-full bg-coffee-900 text-white font-bold hover:bg-coffee-800 transition-colors shadow-lg"
-              >
-                <span>{currentStepIndex < selectedRecipe.steps.length - 1 ? 'Próximo' : 'Concluir'}</span>
-                <ChevronRight size={20} />
-              </button>
             </div>
           </motion.div>
         )}
@@ -2269,19 +2287,15 @@ export default function App() {
                               transition={{ duration: 0.3 }}
                               className="space-y-8"
                             >
-                              <div className="w-full max-w-[340px] aspect-[4/5] mx-auto relative">
-                                {/* Efeito de sombreamento/vignette para fundir com o fundo */}
-                                <div className="absolute inset-0 z-10 pointer-events-none shadow-[inset_0_0_100px_rgba(255,255,255,1)]" />
+                              <div className="w-full max-w-[224px] aspect-[2/3] mx-auto relative rounded-[2rem] overflow-hidden bg-coffee-50 border-4 border-white shadow-xl rotate-1">
                                 <img 
-                                  src={selectedRecipe.steps[currentStepIndex].image || `https://picsum.photos/seed/${selectedRecipe.steps[currentStepIndex].title + currentStepIndex}/600/750`} 
+                                  src={selectedRecipe.steps[currentStepIndex].image || `https://picsum.photos/seed/${selectedRecipe.steps[currentStepIndex].title + currentStepIndex}/1024/1536`} 
                                   alt={selectedRecipe.steps[currentStepIndex].title}
                                   referrerPolicy="no-referrer"
-                                  className="w-full h-full object-contain opacity-90 filter sepia-[0.2] contrast-[1.05]"
-                                  style={{ 
-                                    maskImage: 'radial-gradient(circle, black 40%, transparent 100%)',
-                                    WebkitMaskImage: 'radial-gradient(circle, black 40%, transparent 100%)'
-                                  }}
+                                  className="w-full h-full object-cover opacity-95 filter sepia-[0.1] contrast-[1.05]"
                                 />
+                                {/* Subtle paper texture overlay */}
+                                <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/paper.png')]" />
                               </div>
 
                               <div className="max-w-xs mx-auto">
