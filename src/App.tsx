@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Search, Filter, MapPin, Cloud, Sun, Clock, ChevronRight, ChevronUp, ChevronDown, X, Heart, Share2, Coffee, Droplets, Zap, Loader2, Settings, Plus, Trash2, Lock, Sparkles, Edit, RotateCcw, Upload, Image as ImageIcon, User as UserIcon, LogOut, Mail } from 'lucide-react';
+import { Search, Filter, MapPin, Cloud, Sun, Clock, ChevronRight, ChevronUp, ChevronDown, X, Heart, Share2, Coffee, Droplets, Zap, Loader2, Settings, Plus, Trash2, Lock, Sparkles, Edit, RotateCcw, Upload, Image as ImageIcon, User as UserIcon, LogOut, Mail, Maximize2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Recipe, Ingredient, Step, WeatherCondition, recipes } from './data/recipes';
 import { useWeather } from './hooks/useWeather';
@@ -52,6 +52,7 @@ export default function App() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [isFullScreenSteps, setIsFullScreenSteps] = useState(false);
   const [isExplainingRecommendation, setIsExplainingRecommendation] = useState(false);
   const [recommendation, setRecommendation] = useState<{ recipeId: string, reason: string } | null>(null);
   const [showFilters, setShowFilters] = useState(false);
@@ -2017,6 +2018,105 @@ export default function App() {
         )}
       </AnimatePresence>
 
+      {/* Full Screen Step Guide */}
+      <AnimatePresence>
+        {isFullScreenSteps && selectedRecipe && selectedRecipe.steps && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] bg-white flex flex-col overflow-hidden"
+          >
+            {/* Header - Non-absolute for better stability */}
+            <div className="w-full p-6 flex items-center justify-between bg-white/80 backdrop-blur-md border-b border-coffee-50">
+              <div className="bg-coffee-50/80 backdrop-blur-sm px-4 py-2 rounded-full border border-coffee-100 text-coffee-900 font-bold text-sm shadow-sm">
+                {currentStepIndex + 1} / {selectedRecipe.steps.length}
+              </div>
+              <button 
+                onClick={() => setIsFullScreenSteps(false)}
+                className="w-12 h-12 bg-coffee-900 text-white rounded-full flex items-center justify-center shadow-xl hover:scale-110 transition-transform"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-12 max-w-5xl mx-auto w-full overflow-y-auto">
+              <AnimatePresence mode="wait">
+                <motion.div 
+                  key={currentStepIndex}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.4 }}
+                  className="w-full flex flex-col items-center gap-6 sm:gap-12"
+                >
+                  <div className="w-full max-h-[40vh] sm:max-h-[50vh] aspect-[4/3] sm:aspect-video relative rounded-[2rem] overflow-hidden">
+                    {/* Vignette effect for full screen too */}
+                    <div className="absolute inset-0 z-10 pointer-events-none shadow-[inset_0_0_150px_rgba(255,255,255,1)]" />
+                    <img 
+                      src={selectedRecipe.steps[currentStepIndex].image || `https://picsum.photos/seed/${selectedRecipe.steps[currentStepIndex].title + currentStepIndex}/1200/800`} 
+                      alt={selectedRecipe.steps[currentStepIndex].title}
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full object-contain filter contrast-[1.05]"
+                      style={{ 
+                        maskImage: 'radial-gradient(circle, black 40%, transparent 100%)',
+                        WebkitMaskImage: 'radial-gradient(circle, black 40%, transparent 100%)'
+                      }}
+                    />
+                  </div>
+
+                  <div className="text-center space-y-6 max-w-2xl">
+                    <h2 className="text-2xl sm:text-4xl font-serif font-bold text-coffee-950">
+                      {selectedRecipe.steps[currentStepIndex].title}
+                    </h2>
+                    <p className="text-xl sm:text-3xl font-serif text-coffee-800/90 leading-relaxed italic">
+                      {selectedRecipe.steps[currentStepIndex].description}
+                    </p>
+                  </div>
+                </motion.div>
+              </AnimatePresence>
+            </div>
+
+            <div className="p-8 sm:p-12 flex items-center justify-between w-full max-w-4xl mx-auto">
+              <button 
+                onClick={() => currentStepIndex > 0 && setCurrentStepIndex(prev => prev - 1)}
+                disabled={currentStepIndex === 0}
+                className="flex items-center gap-3 px-8 py-4 rounded-full bg-coffee-50 text-coffee-900 font-bold disabled:opacity-30 hover:bg-coffee-100 transition-colors"
+              >
+                <ChevronRight size={20} className="rotate-180" />
+                <span className="hidden sm:inline">Anterior</span>
+              </button>
+
+              <div className="flex gap-2">
+                {selectedRecipe.steps.map((_, i) => (
+                  <div 
+                    key={i}
+                    className={cn(
+                      "w-2 h-2 rounded-full transition-all duration-300",
+                      i === currentStepIndex ? "w-8 bg-coffee-900" : "bg-coffee-200"
+                    )}
+                  />
+                ))}
+              </div>
+
+              <button 
+                onClick={() => {
+                  if (currentStepIndex < selectedRecipe.steps.length - 1) {
+                    setCurrentStepIndex(prev => prev + 1);
+                  } else {
+                    setIsFullScreenSteps(false);
+                  }
+                }}
+                className="flex items-center gap-3 px-8 py-4 rounded-full bg-coffee-900 text-white font-bold hover:bg-coffee-800 transition-colors shadow-lg"
+              >
+                <span>{currentStepIndex < selectedRecipe.steps.length - 1 ? 'Próximo' : 'Concluir'}</span>
+                <ChevronRight size={20} />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Recipe Detail Modal */}
       <AnimatePresence>
         {selectedRecipe && (
@@ -2134,13 +2234,24 @@ export default function App() {
                   <div className="space-y-8 pt-4">
                     <div className="flex items-center justify-between relative">
                       <h3 className="text-xl font-serif font-bold text-coffee-950">Modo de Preparo</h3>
-                      {selectedRecipe.steps && selectedRecipe.steps.length > 0 && (
-                        <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-coffee-100 shadow-sm">
-                          <span className="text-coffee-900 font-bold text-sm">{currentStepIndex + 1}</span>
-                          <span className="text-coffee-300 text-[10px]">/</span>
-                          <span className="text-coffee-400 text-[10px]">{selectedRecipe.steps.length}</span>
-                        </div>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {selectedRecipe.steps && selectedRecipe.steps.length > 0 && (
+                          <>
+                            <button 
+                              onClick={() => setIsFullScreenSteps(true)}
+                              className="p-2 rounded-full bg-white border border-coffee-100 text-coffee-600 hover:bg-coffee-900 hover:text-white transition-all shadow-sm"
+                              title="Tela Cheia"
+                            >
+                              <Maximize2 size={16} />
+                            </button>
+                            <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-coffee-100 shadow-sm">
+                              <span className="text-coffee-900 font-bold text-sm">{currentStepIndex + 1}</span>
+                              <span className="text-coffee-300 text-[10px]">/</span>
+                              <span className="text-coffee-400 text-[10px]">{selectedRecipe.steps.length}</span>
+                            </div>
+                          </>
+                        )}
+                      </div>
                     </div>
 
                     {selectedRecipe.steps && selectedRecipe.steps.length > 0 ? (
@@ -2160,15 +2271,15 @@ export default function App() {
                             >
                               <div className="w-full max-w-[340px] aspect-[4/5] mx-auto relative">
                                 {/* Efeito de sombreamento/vignette para fundir com o fundo */}
-                                <div className="absolute inset-0 z-10 pointer-events-none shadow-[inset_0_0_60px_rgba(255,255,255,1)]" />
+                                <div className="absolute inset-0 z-10 pointer-events-none shadow-[inset_0_0_100px_rgba(255,255,255,1)]" />
                                 <img 
                                   src={selectedRecipe.steps[currentStepIndex].image || `https://picsum.photos/seed/${selectedRecipe.steps[currentStepIndex].title + currentStepIndex}/600/750`} 
                                   alt={selectedRecipe.steps[currentStepIndex].title}
                                   referrerPolicy="no-referrer"
-                                  className="w-full h-full object-cover opacity-90 filter sepia-[0.2] contrast-[1.05]"
+                                  className="w-full h-full object-contain opacity-90 filter sepia-[0.2] contrast-[1.05]"
                                   style={{ 
-                                    maskImage: 'radial-gradient(circle, black 40%, transparent 95%)',
-                                    WebkitMaskImage: 'radial-gradient(circle, black 40%, transparent 95%)'
+                                    maskImage: 'radial-gradient(circle, black 40%, transparent 100%)',
+                                    WebkitMaskImage: 'radial-gradient(circle, black 40%, transparent 100%)'
                                   }}
                                 />
                               </div>
