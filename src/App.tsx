@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Search, Filter, MapPin, Cloud, Sun, Clock, ChevronRight, ChevronUp, ChevronDown, X, Heart, Share2, Coffee, Droplets, Zap, Loader2, Settings, Plus, Trash2, Lock, Sparkles, Edit, RotateCcw, Upload, Image as ImageIcon, User as UserIcon, LogOut, Mail, Maximize2, Check } from 'lucide-react';
+import { Search, Filter, MapPin, Cloud, Sun, Clock, ChevronRight, ChevronUp, ChevronDown, X, Heart, Share2, Coffee, Droplets, Zap, Loader2, Settings, Plus, Trash2, Lock, Sparkles, Edit, RotateCcw, Upload, Image as ImageIcon, User as UserIcon, LogOut, Mail, Maximize2, Check, Menu, MessageCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Recipe, Ingredient, Step, WeatherCondition, recipes } from './data/recipes';
 import { useWeather } from './hooks/useWeather';
@@ -56,6 +56,8 @@ export default function App() {
   const [isExplainingRecommendation, setIsExplainingRecommendation] = useState(false);
   const [recommendation, setRecommendation] = useState<{ recipeId: string, reason: string } | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [welcomePhrase, setWelcomePhrase] = useState('');
   const [appLogo, setAppLogo] = useState<string | null>(() => localStorage.getItem('coffee_app_logo'));
   
   // Auth State
@@ -85,8 +87,36 @@ export default function App() {
     }
   }, [showFilters, activeIngredients, activeEquipment]);
 
-  const categories = ['Espresso', 'Latte', 'Cappuccino', 'Cold Brew', 'Specialty'];
+  useEffect(() => {
+    const phrases = [
+      "Seu cantinho do café já está pronto para mais uma receita especial.",
+      "Que tal descobrir um novo café para preparar hoje?",
+      "O aroma de uma nova receita de café já está esperando por você.",
+      "Hoje é um ótimo dia para experimentar um café diferente.",
+      "Seu próximo café favorito pode estar aqui. Vamos descobrir?",
+      "Seu cantinho do café está pronto para mais um momento especial.",
+      "Hora de preparar um café e aproveitar o momento.",
+      "Que tal transformar hoje em um dia com mais café?",
+      "Vamos preparar algo delicioso hoje?",
+      "Uma nova receita de café está esperando por você.",
+      "Descubra um novo sabor de café para hoje.",
+      "O momento perfeito para um bom café começa agora."
+    ];
+    setWelcomePhrase(phrases[Math.floor(Math.random() * phrases.length)]);
+  }, [user]);
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12) return "Bom dia";
+    if (hour >= 12 && hour < 18) return "Boa tarde";
+    return "Boa noite";
+  };
+
+  const userName = user?.email?.split('@')[0] || 'Barista';
+  const capitalizedName = userName.charAt(0).toUpperCase() + userName.slice(1);
   
+  const categories = ['Espresso', 'Latte', 'Cappuccino', 'Cold Brew', 'Specialty'];
+
   const allIngredients = useMemo(() => 
     Array.from(new Set(allRecipes.flatMap(r => r.ingredients || [])))
       .filter(ing => typeof ing === 'string' && ing.trim() !== '')
@@ -349,7 +379,11 @@ export default function App() {
   };
 
   const handleSignOut = async () => {
+    setShowUserMenu(false);
     await supabase.auth.signOut();
+    setUser(null);
+    setIsPremium(false);
+    setView('landing');
   };
 
   useEffect(() => {
@@ -1000,7 +1034,7 @@ export default function App() {
             </div>
           )}
           
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 relative">
             <div className="hidden md:flex flex-col items-end">
               <span className="text-[10px] font-bold text-coffee-900 uppercase tracking-widest truncate max-w-[120px]">
                 {user.email?.split('@')[0]}
@@ -1022,19 +1056,83 @@ export default function App() {
                 Assinar
               </button>
             )}
-            <button 
-              onClick={handleSignOut}
-              className="p-2.5 rounded-full bg-coffee-100 text-coffee-600 hover:bg-coffee-200 transition-all border border-coffee-200"
-              title="Sair"
-            >
-              <LogOut size={18} />
-            </button>
+            
+            {/* Hamburger Menu */}
+            <div className="relative">
+              <button 
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                className={cn(
+                  "p-2.5 rounded-full transition-all border",
+                  showUserMenu 
+                    ? "bg-coffee-900 text-white border-coffee-900 shadow-lg" 
+                    : "bg-coffee-100 text-coffee-600 hover:bg-coffee-200 border-coffee-200"
+                )}
+                title="Menu"
+              >
+                {showUserMenu ? <X size={20} /> : <Menu size={20} />}
+              </button>
+
+              <AnimatePresence>
+                {showUserMenu && (
+                  <>
+                    {/* Backdrop for closing menu */}
+                    <div 
+                      className="fixed inset-0 z-40" 
+                      onClick={() => setShowUserMenu(false)}
+                    />
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      className="absolute right-0 mt-3 w-48 bg-white rounded-2xl shadow-2xl border border-coffee-100 overflow-hidden z-50"
+                    >
+                      <div className="p-2 space-y-1">
+                        <a 
+                          href="https://wa.me/5531999999999" // Link para o WhatsApp
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-3 px-4 py-3 text-sm font-bold text-coffee-700 hover:bg-coffee-50 rounded-xl transition-colors"
+                          onClick={() => setShowUserMenu(false)}
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600">
+                            <MessageCircle size={16} />
+                          </div>
+                          Suporte
+                        </a>
+                        <button 
+                          onClick={handleSignOut}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center text-red-600">
+                            <LogOut size={16} />
+                          </div>
+                          Sair
+                        </button>
+                      </div>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </div>
         </div>
       </header>
 
       <main className="px-6 py-8 space-y-8 max-w-5xl mx-auto">
+        {/* Welcome Message */}
+        {user && (
+          <motion.div 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center py-2"
+          >
+            <p className="text-2xl font-serif font-bold text-coffee-900 leading-relaxed">
+              Olá, {capitalizedName}! {getGreeting()} {welcomePhrase}
+            </p>
+          </motion.div>
+        )}
+
         {/* Search & Filters */}
         <section className="space-y-4">
           <div className="relative group">
