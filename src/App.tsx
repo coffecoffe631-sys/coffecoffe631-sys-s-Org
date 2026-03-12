@@ -75,6 +75,8 @@ export default function App() {
   const [view, setView] = useState<'landing' | 'auth'>('landing');
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [activeIngredients, setActiveIngredients] = useState<string[]>([]);
+  
+  const DEVELOPER_EMAIL = 'coffecoffe631@gmail.com';
   const [activeEquipment, setActiveEquipment] = useState<string[]>([]);
   const [pendingIngredients, setPendingIngredients] = useState<string[]>([]);
   const [pendingEquipment, setPendingEquipment] = useState<string[]>([]);
@@ -166,6 +168,15 @@ export default function App() {
       if (!user?.email) {
         setIsPremium(false);
         setSubscriptionChecked(false);
+        return;
+      }
+
+      // Developer Bypass
+      if (user.email === DEVELOPER_EMAIL) {
+        setIsPremium(true);
+        setIsAdminAuthenticated(true);
+        setIsCheckingSubscription(false);
+        setSubscriptionChecked(true);
         return;
       }
 
@@ -825,6 +836,18 @@ export default function App() {
                 className="text-sm font-bold text-coffee-500 hover:text-coffee-900 transition-colors uppercase tracking-widest"
               >
                 Já sou assinante? Fazer Login
+              </button>
+
+              <button 
+                onClick={() => {
+                  setUser({ email: DEVELOPER_EMAIL, id: 'dev-user' } as User);
+                  setIsPremium(true);
+                  setIsAdminAuthenticated(true);
+                  setSubscriptionChecked(true);
+                }}
+                className="block w-full text-[10px] font-bold text-coffee-300 hover:text-coffee-500 transition-colors uppercase tracking-[0.2em] pt-4"
+              >
+                Acesso Desenvolvedor
               </button>
             </div>
           </motion.div>

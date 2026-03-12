@@ -198,6 +198,11 @@ app.get("/api/check-subscription", async (req, res) => {
   const email = req.query.email as string;
   if (!email) return res.status(400).json({ error: "Email é obrigatório" });
 
+  // Developer Bypass
+  if (email === "coffecoffe631@gmail.com") {
+    return res.json({ isPremium: true });
+  }
+
   const stripe = getStripe();
   if (!stripe) return res.status(500).json({ error: "Stripe não configurado" });
 
