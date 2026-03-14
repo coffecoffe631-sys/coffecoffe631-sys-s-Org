@@ -54,3 +54,12 @@
 ::-webkit-scrollbar-thumb {
   @apply bg-coffee-300 rounded-full hover:bg-coffee-400 transition-colors;
 }
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

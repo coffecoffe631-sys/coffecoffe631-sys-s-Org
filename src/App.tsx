@@ -1263,7 +1263,7 @@ export default function App() {
             )}
           </AnimatePresence>
 
-          <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar sm:justify-center">
+          <div className="flex gap-3 overflow-x-auto no-scrollbar sm:justify-center px-6 -mx-6">
             <button 
               onClick={() => setSelectedCategory(null)}
               className={cn(
