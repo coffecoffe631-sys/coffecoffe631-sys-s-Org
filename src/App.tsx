@@ -57,6 +57,8 @@ export default function App() {
   const [recommendation, setRecommendation] = useState<{ recipeId: string, reason: string } | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [newName, setNewName] = useState('');
   const [welcomePhrase, setWelcomePhrase] = useState('');
   const [appLogo, setAppLogo] = useState<string | null>(() => localStorage.getItem('coffee_app_logo'));
   
@@ -112,7 +114,7 @@ export default function App() {
     return "Boa noite";
   };
 
-  const userName = user?.email?.split('@')[0] || 'Barista';
+  const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Barista';
   const capitalizedName = userName.charAt(0).toUpperCase() + userName.slice(1);
   
   const categories = ['Espresso', 'Latte', 'Cappuccino', 'Cold Brew', 'Specialty'];
@@ -327,6 +329,24 @@ export default function App() {
     } catch (err: any) {
       console.error('Erro ao gerenciar assinatura:', err);
       alert('Erro ao abrir portal: ' + err.message);
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleUpdateName = async () => {
+    if (!newName.trim()) return;
+    setAuthLoading(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        data: { full_name: newName.trim() }
+      });
+      if (error) throw error;
+      setIsEditingName(false);
+      setSuccessMessage('Nome atualizado com sucesso!');
+    } catch (err: any) {
+      console.error('Erro ao atualizar nome:', err);
+      alert('Erro ao atualizar nome: ' + err.message);
     } finally {
       setAuthLoading(false);
     }
@@ -1037,7 +1057,7 @@ export default function App() {
           <div className="flex items-center gap-3 relative">
             <div className="hidden md:flex flex-col items-end">
               <span className="text-[10px] font-bold text-coffee-900 uppercase tracking-widest truncate max-w-[120px]">
-                {user.email?.split('@')[0]}
+                {userName}
               </span>
               <button 
                 onClick={handleManageSubscription}
@@ -1087,6 +1107,19 @@ export default function App() {
                       className="absolute right-0 mt-3 w-48 bg-white rounded-2xl shadow-2xl border border-coffee-100 overflow-hidden z-50"
                     >
                       <div className="p-2 space-y-1">
+                        <button 
+                          onClick={() => {
+                            setNewName(userName);
+                            setIsEditingName(true);
+                            setShowUserMenu(false);
+                          }}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-coffee-700 hover:bg-coffee-50 rounded-xl transition-colors"
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-coffee-100 flex items-center justify-center text-coffee-600">
+                            <UserIcon size={16} />
+                          </div>
+                          Editar Nome
+                        </button>
                         <a 
                           href="https://wa.me/5531999999999" // Link para o WhatsApp
                           target="_blank"
@@ -1357,6 +1390,66 @@ export default function App() {
           )}
         </section>
       </main>
+
+      {/* Edit Name Modal */}
+      <AnimatePresence>
+        {isEditingName && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-6">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsEditingName(false)}
+              className="absolute inset-0 bg-coffee-900/60 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="bg-white rounded-[2.5rem] p-8 w-full max-w-sm relative z-10 shadow-2xl border border-coffee-100"
+            >
+              <button 
+                onClick={() => setIsEditingName(false)}
+                className="absolute top-6 right-6 p-2 rounded-full hover:bg-coffee-50 text-coffee-400 transition-colors"
+              >
+                <X size={20} />
+              </button>
+
+              <div className="text-center space-y-6">
+                <div className="w-16 h-16 rounded-2xl bg-coffee-100 flex items-center justify-center mx-auto rotate-3">
+                  <Edit size={32} className="text-coffee-600" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-serif font-bold text-coffee-900">Editar Nome</h2>
+                  <p className="text-sm text-coffee-500 mt-1">Como você gostaria de ser chamado?</p>
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="relative">
+                    <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-coffee-400" size={18} />
+                    <input 
+                      type="text"
+                      value={newName}
+                      onChange={(e) => setNewName(e.target.value)}
+                      placeholder="Seu nome"
+                      className="w-full bg-coffee-50 border border-coffee-100 rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-coffee-200 transition-all font-medium"
+                      autoFocus
+                    />
+                  </div>
+                  
+                  <button 
+                    onClick={handleUpdateName}
+                    disabled={authLoading || !newName.trim()}
+                    className="w-full bg-coffee-900 text-white py-4 rounded-xl font-bold hover:bg-coffee-800 transition-all shadow-lg shadow-coffee-900/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {authLoading ? <Loader2 className="animate-spin" size={20} /> : 'Salvar Alterações'}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Subscription Modal */}
       <AnimatePresence>
