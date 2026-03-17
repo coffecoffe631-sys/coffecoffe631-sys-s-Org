@@ -45,40 +45,11 @@ app.use((req, res, next) => {
   }
 });
 
-app.get("/healthz", (req, res) => res.send("ok"));
-
 app.get("/ping", (req, res) => {
   res.send("pong");
 });
 
 // API routes
-app.get("/checkout-direct", async (req, res) => {
-  const stripe = getStripe();
-  const stripePriceId = process.env.STRIPE_PRICE_ID || process.env.ID_DO_PRECO;
-  
-  if (!stripe || !stripePriceId) {
-    return res.status(500).send("Configuração do Stripe ausente no servidor.");
-  }
-
-  const protocol = req.headers['x-forwarded-proto'] || 'http';
-  const host = req.headers.host;
-  const origin = process.env.APP_URL || (host ? `${protocol}://${host}` : "");
-
-  try {
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card"],
-      line_items: [{ price: stripePriceId, quantity: 1 }],
-      mode: "subscription",
-      success_url: `${origin}/?success=true&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/?canceled=true`,
-    });
-
-    res.redirect(303, session.url!);
-  } catch (error: any) {
-    res.status(500).send("Erro ao iniciar checkout: " + error.message);
-  }
-});
-
 app.get("/api/checkout", async (req, res) => {
   const stripe = getStripe();
   const stripePriceId = process.env.STRIPE_PRICE_ID || process.env.ID_DO_PRECO;

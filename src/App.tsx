@@ -212,8 +212,7 @@ export default function App() {
       if (user) {
         handleSubscribe();
       } else {
-        // Redireciona para o checkout público se não estiver logado
-        window.location.href = '/api/checkout';
+        setView('auth');
       }
     }
   }, [user]);
@@ -1003,13 +1002,12 @@ export default function App() {
           </div>
 
           <div className="space-y-4">
-            <button 
-              onClick={handleSubscribe}
-              disabled={authLoading}
-              className="w-full bg-coffee-900 text-white py-4 rounded-2xl font-bold hover:bg-coffee-800 transition-all shadow-lg shadow-coffee-900/20 flex items-center justify-center gap-2 disabled:opacity-70"
+            <a 
+              href="/api/checkout"
+              className="block w-full bg-coffee-900 text-white py-4 rounded-2xl font-bold hover:bg-coffee-800 transition-all shadow-lg shadow-coffee-900/20"
             >
-              {authLoading ? <Loader2 size={20} className="animate-spin" /> : "Assinar Agora - R$ 29,90/mês"}
-            </button>
+              Assinar Agora - R$ 29,90/mês
+            </a>
             
             <button 
               onClick={handleSignOut}
