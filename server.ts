@@ -20,35 +20,43 @@ async function startServer() {
 
   // Iniciar o servidor Express
   try {
-    // Vite middleware para desenvolvimento no AI Studio
+    // Logger para depuração de rotas
+    app.use((req, res, next) => {
+      if (req.url === '/' || req.url.startsWith('/?')) {
+        logToFile(`[ROOT_CHECK] Request para ROOT: ${req.method} ${req.url}`);
+      }
+      next();
+    });
+
     const isProd = process.env.NODE_ENV === "production";
     logToFile(`Modo: ${isProd ? 'Produção' : 'Desenvolvimento'} (NODE_ENV=${process.env.NODE_ENV})`);
 
     if (!isProd) {
       logToFile("Iniciando Vite em modo middleware...");
-      console.log('>>> [SERVER] Iniciando Vite em modo middleware...');
       const vite = await createViteServer({
         server: { middlewareMode: true },
         appType: "spa",
       });
-      logToFile("Vite criado, montando middlewares...");
       app.use(vite.middlewares);
-      logToFile("Middleware do Vite configurado com sucesso.");
-      console.log('>>> [SERVER] Middleware do Vite configurado com sucesso.');
+      logToFile("Middleware do Vite configurado.");
     } else {
       logToFile("Modo produção, servindo dist...");
-      console.log('>>> [SERVER] Servindo arquivos estáticos da pasta dist...');
       app.use(express.static("dist"));
       
-      // SPA Fallback para produção
+      // SPA Fallback para produção - Garante que o root funcione
       app.get("*", (req, res, next) => {
         if (req.path.startsWith('/api')) return next();
-        res.sendFile(path.join(process.cwd(), "dist", "index.html"));
+        const indexPath = path.join(process.cwd(), "dist", "index.html");
+        if (fs.existsSync(indexPath)) {
+          res.sendFile(indexPath);
+        } else {
+          logToFile(`ERRO: dist/index.html não encontrado!`);
+          res.status(404).send("Aplicação não encontrada. Por favor, execute o build.");
+        }
       });
     }
 
-    // Iniciar o servidor Express APÓS configurar middlewares
-    logToFile(`Iniciando listen na porta ${PORT}...`);
+    // Iniciar o servidor Express
     app.listen(PORT, "0.0.0.0", () => {
       logToFile(`Servidor rodando na porta ${PORT}`);
       console.log(`>>> [SERVER] Servidor rodando em http://localhost:${PORT}`);
