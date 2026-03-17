@@ -1,2 +1,2 @@
-import app from "../src/api-server.js";
+import app from "../src/api-server";
 export default app;

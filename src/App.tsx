@@ -74,7 +74,7 @@ export default function App() {
   const [isCheckingSubscription, setIsCheckingSubscription] = useState(false);
   const [subscriptionChecked, setSubscriptionChecked] = useState(false);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
-  const [view, setView] = useState<'landing' | 'auth'>('landing');
+  const [view, setView] = useState<'landing' | 'auth' | 'success'>('landing');
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [activeIngredients, setActiveIngredients] = useState<string[]>([]);
   const [activeEquipment, setActiveEquipment] = useState<string[]>([]);
@@ -195,9 +195,7 @@ export default function App() {
     if (params.get('success')) {
       const sessionId = params.get('session_id');
       console.log('>>> [FRONTEND] Checkout concluído. Session:', sessionId);
-      setSuccessMessage('Pagamento confirmado! Agora crie sua conta usando o MESMO e-mail que você usou na compra para liberar seu acesso.');
-      setView('auth');
-      setAuthMode('signup');
+      setView('success');
       setIsPremium(true);
       window.history.replaceState({}, '', window.location.pathname);
     }
@@ -788,8 +786,78 @@ export default function App() {
     );
   }
 
-  // Se não tem usuário, mostra Landing ou Auth
+  // Se não tem usuário, mostra Landing, Auth ou Success
   if (!user) {
+    if (view === 'success') {
+      return (
+        <div className="min-h-screen bg-coffee-50 flex flex-col items-center justify-center p-6 relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+            <div className="absolute -top-24 -left-24 w-96 h-96 bg-emerald-100 rounded-full blur-3xl opacity-60" />
+            <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-coffee-200 rounded-full blur-3xl opacity-40" />
+          </div>
+
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            className="bg-white rounded-[3rem] p-10 w-full max-w-lg shadow-2xl border border-coffee-100 relative z-10 text-center"
+          >
+            <div className="flex flex-col items-center mb-8">
+              <motion.div 
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring", damping: 12, delay: 0.2 }}
+                className="w-24 h-24 rounded-[2.5rem] bg-emerald-500 flex items-center justify-center mb-6 shadow-xl shadow-emerald-500/20"
+              >
+                <Check size={48} className="text-white" />
+              </motion.div>
+              <h1 className="text-3xl font-serif font-bold text-coffee-900 mb-4">Pagamento Confirmado!</h1>
+              <p className="text-coffee-600 mb-8">
+                Seja bem-vindo ao <span className="font-bold text-coffee-900">Cheirinho Mineiro</span>. Sua assinatura foi ativada com sucesso.
+              </p>
+            </div>
+
+            <div className="bg-coffee-50 rounded-3xl p-6 mb-8 text-left border border-coffee-100">
+              <h3 className="text-sm font-bold text-coffee-900 mb-4 flex items-center gap-2">
+                <Sparkles size={18} className="text-coffee-700" />
+                Próximos Passos:
+              </h3>
+              <ul className="space-y-4">
+                <li className="flex gap-3">
+                  <div className="w-6 h-6 rounded-full bg-coffee-200 flex items-center justify-center shrink-0 text-[10px] font-bold text-coffee-700">1</div>
+                  <p className="text-xs text-coffee-600 leading-relaxed">
+                    Clique no botão abaixo para ir para a tela de cadastro.
+                  </p>
+                </li>
+                <li className="flex gap-3">
+                  <div className="w-6 h-6 rounded-full bg-coffee-200 flex items-center justify-center shrink-0 text-[10px] font-bold text-coffee-700">2</div>
+                  <p className="text-xs text-coffee-600 leading-relaxed">
+                    Use o <span className="font-bold text-coffee-900">MESMO e-mail</span> que você utilizou na compra do Stripe.
+                  </p>
+                </li>
+                <li className="flex gap-3">
+                  <div className="w-6 h-6 rounded-full bg-coffee-200 flex items-center justify-center shrink-0 text-[10px] font-bold text-coffee-700">3</div>
+                  <p className="text-xs text-coffee-600 leading-relaxed">
+                    Após criar sua conta, o acesso premium será liberado automaticamente.
+                  </p>
+                </li>
+              </ul>
+            </div>
+
+            <button 
+              onClick={() => {
+                setView('auth');
+                setAuthMode('signup');
+              }}
+              className="w-full bg-coffee-900 text-white py-5 rounded-2xl font-bold hover:bg-coffee-800 transition-all shadow-lg shadow-coffee-900/20 flex items-center justify-center gap-2"
+            >
+              Criar minha conta agora
+              <ChevronRight size={20} />
+            </button>
+          </motion.div>
+        </div>
+      );
+    }
+
     if (view === 'landing') {
       return (
         <div className="min-h-screen bg-coffee-50 flex flex-col items-center justify-center p-6 relative overflow-hidden">

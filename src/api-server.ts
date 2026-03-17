@@ -178,7 +178,7 @@ app.post("/api/create-checkout-session", async (req, res) => {
       ],
       mode: "subscription",
       customer_email: email,
-      success_url: `${origin}/?success=true`,
+      success_url: `${origin}/?success=true&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/?canceled=true`,
     });
 
