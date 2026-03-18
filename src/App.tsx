@@ -873,6 +873,7 @@ export default function App() {
                   <span className="text-coffee-900 text-3xl sm:text-5xl font-serif font-black tracking-tighter">Apenas R$37/mês</span>
                 </div>
                 <span className="text-coffee-400 text-[10px] sm:text-xs font-bold uppercase tracking-widest">Cancele quando quiser</span>
+                <span className="text-amber-600 text-[10px] sm:text-xs font-black uppercase tracking-widest mt-1">Teste por 15 dias. Sem risco.</span>
               </div>
 
               <div className="space-y-3 sm:space-y-4">
