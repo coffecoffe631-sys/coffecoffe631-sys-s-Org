@@ -9,7 +9,7 @@ const logPath = path.join(process.cwd(), "server.log");
 
 const logToFile = (message: string) => {
   const timestamp = new Date().toISOString();
-  fs.appendFileSync(logPath, `[${timestamp}] [SERVER.TS] ${message}\n`);
+  console.log(`[${timestamp}] [SERVER.TS] ${message}`);
 };
 
 logToFile("Iniciando server.ts");
