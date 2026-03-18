@@ -9,6 +9,8 @@ import { cn } from './lib/utils';
 import { supabase } from './lib/supabase';
 import { User } from '@supabase/supabase-js';
 
+const DEFAULT_LOGO = "https://cdn-icons-png.flaticon.com/512/924/924514.png";
+
 export default function App() {
   const weather = useWeather();
   const [allRecipes, setAllRecipes] = useState<Recipe[]>([]);
@@ -74,7 +76,7 @@ export default function App() {
   const [isCheckingSubscription, setIsCheckingSubscription] = useState(false);
   const [subscriptionChecked, setSubscriptionChecked] = useState(false);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
-  const [view, setView] = useState<'landing' | 'auth' | 'success'>('landing');
+  const [view, setView] = useState<'landing' | 'auth'>('landing');
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [activeIngredients, setActiveIngredients] = useState<string[]>([]);
   const [activeEquipment, setActiveEquipment] = useState<string[]>([]);
@@ -195,7 +197,9 @@ export default function App() {
     if (params.get('success')) {
       const sessionId = params.get('session_id');
       console.log('>>> [FRONTEND] Checkout concluído. Session:', sessionId);
-      setView('success');
+      setSuccessMessage('Pagamento confirmado! Agora crie sua conta usando o MESMO e-mail que você usou na compra para liberar seu acesso.');
+      setView('auth');
+      setAuthMode('signup');
       setIsPremium(true);
       window.history.replaceState({}, '', window.location.pathname);
     }
@@ -774,8 +778,8 @@ export default function App() {
     return (
       <div className="min-h-screen bg-coffee-50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-16 h-16 rounded-full bg-coffee-100 flex items-center justify-center border-4 border-coffee-200">
-            <Coffee size={32} className="text-coffee-700 animate-pulse" />
+          <div className="w-16 h-16 rounded-full bg-coffee-100 flex items-center justify-center border-4 border-coffee-200 p-3">
+            <img src={appLogo || DEFAULT_LOGO} alt="Loading Logo" className="w-full h-full object-contain animate-pulse" referrerPolicy="no-referrer" />
           </div>
           <Loader2 className="animate-spin text-coffee-400" size={24} />
           <span className="text-xs font-bold text-coffee-400 uppercase tracking-widest">
@@ -786,78 +790,8 @@ export default function App() {
     );
   }
 
-  // Se não tem usuário, mostra Landing, Auth ou Success
+  // Se não tem usuário, mostra Landing ou Auth
   if (!user) {
-    if (view === 'success') {
-      return (
-        <div className="min-h-screen bg-coffee-50 flex flex-col items-center justify-center p-6 relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-            <div className="absolute -top-24 -left-24 w-96 h-96 bg-emerald-100 rounded-full blur-3xl opacity-60" />
-            <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-coffee-200 rounded-full blur-3xl opacity-40" />
-          </div>
-
-          <motion.div 
-            initial={{ scale: 0.9, opacity: 0, y: 20 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            className="bg-white rounded-[3rem] p-10 w-full max-w-lg shadow-2xl border border-coffee-100 relative z-10 text-center"
-          >
-            <div className="flex flex-col items-center mb-8">
-              <motion.div 
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ type: "spring", damping: 12, delay: 0.2 }}
-                className="w-24 h-24 rounded-[2.5rem] bg-emerald-500 flex items-center justify-center mb-6 shadow-xl shadow-emerald-500/20"
-              >
-                <Check size={48} className="text-white" />
-              </motion.div>
-              <h1 className="text-3xl font-serif font-bold text-coffee-900 mb-4">Pagamento Confirmado!</h1>
-              <p className="text-coffee-600 mb-8">
-                Seja bem-vindo ao <span className="font-bold text-coffee-900">Cheirinho Mineiro</span>. Sua assinatura foi ativada com sucesso.
-              </p>
-            </div>
-
-            <div className="bg-coffee-50 rounded-3xl p-6 mb-8 text-left border border-coffee-100">
-              <h3 className="text-sm font-bold text-coffee-900 mb-4 flex items-center gap-2">
-                <Sparkles size={18} className="text-coffee-700" />
-                Próximos Passos:
-              </h3>
-              <ul className="space-y-4">
-                <li className="flex gap-3">
-                  <div className="w-6 h-6 rounded-full bg-coffee-200 flex items-center justify-center shrink-0 text-[10px] font-bold text-coffee-700">1</div>
-                  <p className="text-xs text-coffee-600 leading-relaxed">
-                    Clique no botão abaixo para ir para a tela de cadastro.
-                  </p>
-                </li>
-                <li className="flex gap-3">
-                  <div className="w-6 h-6 rounded-full bg-coffee-200 flex items-center justify-center shrink-0 text-[10px] font-bold text-coffee-700">2</div>
-                  <p className="text-xs text-coffee-600 leading-relaxed">
-                    Use o <span className="font-bold text-coffee-900">MESMO e-mail</span> que você utilizou na compra do Stripe.
-                  </p>
-                </li>
-                <li className="flex gap-3">
-                  <div className="w-6 h-6 rounded-full bg-coffee-200 flex items-center justify-center shrink-0 text-[10px] font-bold text-coffee-700">3</div>
-                  <p className="text-xs text-coffee-600 leading-relaxed">
-                    Após criar sua conta, o acesso premium será liberado automaticamente.
-                  </p>
-                </li>
-              </ul>
-            </div>
-
-            <button 
-              onClick={() => {
-                setView('auth');
-                setAuthMode('signup');
-              }}
-              className="w-full bg-coffee-900 text-white py-5 rounded-2xl font-bold hover:bg-coffee-800 transition-all shadow-lg shadow-coffee-900/20 flex items-center justify-center gap-2"
-            >
-              Criar minha conta agora
-              <ChevronRight size={20} />
-            </button>
-          </motion.div>
-        </div>
-      );
-    }
-
     if (view === 'landing') {
       return (
         <div className="min-h-screen bg-coffee-50 flex flex-col items-center justify-center p-6 relative overflow-hidden">
@@ -870,47 +804,98 @@ export default function App() {
           <motion.div 
             initial={{ scale: 0.9, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
-            className="bg-white rounded-[3rem] p-10 w-full max-w-2xl shadow-2xl border border-coffee-100 relative z-10 text-center"
+            className="bg-white rounded-[2.5rem] sm:rounded-[3rem] p-6 sm:p-10 w-full max-w-2xl shadow-2xl border border-coffee-100 relative z-10 text-center"
           >
-            <div className="flex flex-col items-center mb-8">
-              <div className="w-20 h-20 rounded-[2rem] bg-coffee-900 flex items-center justify-center mb-6 shadow-xl shadow-coffee-900/20 rotate-3">
-                <Coffee size={40} className="text-white" />
+            <motion.div 
+              animate={{ 
+                scale: [1, 1.05, 1],
+                rotate: [-2, 2, -2]
+              }}
+              transition={{ 
+                duration: 2, 
+                repeat: Infinity, 
+                ease: "easeInOut" 
+              }}
+              className="absolute -top-3 right-6 sm:right-10 bg-amber-500 text-white px-4 sm:px-6 py-1.5 sm:py-2 rounded-full text-[10px] sm:text-xs font-black uppercase tracking-widest shadow-lg shadow-amber-500/30"
+            >
+              Oferta Especial
+            </motion.div>
+
+            <div className="flex flex-col items-center mb-6 sm:mb-10">
+              <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-2xl sm:rounded-[2rem] bg-coffee-900 flex items-center justify-center mb-4 sm:mb-6 shadow-xl shadow-coffee-900/20 rotate-3 overflow-hidden p-3 sm:p-4">
+                <img src={appLogo || DEFAULT_LOGO} alt="Logo" className="w-full h-full object-contain brightness-0 invert" referrerPolicy="no-referrer" />
               </div>
-              <h1 className="text-4xl font-serif font-bold text-coffee-900 mb-4">Cheirinho Mineiro</h1>
-              <p className="text-lg text-coffee-600 max-w-md mx-auto">
-                Descubra os segredos do café artesanal com receitas exclusivas e dicas de especialistas.
+              <h1 className="text-2xl sm:text-4xl font-serif font-bold text-coffee-900 mb-2 sm:mb-4 px-2">Seu acesso está quase liberado ☕</h1>
+              <p className="text-sm sm:text-lg text-coffee-600 max-w-md mx-auto leading-relaxed px-4">
+                Em menos de 1 minuto você já pode começar a preparar cafés incríveis em casa
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-              <div className="p-6 rounded-3xl bg-coffee-50 border border-coffee-100">
-                <Sparkles className="text-coffee-700 mb-3 mx-auto" size={24} />
-                <h3 className="text-sm font-bold text-coffee-900 mb-1">Receitas Exclusivas</h3>
-                <p className="text-xs text-coffee-500">Acesso a métodos de preparo profissionais.</p>
-              </div>
-              <div className="p-6 rounded-3xl bg-coffee-50 border border-coffee-100">
-                <Cloud className="text-coffee-700 mb-3 mx-auto" size={24} />
-                <h3 className="text-sm font-bold text-coffee-900 mb-1">Dicas por Clima</h3>
-                <p className="text-xs text-coffee-500">Sugestões baseadas na temperatura local.</p>
-              </div>
-              <div className="p-6 rounded-3xl bg-coffee-50 border border-coffee-100">
-                <Lock className="text-coffee-700 mb-3 mx-auto" size={24} />
-                <h3 className="text-sm font-bold text-coffee-900 mb-1">Conteúdo Exclusivo</h3>
-                <p className="text-xs text-coffee-500">Área restrita para assinantes apaixonados.</p>
-              </div>
+            {/* Floating Square Benefits - Now visible on all screens with responsive positioning */}
+            <div className="block">
+              {[
+                { icon: Check, title: "Passo a passo", color: "text-emerald-500", pos: "-left-8 sm:-left-20 top-[5%] sm:top-[20%] -rotate-6" },
+                { icon: Zap, title: "Personalizado", color: "text-amber-500", pos: "-right-8 sm:-right-20 top-[25%] sm:top-[35%] rotate-12" },
+                { icon: Plus, title: "Novidades", color: "text-coffee-500", pos: "-left-10 sm:-left-16 top-[50%] sm:bottom-[25%] rotate-3" }
+              ].map((card, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, scale: 0.8, x: i % 2 === 0 ? -20 : 20 }}
+                  animate={{ 
+                    opacity: 1, 
+                    scale: 1,
+                    x: 0,
+                    y: [0, -10, 0]
+                  }}
+                  transition={{ 
+                    opacity: { delay: 0.5 + (i * 0.2) },
+                    scale: { delay: 0.5 + (i * 0.2) },
+                    y: { duration: 3 + i, repeat: Infinity, ease: "easeInOut" }
+                  }}
+                  className={cn(
+                    "absolute p-2 sm:p-4 rounded-xl sm:rounded-2xl bg-white shadow-2xl border border-coffee-100 flex flex-col items-center justify-center gap-1 sm:gap-2 z-20 w-20 h-20 sm:w-28 sm:h-28",
+                    card.pos
+                  )}
+                >
+                  <div className="w-7 h-7 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-coffee-50 flex items-center justify-center">
+                    <card.icon className={cn(card.color, "w-3.5 h-3.5 sm:w-5 sm:h-5")} />
+                  </div>
+                  <span className="text-[8px] sm:text-[10px] font-bold text-coffee-900 uppercase tracking-tight leading-none text-center">{card.title}</span>
+                </motion.div>
+              ))}
             </div>
 
-            <div className="space-y-4">
-              <a 
-                href="/api/checkout"
-                className="block w-full bg-coffee-900 text-white py-5 rounded-2xl font-bold hover:bg-coffee-800 transition-all shadow-lg shadow-coffee-900/20 text-lg"
-              >
-                Assinar Agora - R$ 29,90/mês
-              </a>
+            <div className="space-y-6 sm:space-y-8">
+              <div className="flex flex-col items-center gap-1 sm:gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-coffee-900 text-3xl sm:text-5xl font-serif font-black tracking-tighter">Apenas R$37/mês</span>
+                </div>
+                <span className="text-coffee-400 text-[10px] sm:text-xs font-bold uppercase tracking-widest">Cancele quando quiser</span>
+              </div>
+
+              <div className="space-y-3 sm:space-y-4">
+                <p className="text-xs sm:text-base font-bold text-coffee-800 italic">Você está a um passo de transformar seu café</p>
+                <div className="max-w-md mx-auto">
+                  <a 
+                    href="/api/checkout"
+                    className="block w-full bg-coffee-900 text-white py-5 sm:py-7 rounded-xl sm:rounded-2xl font-bold hover:bg-coffee-800 transition-all shadow-xl shadow-coffee-900/30 text-lg sm:text-2xl group relative overflow-hidden"
+                  >
+                    <span className="relative z-10 flex items-center justify-center gap-2">
+                      LIBERAR MEU ACESSO <ChevronRight size={24} className="group-hover:translate-x-1 transition-transform" />
+                    </span>
+                    <motion.div 
+                      className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent"
+                      animate={{ x: ['-100%', '200%'] }}
+                      transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                    />
+                  </a>
+                </div>
+                <p className="text-[10px] sm:text-xs font-bold text-coffee-400 uppercase tracking-widest">Acesso imediato após confirmação</p>
+              </div>
               
               <button 
                 onClick={() => setView('auth')}
-                className="text-sm font-bold text-coffee-500 hover:text-coffee-900 transition-colors uppercase tracking-widest"
+                className="text-xs sm:text-sm font-bold text-coffee-400 hover:text-coffee-900 transition-colors uppercase tracking-widest pt-2 sm:pt-4"
               >
                 Já sou assinante? Fazer Login
               </button>
@@ -940,8 +925,8 @@ export default function App() {
             >
               <RotateCcw size={20} />
             </button>
-            <div className="w-20 h-20 rounded-[2rem] bg-coffee-900 flex items-center justify-center mb-6 shadow-xl shadow-coffee-900/20 rotate-3">
-              <Coffee size={40} className="text-white" />
+            <div className="w-20 h-20 rounded-[2rem] bg-coffee-900 flex items-center justify-center mb-6 shadow-xl shadow-coffee-900/20 rotate-3 overflow-hidden p-4">
+              <img src={appLogo || DEFAULT_LOGO} alt="Logo" className="w-full h-full object-contain brightness-0 invert" referrerPolicy="no-referrer" />
             </div>
             <h1 className="text-3xl font-serif font-bold text-coffee-900 mb-2">Cheirinho Mineiro</h1>
             <p className="text-sm text-coffee-500 font-medium">Sua jornada pelo café artesanal começa aqui.</p>
@@ -1062,19 +1047,31 @@ export default function App() {
               Identificamos que você ainda não possui uma assinatura ativa.
             </p>
             
-            <div className="bg-coffee-50 p-4 rounded-2xl border border-coffee-100 mb-8 text-left">
-              <p className="text-xs text-coffee-500 leading-relaxed">
+            <div className="bg-coffee-50 p-6 rounded-3xl border border-coffee-100 mb-8 text-left relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-2 opacity-10">
+                <Sparkles size={48} />
+              </div>
+              <p className="text-xs text-coffee-600 leading-relaxed font-medium">
                 Para acessar nossas receitas exclusivas e dicas de especialistas, você precisa ter uma assinatura ativa.
               </p>
+              <div className="mt-4 pt-4 border-t border-coffee-100 flex items-center justify-between">
+                <span className="text-[10px] font-bold text-coffee-400 uppercase tracking-widest">Preço Especial</span>
+                <div className="flex items-center gap-1">
+                  <span className="text-2xl font-serif font-black text-coffee-900 tracking-tighter">37 R$</span>
+                  <span className="text-[10px] font-bold text-coffee-400 uppercase">/mês</span>
+                </div>
+              </div>
             </div>
           </div>
 
           <div className="space-y-4">
             <a 
               href="/api/checkout"
-              className="block w-full bg-coffee-900 text-white py-4 rounded-2xl font-bold hover:bg-coffee-800 transition-all shadow-lg shadow-coffee-900/20"
+              className="block w-full bg-coffee-900 text-white py-5 rounded-2xl font-bold hover:bg-coffee-800 transition-all shadow-xl shadow-coffee-900/30 group"
             >
-              Assinar Agora - R$ 29,90/mês
+              <span className="flex items-center justify-center gap-2">
+                Assinar Agora <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
+              </span>
             </a>
             
             <button 
@@ -1101,14 +1098,10 @@ export default function App() {
         <div className="max-w-5xl mx-auto px-6 pt-8 pb-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
           <div 
-            className="w-10 h-10 rounded-full bg-coffee-100 flex items-center justify-center border-2 border-coffee-200 cursor-pointer text-coffee-700 overflow-hidden"
+            className="w-10 h-10 rounded-full bg-coffee-100 flex items-center justify-center border-2 border-coffee-200 cursor-pointer text-coffee-700 overflow-hidden p-2"
             onClick={() => isAdminAuthenticated ? setShowAdminPanel(true) : setShowAdminLogin(true)}
           >
-            {appLogo ? (
-              <img src={appLogo} alt="App Logo" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-            ) : (
-              <Coffee size={20} fill="currentColor" />
-            )}
+            <img src={appLogo || DEFAULT_LOGO} alt="App Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
           </div>
           <div>
             <h1 className="text-xl font-serif font-bold text-coffee-900 leading-none">Cheirinho Mineiro</h1>
@@ -1427,8 +1420,8 @@ export default function App() {
 
           {filteredRecipes.length === 0 && (
             <div className="py-20 text-center space-y-4">
-              <div className="w-20 h-20 bg-coffee-100 rounded-full flex items-center justify-center mx-auto text-coffee-300">
-                <Coffee size={40} />
+              <div className="w-20 h-20 bg-coffee-100 rounded-full flex items-center justify-center mx-auto text-coffee-300 p-4">
+                <img src={appLogo || DEFAULT_LOGO} alt="No results" className="w-full h-full object-contain opacity-30" referrerPolicy="no-referrer" />
               </div>
               <p className="text-coffee-500 font-serif italic">
                 {activeTab === 'favorites' ? 'Você ainda não favoritou nenhuma receita.' : 'Nenhuma receita encontrada com esses filtros.'}
@@ -1548,37 +1541,49 @@ export default function App() {
                   <Sparkles size={32} className="text-amber-600" />
                 </div>
                 <h2 className="text-2xl font-serif font-bold text-coffee-900">Assinatura Ativa</h2>
+                <div className="flex flex-col items-center gap-0">
+                  <span className="text-coffee-400 text-[10px] line-through font-bold mb-[-2px]">De R$ 49,90</span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-4xl font-serif font-black text-coffee-900 tracking-tighter">37 R$</span>
+                    <span className="text-[10px] font-bold text-coffee-400 uppercase tracking-widest leading-none">/ mês</span>
+                  </div>
+                </div>
                 <p className="text-sm text-coffee-500">
-                  Aproveite receitas exclusivas, dicas de baristas e suporte prioritário por apenas <span className="font-bold text-coffee-900">R$ 29,90/mês</span>.
+                  Aproveite receitas exclusivas, dicas de baristas e suporte prioritário.
                 </p>
                 
                 <div className="py-6 space-y-3">
-                  <div className="flex items-center gap-3 text-left text-xs font-medium text-coffee-600">
-                    <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
-                      <Zap size={12} />
+                  <div className="flex items-center gap-3 text-left text-xs font-medium text-coffee-600 bg-coffee-50 p-3 rounded-2xl border border-coffee-100">
+                    <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
+                      <Check size={14} />
                     </div>
-                    Receitas ilimitadas
+                    Receitas ilimitadas e exclusivas
                   </div>
-                  <div className="flex items-center gap-3 text-left text-xs font-medium text-coffee-600">
-                    <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
-                      <Zap size={12} />
+                  <div className="flex items-center gap-3 text-left text-xs font-medium text-coffee-600 bg-coffee-50 p-3 rounded-2xl border border-coffee-100">
+                    <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
+                      <Check size={14} />
                     </div>
                     Acesso a vídeos de preparo
                   </div>
-                  <div className="flex items-center gap-3 text-left text-xs font-medium text-coffee-600">
-                    <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
-                      <Zap size={12} />
+                  <div className="flex items-center gap-3 text-left text-xs font-medium text-coffee-600 bg-coffee-50 p-3 rounded-2xl border border-coffee-100">
+                    <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
+                      <Check size={14} />
                     </div>
-                    Sem anúncios (em breve)
+                    Suporte VIP via WhatsApp
                   </div>
                 </div>
 
                 <button 
                   onClick={handleSubscribe}
                   disabled={authLoading}
-                  className="w-full bg-coffee-900 text-white py-4 rounded-2xl font-bold hover:bg-coffee-800 transition-all shadow-lg shadow-coffee-900/20 flex items-center justify-center gap-2 disabled:opacity-70"
+                  className="w-full bg-coffee-900 text-white py-5 rounded-2xl font-bold hover:bg-coffee-800 transition-all shadow-xl shadow-coffee-900/30 flex items-center justify-center gap-2 disabled:opacity-70 group"
                 >
-                  {authLoading ? <Loader2 size={20} className="animate-spin" /> : "Assinar Agora"}
+                  {authLoading ? <Loader2 size={20} className="animate-spin" /> : (
+                    <>
+                      Assinar Agora 
+                      <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                    </>
+                  )}
                 </button>
                 <p className="text-[10px] text-coffee-400 uppercase tracking-widest font-bold">
                   Cancele quando quiser
@@ -1828,12 +1833,8 @@ export default function App() {
                     Personalização do App
                   </h4>
                   <div className="flex items-center gap-6">
-                    <div className="w-20 h-20 rounded-full bg-white border-2 border-coffee-200 flex items-center justify-center overflow-hidden text-coffee-700 shrink-0">
-                      {appLogo ? (
-                        <img src={appLogo} alt="Logo Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                      ) : (
-                        <Coffee size={32} fill="currentColor" />
-                      )}
+                    <div className="w-20 h-20 rounded-full bg-white border-2 border-coffee-200 flex items-center justify-center overflow-hidden text-coffee-700 shrink-0 p-3">
+                      <img src={appLogo || DEFAULT_LOGO} alt="Logo Preview" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                     </div>
                     <div className="flex flex-col gap-2">
                       <label className="bg-coffee-900 text-white px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest cursor-pointer hover:bg-coffee-800 transition-all flex items-center gap-2">
