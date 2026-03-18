@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Search, Filter, MapPin, Cloud, Sun, Clock, ChevronRight, ChevronUp, ChevronDown, X, Heart, Share2, Coffee, Droplets, Zap, Loader2, Settings, Plus, Trash2, Lock, Sparkles, Edit, RotateCcw, Upload, Image as ImageIcon, User as UserIcon, LogOut, Mail, Maximize2, Check, Menu, MessageCircle } from 'lucide-react';
+import { Search, Filter, MapPin, Cloud, Sun, Clock, ChevronRight, ChevronUp, ChevronDown, X, Heart, Share2, Coffee, Droplets, Zap, Loader2, Settings, Plus, Trash2, Lock, Sparkles, Edit, RotateCcw, Upload, Image as ImageIcon, User as UserIcon, LogOut, Mail, Maximize2, Check, Menu, MessageCircle, Eye, EyeOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Recipe, Ingredient, Step, WeatherCondition, recipes } from './data/recipes';
 import { useWeather } from './hooks/useWeather';
@@ -21,6 +21,7 @@ export default function App() {
   // Admin State
   const [showAdminLogin, setShowAdminLogin] = useState(false);
   const [adminPassword, setAdminPassword] = useState('');
+  const [showAdminPassword, setShowAdminPassword] = useState(false);
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -70,6 +71,7 @@ export default function App() {
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [isPremium, setIsPremium] = useState(false);
@@ -1000,13 +1002,20 @@ export default function App() {
                   <Lock size={18} />
                 </div>
                 <input 
-                  type="password" 
+                  type={showPassword ? "text" : "password"} 
                   required
                   value={authPassword}
                   onChange={(e) => setAuthPassword(e.target.value)}
-                  className="w-full bg-coffee-50 border border-coffee-100 rounded-2xl py-4 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-coffee-200 transition-all text-sm"
+                  className="w-full bg-coffee-50 border border-coffee-100 rounded-2xl py-4 pl-12 pr-12 focus:outline-none focus:ring-2 focus:ring-coffee-200 transition-all text-sm"
                   placeholder="••••••••"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-4 flex items-center text-coffee-300 hover:text-coffee-500 transition-colors"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
               </div>
             </div>
 
@@ -1768,14 +1777,23 @@ export default function App() {
               <form onSubmit={handleAdminLogin} className="space-y-4">
                 <div>
                   <label className="block text-[10px] font-bold text-coffee-400 uppercase tracking-widest mb-2">Senha de Acesso</label>
-                  <input 
-                    type="password" 
-                    value={adminPassword}
-                    onChange={(e) => setAdminPassword(e.target.value)}
-                    className="w-full bg-coffee-50 border border-coffee-100 rounded-xl py-3 px-4 focus:outline-none focus:ring-2 focus:ring-coffee-200"
-                    placeholder="••••••••"
-                    autoFocus
-                  />
+                  <div className="relative">
+                    <input 
+                      type={showAdminPassword ? "text" : "password"} 
+                      value={adminPassword}
+                      onChange={(e) => setAdminPassword(e.target.value)}
+                      className="w-full bg-coffee-50 border border-coffee-100 rounded-xl py-3 px-4 pr-10 focus:outline-none focus:ring-2 focus:ring-coffee-200"
+                      placeholder="••••••••"
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowAdminPassword(!showAdminPassword)}
+                      className="absolute inset-y-0 right-3 flex items-center text-coffee-300 hover:text-coffee-500 transition-colors"
+                    >
+                      {showAdminPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
                 </div>
                 <button 
                   type="submit"
