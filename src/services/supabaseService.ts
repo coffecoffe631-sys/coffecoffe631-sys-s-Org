@@ -116,3 +116,34 @@ export const seedRecipes = async (recipes: Recipe[]) => {
   if (error) throw error;
   return data;
 };
+
+export const fetchAppLogo = async (): Promise<string | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('app_settings')
+      .select('value')
+      .eq('key', 'app_logo')
+      .maybeSingle();
+
+    if (error) {
+      console.warn('Could not fetch app logo from Supabase (table might not exist):', error.message);
+      return null;
+    }
+
+    return data?.value || null;
+  } catch (err) {
+    console.error('Error in fetchAppLogo:', err);
+    return null;
+  }
+};
+
+export const updateAppLogo = async (logoBase64: string) => {
+  const { error } = await supabase
+    .from('app_settings')
+    .upsert({ key: 'app_logo', value: logoBase64 }, { onConflict: 'key' });
+
+  if (error) {
+    console.error('Error updating app logo in Supabase:', error.message);
+    throw error;
+  }
+};

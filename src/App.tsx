@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Recipe, Ingredient, Step, WeatherCondition, recipes } from './data/recipes';
 import { useWeather } from './hooks/useWeather';
 import { getLocalCoffeeRecommendation } from './services/recommendationService';
-import { fetchRecipesFromSupabase, insertRecipeToSupabase, deleteRecipeFromSupabase, updateRecipeInSupabase, seedRecipes } from './services/supabaseService';
+import { fetchRecipesFromSupabase, insertRecipeToSupabase, deleteRecipeFromSupabase, updateRecipeInSupabase, seedRecipes, fetchAppLogo, updateAppLogo } from './services/supabaseService';
 import { cn } from './lib/utils';
 import { supabase } from './lib/supabase';
 import { User } from '@supabase/supabase-js';
@@ -92,6 +92,17 @@ export default function App() {
       setPendingEquipment(activeEquipment);
     }
   }, [showFilters, activeIngredients, activeEquipment]);
+
+  useEffect(() => {
+    const loadLogo = async () => {
+      const logo = await fetchAppLogo();
+      if (logo) {
+        setAppLogo(logo);
+        localStorage.setItem('coffee_app_logo', logo);
+      }
+    };
+    loadLogo();
+  }, []);
 
   useEffect(() => {
     const phrases = [
@@ -662,18 +673,28 @@ export default function App() {
         return;
       }
       const reader = new FileReader();
-      reader.onloadend = () => {
+      reader.onloadend = async () => {
         const base64 = reader.result as string;
         setAppLogo(base64);
         localStorage.setItem('coffee_app_logo', base64);
+        try {
+          await updateAppLogo(base64);
+        } catch (err) {
+          console.error('Erro ao salvar logo no Supabase:', err);
+        }
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const resetLogo = () => {
+  const resetLogo = async () => {
     setAppLogo(null);
     localStorage.removeItem('coffee_app_logo');
+    try {
+      await updateAppLogo('');
+    } catch (err) {
+      console.error('Erro ao resetar logo no Supabase:', err);
+    }
   };
 
   const addIngredient = () => {
