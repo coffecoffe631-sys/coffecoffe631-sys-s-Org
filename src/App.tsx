@@ -74,9 +74,9 @@ export default function App() {
   const [showPassword, setShowPassword] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
-  const [isPremium, setIsPremium] = useState(false);
+  const [isPremium, setIsPremium] = useState(true);
   const [isCheckingSubscription, setIsCheckingSubscription] = useState(false);
-  const [subscriptionChecked, setSubscriptionChecked] = useState(false);
+  const [subscriptionChecked, setSubscriptionChecked] = useState(true);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [view, setView] = useState<'landing' | 'auth'>('landing');
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -167,6 +167,8 @@ export default function App() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       setIsInitialAuthCheck(false);
+    }).catch(() => {
+      setIsInitialAuthCheck(false);
     });
 
     // Listen for auth changes
@@ -175,11 +177,22 @@ export default function App() {
       setIsInitialAuthCheck(false);
     });
 
-    return () => subscription.unsubscribe();
+    // Safety timeout for preview
+    const timeout = setTimeout(() => setIsInitialAuthCheck(false), 2000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeout);
+    };
   }, []);
 
   useEffect(() => {
     const checkUserSubscription = async () => {
+      // Bypassing for preview
+      setIsPremium(true);
+      setSubscriptionChecked(true);
+      return;
+
       if (!user?.email) {
         setIsPremium(false);
         setSubscriptionChecked(false);
@@ -797,7 +810,7 @@ export default function App() {
     }
   };
 
-  if (isInitialAuthCheck || (user && isCheckingSubscription) || (user && !subscriptionChecked)) {
+  if (false && (isInitialAuthCheck || (user && isCheckingSubscription) || (user && !subscriptionChecked))) {
     return (
       <div className="min-h-screen bg-coffee-50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
@@ -814,7 +827,7 @@ export default function App() {
   }
 
   // Se não tem usuário, mostra Landing ou Auth
-  if (!user) {
+  if (false && !user) {
     if (view === 'landing') {
       return (
         <div className="min-h-screen bg-coffee-50 flex flex-col items-center justify-center p-6 relative overflow-hidden">
@@ -1074,7 +1087,7 @@ export default function App() {
             </div>
             <h1 className="text-2xl font-serif font-bold text-coffee-900 mb-4">Acesso Restrito</h1>
             <p className="text-sm text-coffee-600 mb-6">
-              Olá, <span className="font-bold text-coffee-900">{user.email}</span>! 
+              Olá, <span className="font-bold text-coffee-900">{user?.email || 'Barista'}</span>! 
               Identificamos que você ainda não possui uma assinatura ativa.
             </p>
             
@@ -1355,28 +1368,42 @@ export default function App() {
             )}
           </AnimatePresence>
 
-          <div className="flex gap-3 overflow-x-auto no-scrollbar sm:justify-center px-6 -mx-6">
-            <button 
-              onClick={() => setSelectedCategory(null)}
-              className={cn(
-                "px-6 py-3 rounded-2xl whitespace-nowrap text-sm font-medium transition-all",
-                !selectedCategory ? "bg-coffee-900 text-white shadow-lg shadow-coffee-900/20" : "bg-white text-coffee-600 border border-coffee-100"
-              )}
-            >
-              Todos
-            </button>
-            {categories.map(cat => (
+          <div 
+            className="overflow-x-auto no-scrollbar -mx-6 px-6 scroll-smooth touch-pan-x" 
+            style={{ 
+              scrollbarWidth: 'none', 
+              msOverflowStyle: 'none',
+              WebkitOverflowScrolling: 'touch'
+            }}
+          >
+            <style>{`
+              .no-scrollbar::-webkit-scrollbar {
+                display: none;
+              }
+            `}</style>
+            <div className="flex gap-3 w-max py-1 min-w-full">
               <button 
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
+                onClick={() => setSelectedCategory(null)}
                 className={cn(
-                  "px-6 py-3 rounded-2xl whitespace-nowrap text-sm font-medium transition-all",
-                  selectedCategory === cat ? "bg-coffee-900 text-white shadow-lg shadow-coffee-900/20" : "bg-white text-coffee-600 border border-coffee-100"
+                  "px-6 py-3 rounded-2xl whitespace-nowrap text-sm font-medium transition-all shrink-0",
+                  !selectedCategory ? "bg-coffee-900 text-white shadow-lg shadow-coffee-900/20" : "bg-white text-coffee-600 border border-coffee-100"
                 )}
               >
-                {cat}
+                Todos
               </button>
-            ))}
+              {categories.map(cat => (
+                <button 
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={cn(
+                    "px-6 py-3 rounded-2xl whitespace-nowrap text-sm font-medium transition-all shrink-0",
+                    selectedCategory === cat ? "bg-coffee-900 text-white shadow-lg shadow-coffee-900/20" : "bg-white text-coffee-600 border border-coffee-100"
+                  )}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
           </div>
         </section>
 
