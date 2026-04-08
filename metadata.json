@@ -1,5 +1,5 @@
 {
-  "name": "Norja Coffee",
-  "description": "Nordic-style Roasted Coffee Delivered to your Doorstep.",
+  "name": "Cheirinho Mineiro",
+  "description": "Descubra os segredos do café artesanal com receitas exclusivas e dicas de especialistas.",
   "requestFramePermissions": ["geolocation"]
 }

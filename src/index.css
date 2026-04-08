@@ -20,7 +20,7 @@
 
 @layer base {
   body {
-    @apply bg-coffee-50 text-coffee-950 font-sans antialiased overflow-x-hidden;
+    @apply bg-coffee-50 text-coffee-950 font-sans antialiased;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -55,13 +55,11 @@
   @apply bg-coffee-300 rounded-full hover:bg-coffee-400 transition-colors;
 }
 
-@layer utilities {
-  .no-scrollbar::-webkit-scrollbar {
-    display: none;
-  }
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
 
-  .no-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
