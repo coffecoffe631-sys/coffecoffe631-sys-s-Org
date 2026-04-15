@@ -954,6 +954,62 @@ export default function App() {
               </div>
             </div>
           </motion.div>
+
+          {/* Admin Login Modal for Landing */}
+          <AnimatePresence>
+            {showAdminLogin && (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-coffee-950/80 backdrop-blur-sm"
+              >
+                <motion.div 
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="bg-white rounded-[2rem] p-8 w-full max-w-sm shadow-2xl border border-coffee-100"
+                >
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-xl font-serif font-bold text-coffee-900 flex items-center gap-2">
+                      <Lock size={20} className="text-coffee-500" />
+                      Painel Dev
+                    </h3>
+                    <button onClick={() => setShowAdminLogin(false)} className="text-coffee-400 hover:text-coffee-600">
+                      <X size={24} />
+                    </button>
+                  </div>
+                  <form onSubmit={handleAdminLogin} className="space-y-4">
+                    <div>
+                      <label className="block text-[10px] font-bold text-coffee-400 uppercase tracking-widest mb-2">Senha de Acesso</label>
+                      <div className="relative">
+                        <input 
+                          type={showAdminPassword ? "text" : "password"} 
+                          value={adminPassword}
+                          onChange={(e) => setAdminPassword(e.target.value)}
+                          className="w-full bg-coffee-50 border border-coffee-100 rounded-xl py-3 px-4 pr-10 focus:outline-none focus:ring-2 focus:ring-coffee-200"
+                          placeholder="••••••••"
+                          autoFocus
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowAdminPassword(!showAdminPassword)}
+                          className="absolute inset-y-0 right-3 flex items-center text-coffee-300 hover:text-coffee-500 transition-colors"
+                        >
+                          {showAdminPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
+                      </div>
+                    </div>
+                    <button 
+                      type="submit"
+                      className="w-full bg-coffee-900 text-white py-3 rounded-xl font-bold hover:bg-coffee-800 transition-colors"
+                    >
+                      Entrar
+                    </button>
+                  </form>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       );
     }
@@ -1079,12 +1135,68 @@ export default function App() {
             </button>
           </form>
         </motion.div>
+
+        {/* Admin Login Modal for Auth View */}
+        <AnimatePresence>
+          {showAdminLogin && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-coffee-950/80 backdrop-blur-sm"
+            >
+              <motion.div 
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="bg-white rounded-[2rem] p-8 w-full max-w-sm shadow-2xl border border-coffee-100"
+              >
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-xl font-serif font-bold text-coffee-900 flex items-center gap-2">
+                    <Lock size={20} className="text-coffee-500" />
+                    Painel Dev
+                  </h3>
+                  <button onClick={() => setShowAdminLogin(false)} className="text-coffee-400 hover:text-coffee-600">
+                    <X size={24} />
+                  </button>
+                </div>
+                <form onSubmit={handleAdminLogin} className="space-y-4">
+                  <div>
+                    <label className="block text-[10px] font-bold text-coffee-400 uppercase tracking-widest mb-2">Senha de Acesso</label>
+                    <div className="relative">
+                      <input 
+                        type={showAdminPassword ? "text" : "password"} 
+                        value={adminPassword}
+                        onChange={(e) => setAdminPassword(e.target.value)}
+                        className="w-full bg-coffee-50 border border-coffee-100 rounded-xl py-3 px-4 pr-10 focus:outline-none focus:ring-2 focus:ring-coffee-200"
+                        placeholder="••••••••"
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowAdminPassword(!showAdminPassword)}
+                        className="absolute inset-y-0 right-3 flex items-center text-coffee-300 hover:text-coffee-500 transition-colors"
+                      >
+                        {showAdminPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
+                  </div>
+                  <button 
+                    type="submit"
+                    className="w-full bg-coffee-900 text-white py-3 rounded-xl font-bold hover:bg-coffee-800 transition-colors"
+                  >
+                    Entrar
+                  </button>
+                </form>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     );
   }
 
   // Se tem usuário mas não é premium, mostra Acesso Restrito
-  if (!isPremium && user?.email !== 'coffecoffe631@gmail.com') {
+  if (!isPremium && user?.email !== 'coffecoffe631@gmail.com' && !isAdminAuthenticated) {
     return (
       <div className="min-h-screen bg-coffee-50 flex flex-col items-center justify-center p-6 relative overflow-hidden">
         {/* Fixed Dev Button for Restricted Access */}
@@ -1161,6 +1273,62 @@ export default function App() {
             </div>
           </div>
         </motion.div>
+
+        {/* Admin Login Modal for Restricted Access */}
+        <AnimatePresence>
+          {showAdminLogin && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-coffee-950/80 backdrop-blur-sm"
+            >
+              <motion.div 
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="bg-white rounded-[2rem] p-8 w-full max-w-sm shadow-2xl border border-coffee-100"
+              >
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-xl font-serif font-bold text-coffee-900 flex items-center gap-2">
+                    <Lock size={20} className="text-coffee-500" />
+                    Painel Dev
+                  </h3>
+                  <button onClick={() => setShowAdminLogin(false)} className="text-coffee-400 hover:text-coffee-600">
+                    <X size={24} />
+                  </button>
+                </div>
+                <form onSubmit={handleAdminLogin} className="space-y-4">
+                  <div>
+                    <label className="block text-[10px] font-bold text-coffee-400 uppercase tracking-widest mb-2">Senha de Acesso</label>
+                    <div className="relative">
+                      <input 
+                        type={showAdminPassword ? "text" : "password"} 
+                        value={adminPassword}
+                        onChange={(e) => setAdminPassword(e.target.value)}
+                        className="w-full bg-coffee-50 border border-coffee-100 rounded-xl py-3 px-4 pr-10 focus:outline-none focus:ring-2 focus:ring-coffee-200"
+                        placeholder="••••••••"
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowAdminPassword(!showAdminPassword)}
+                        className="absolute inset-y-0 right-3 flex items-center text-coffee-300 hover:text-coffee-500 transition-colors"
+                      >
+                        {showAdminPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
+                  </div>
+                  <button 
+                    type="submit"
+                    className="w-full bg-coffee-900 text-white py-3 rounded-xl font-bold hover:bg-coffee-800 transition-colors"
+                  >
+                    Entrar
+                  </button>
+                </form>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     );
   }
