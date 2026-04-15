@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Search, Filter, MapPin, Cloud, Sun, Clock, ChevronRight, ChevronUp, ChevronDown, X, Heart, Share2, Coffee, Droplets, Zap, Loader2, Settings, Plus, Trash2, Lock, Sparkles, Edit, RotateCcw, Upload, Image as ImageIcon, User as UserIcon, LogOut, Mail, Maximize2, Check, Menu, MessageCircle, Eye, EyeOff } from 'lucide-react';
+import { Search, Filter, MapPin, Cloud, Sun, Clock, ChevronRight, ChevronUp, ChevronDown, X, Heart, Share2, Coffee, Droplets, Zap, Loader2, Settings, Plus, Trash2, Lock, Sparkles, Edit, RotateCcw, Upload, Image as ImageIcon, User as UserIcon, LogOut, Mail, Maximize2, Check, Menu, MessageCircle, Eye, EyeOff, Trophy } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Recipe, Ingredient, Step, WeatherCondition, recipes } from './data/recipes';
+import Gamification from './components/Gamification';
 import { useWeather } from './hooks/useWeather';
 import { getLocalCoffeeRecommendation } from './services/recommendationService';
 import { fetchRecipesFromSupabase, insertRecipeToSupabase, deleteRecipeFromSupabase, updateRecipeInSupabase, seedRecipes, fetchAppLogo, updateAppLogo } from './services/supabaseService';
@@ -16,7 +17,7 @@ export default function App() {
   const [allRecipes, setAllRecipes] = useState<Recipe[]>([]);
   const [isLoadingSupabase, setIsLoadingSupabase] = useState(true);
   const [supabaseError, setSupabaseError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'home' | 'favorites'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'favorites' | 'gamification'>('home');
   
   // Admin State
   const [showAdminLogin, setShowAdminLogin] = useState(false);
@@ -1244,19 +1245,22 @@ export default function App() {
         </div>
       </header>
 
-      <main className="px-6 py-8 space-y-8 max-w-5xl mx-auto">
-        {/* Welcome Message */}
-        {user && (
-          <motion.div 
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center py-2"
-          >
-            <p className="text-2xl font-serif font-bold text-coffee-900 leading-relaxed">
-              Olá, {capitalizedName}! {getGreeting()} {welcomePhrase}
-            </p>
-          </motion.div>
-        )}
+      {activeTab === 'gamification' ? (
+        <Gamification userName={capitalizedName} />
+      ) : (
+        <main className="px-6 py-8 space-y-8 max-w-5xl mx-auto">
+          {/* Welcome Message */}
+          {user && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-center py-2"
+            >
+              <p className="text-2xl font-serif font-bold text-coffee-900 leading-relaxed">
+                Olá, {capitalizedName}! {getGreeting()} {welcomePhrase}
+              </p>
+            </motion.div>
+          )}
 
         {/* Search & Filters */}
         <section className="space-y-4">
@@ -1482,6 +1486,7 @@ export default function App() {
           )}
         </section>
       </main>
+      )}
 
       {/* Edit Name Modal */}
       <AnimatePresence>
@@ -1676,13 +1681,23 @@ export default function App() {
                 <button 
                   onClick={() => setActiveTab('home')}
                   className={cn("p-2 transition-colors", activeTab === 'home' ? "text-white" : "text-coffee-600")}
+                  title="Início"
                 >
                   <Coffee size={24} />
                 </button>
 
                 <button 
+                  onClick={() => setActiveTab('gamification')}
+                  className={cn("p-2 transition-colors", activeTab === 'gamification' ? "text-white" : "text-coffee-600")}
+                  title="Progresso"
+                >
+                  <Trophy size={24} fill={activeTab === 'gamification' ? "currentColor" : "none"} />
+                </button>
+
+                <button 
                   onClick={() => setActiveTab('favorites')}
                   className={cn("p-2 transition-colors", activeTab === 'favorites' ? "text-white" : "text-coffee-600")}
+                  title="Favoritos"
                 >
                   <Heart size={24} fill={activeTab === 'favorites' ? "currentColor" : "none"} />
                 </button>
