@@ -187,6 +187,14 @@ export default function App() {
         return;
       }
 
+      // Developer bypass: Grant premium and admin access to the developer email
+      if (user.email === 'coffecoffe631@gmail.com') {
+        setIsPremium(true);
+        setIsAdminAuthenticated(true);
+        setSubscriptionChecked(true);
+        return;
+      }
+
       setIsCheckingSubscription(true);
       try {
         const res = await fetch(`/api/check-subscription?email=${encodeURIComponent(user.email)}`);
@@ -1056,7 +1064,7 @@ export default function App() {
   }
 
   // Se tem usuário mas não é premium, mostra Acesso Restrito
-  if (!isPremium) {
+  if (!isPremium && user?.email !== 'coffecoffe631@gmail.com') {
     return (
       <div className="min-h-screen bg-coffee-50 flex flex-col items-center justify-center p-6 relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
