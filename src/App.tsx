@@ -130,7 +130,7 @@ export default function App() {
     return "Boa noite";
   };
 
-  const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Barista';
+  const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || (isAdminAuthenticated ? 'Desenvolvedor' : 'Barista');
   const capitalizedName = userName.charAt(0).toUpperCase() + userName.slice(1);
   
   const categories = ['Espresso', 'Latte', 'Cappuccino', 'Cold Brew', 'Specialty'];
@@ -497,6 +497,7 @@ export default function App() {
     e.preventDefault();
     if (adminPassword === 'replanificando.1234') {
       setIsAdminAuthenticated(true);
+      setIsPremium(true);
       setShowAdminLogin(false);
       setShowAdminPanel(true);
       setAdminPassword('');
@@ -822,11 +823,20 @@ export default function App() {
     );
   }
 
-  // Se não tem usuário, mostra Landing ou Auth
-  if (!user) {
+  // Se não tem usuário e não é admin, mostra Landing ou Auth
+  if (!user && !isAdminAuthenticated) {
     if (view === 'landing') {
       return (
         <div className="min-h-screen bg-coffee-50 flex flex-col items-center justify-center p-6 relative overflow-hidden">
+          {/* Fixed Dev Button for Landing */}
+          <button 
+            onClick={() => setShowAdminLogin(true)}
+            className="fixed top-6 right-6 z-50 bg-white/80 backdrop-blur-sm p-3 rounded-2xl shadow-xl border border-coffee-100 text-coffee-400 hover:text-amber-600 transition-all hover:scale-110 active:scale-95"
+            title="Painel Dev"
+          >
+            <Settings size={24} />
+          </button>
+
           {/* Background Decorations */}
           <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
             <div className="absolute -top-24 -left-24 w-96 h-96 bg-coffee-100 rounded-full blur-3xl opacity-60" />
@@ -932,6 +942,16 @@ export default function App() {
               >
                 Já sou assinante? Fazer Login
               </button>
+
+              <div className="pt-6 flex justify-center border-t border-coffee-50">
+                <button 
+                  onClick={() => setShowAdminLogin(true)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-full bg-amber-50 text-amber-600 text-[10px] font-bold uppercase tracking-widest hover:bg-amber-100 transition-all border border-amber-100"
+                >
+                  <Settings size={12} />
+                  Acesso Desenvolvedor
+                </button>
+              </div>
             </div>
           </motion.div>
         </div>
@@ -1067,6 +1087,15 @@ export default function App() {
   if (!isPremium && user?.email !== 'coffecoffe631@gmail.com') {
     return (
       <div className="min-h-screen bg-coffee-50 flex flex-col items-center justify-center p-6 relative overflow-hidden">
+        {/* Fixed Dev Button for Restricted Access */}
+        <button 
+          onClick={() => setShowAdminLogin(true)}
+          className="fixed top-6 right-6 z-50 bg-white/80 backdrop-blur-sm p-3 rounded-2xl shadow-xl border border-coffee-100 text-coffee-400 hover:text-amber-600 transition-all hover:scale-110 active:scale-95"
+          title="Painel Dev"
+        >
+          <Settings size={24} />
+        </button>
+
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
           <div className="absolute -top-24 -left-24 w-96 h-96 bg-coffee-100 rounded-full blur-3xl opacity-60" />
           <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-coffee-200 rounded-full blur-3xl opacity-40" />
@@ -1120,6 +1149,16 @@ export default function App() {
             >
               Sair da conta
             </button>
+
+            <div className="pt-4 flex justify-center">
+              <button 
+                onClick={() => setShowAdminLogin(true)}
+                className="flex items-center gap-2 px-4 py-2 rounded-full bg-amber-50 text-amber-600 text-[10px] font-bold uppercase tracking-widest hover:bg-amber-100 transition-all border border-amber-100"
+              >
+                <Settings size={12} />
+                Acesso Desenvolvedor
+              </button>
+            </div>
           </div>
         </motion.div>
       </div>
@@ -1145,6 +1184,15 @@ export default function App() {
           </div>
           <div>
             <h1 className="text-xl font-serif font-bold text-coffee-900 leading-none">Cheirinho Mineiro</h1>
+            {user?.email === 'coffecoffe631@gmail.com' && (
+              <button 
+                onClick={() => setShowAdminPanel(true)}
+                className="mt-1 flex items-center gap-1 text-[8px] font-bold uppercase tracking-widest bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full border border-amber-200 hover:bg-amber-200 transition-colors"
+              >
+                <Settings size={8} />
+                Painel Dev
+              </button>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -1221,6 +1269,22 @@ export default function App() {
                           </div>
                           Editar Nome
                         </button>
+
+                        {user?.email === 'coffecoffe631@gmail.com' && (
+                          <button 
+                            onClick={() => {
+                              setShowAdminPanel(true);
+                              setShowUserMenu(false);
+                            }}
+                            className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-amber-600 hover:bg-amber-50 rounded-xl transition-colors"
+                          >
+                            <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600">
+                              <Settings size={16} />
+                            </div>
+                            Painel Dev
+                          </button>
+                        )}
+
                         <a 
                           href="https://wa.me/5531999999999" // Link para o WhatsApp
                           target="_blank"
@@ -2669,6 +2733,21 @@ export default function App() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Floating Dev Button */}
+      {user?.email === 'coffecoffe631@gmail.com' && (
+        <motion.button
+          initial={{ scale: 0, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={() => setShowAdminPanel(true)}
+          className="fixed top-24 left-6 z-[100] bg-amber-500 text-white p-3 rounded-2xl shadow-2xl border-2 border-white flex items-center gap-2 group"
+        >
+          <Settings size={20} className="group-hover:rotate-90 transition-transform duration-500" />
+          <span className="text-xs font-bold uppercase tracking-widest pr-1">Painel Dev</span>
+        </motion.button>
+      )}
     </div>
   );
 }
