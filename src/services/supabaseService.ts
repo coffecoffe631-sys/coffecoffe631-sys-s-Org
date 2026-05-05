@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { Recipe, Ingredient, Step } from '../data/recipes';
+import { JourneyStep } from '../data/journey';
 
 export const fetchRecipesFromSupabase = async (): Promise<Recipe[]> => {
   const { data, error } = await supabase
@@ -16,7 +17,7 @@ export const fetchRecipesFromSupabase = async (): Promise<Recipe[]> => {
     name: item.nome,
     country: item.pais || 'Brasil', // Default to Brasil if not present
     description: item.descricao || '',
-    image: item.imagem || 'https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=1000&auto=format&fit=crop',
+    image: item.imagem_url || 'https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=1000&auto=format&fit=crop',
     ingredients: Array.isArray(item.ingredientes) 
       ? item.ingredientes.map((i: any) => typeof i === 'string' ? i : i.name).filter(Boolean) 
       : [],
@@ -28,7 +29,7 @@ export const fetchRecipesFromSupabase = async (): Promise<Recipe[]> => {
     steps: Array.isArray(item.modo_preparo) ? item.modo_preparo.map((s: any) => ({
       title: s.title || s.titulo || '',
       description: s.description || s.descricao || '',
-      image: s.image || ''
+      image: s.image || 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=1000&auto=format&fit=crop'
     })) : [],
     weatherSuitability: item.clima_adequado || ['neutral'],
     category: item.categoria || 'Specialty',
@@ -44,7 +45,7 @@ export const insertRecipeToSupabase = async (recipe: Omit<Recipe, 'id'>) => {
       nome: recipe.name,
       pais: recipe.country,
       descricao: recipe.description,
-      imagem: recipe.image,
+      imagem_url: recipe.image,
       categoria: recipe.category,
       tempo_preparo: recipe.prepTime,
       dificuldade: recipe.difficulty,
@@ -74,7 +75,7 @@ export const updateRecipeInSupabase = async (id: string, recipe: Partial<Recipe>
   if (recipe.name !== undefined) updateData.nome = recipe.name;
   if (recipe.country !== undefined) updateData.pais = recipe.country;
   if (recipe.description !== undefined) updateData.descricao = recipe.description;
-  if (recipe.image !== undefined) updateData.imagem = recipe.image;
+  if (recipe.image !== undefined) updateData.imagem_url = recipe.image;
   if (recipe.category !== undefined) updateData.categoria = recipe.category;
   if (recipe.prepTime !== undefined) updateData.tempo_preparo = recipe.prepTime;
   if (recipe.difficulty !== undefined) updateData.dificuldade = recipe.difficulty;
@@ -98,7 +99,7 @@ export const seedRecipes = async (recipes: Recipe[]) => {
     nome: recipe.name,
     pais: recipe.country,
     descricao: recipe.description,
-    imagem: recipe.image,
+    imagem_url: recipe.image,
     categoria: recipe.category,
     tempo_preparo: recipe.prepTime,
     dificuldade: recipe.difficulty,
@@ -144,6 +145,118 @@ export const updateAppLogo = async (logoBase64: string) => {
 
   if (error) {
     console.error('Error updating app logo in Supabase:', error.message);
+    throw error;
+  }
+};
+
+// Journey Services
+export const fetchJourneyFromSupabase = async (): Promise<JourneyStep[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('coffee_journey')
+      .select('*')
+      .order('id', { ascending: true });
+
+    if (error) {
+      console.warn('Error fetching journey:', error.message);
+      return [];
+    }
+    
+    return data.map((item: any) => ({
+      id: item.id.toString(),
+      title: item.title,
+      description: item.description,
+      status: item.status,
+      icon: item.icon,
+      image: item.imagem_url || 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=1000&auto=format&fit=crop',
+      requirements: item.requirements,
+      reward: item.reward,
+      content: typeof item.content === 'string' ? JSON.parse(item.content) : item.content
+    }));
+  } catch (err) {
+    console.error('Error in fetchJourneyFromSupabase:', err);
+    return [];
+  }
+};
+
+export const updateJourneyStepInSupabase = async (step: JourneyStep) => {
+  const { error } = await supabase
+    .from('coffee_journey')
+    .update({
+      title: step.title,
+      description: step.description,
+      status: step.status,
+      icon: step.icon,
+      imagem_url: step.image,
+      requirements: step.requirements,
+      reward: step.reward,
+      content: step.content
+    })
+    .eq('id', step.id);
+
+  if (error) {
+    console.error('Error updating journey step:', error.message);
+    throw error;
+  }
+};
+
+export const insertJourneyStepToSupabase = async (step: Omit<JourneyStep, 'id'>) => {
+  const { data, error } = await supabase
+    .from('coffee_journey')
+    .insert([{
+      title: step.title,
+      description: step.description,
+      status: step.status,
+      icon: step.icon,
+      imagem_url: step.image,
+      requirements: step.requirements,
+      reward: step.reward,
+      content: typeof step.content === 'object' ? step.content : JSON.parse(step.content as any)
+    }])
+    .select();
+
+  if (error) {
+    if (error.code === 'PGRST205') {
+      console.error('Tabela "coffee_journey" não encontrada. Por favor, crie-a no SQL Editor do Supabase.');
+      throw new Error('Tabela não encontrada no banco de dados. Execute o script SQL fornecido.');
+    }
+    console.error('Error inserting journey step:', error.message);
+    throw error;
+  }
+  return data;
+};
+
+export const deleteJourneyStepFromSupabase = async (id: string) => {
+  const { error } = await supabase
+    .from('coffee_journey')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error('Error deleting journey step:', error.message);
+    throw error;
+  }
+};
+
+export const seedJourney = async (journey: JourneyStep[]) => {
+  const formattedJourney = journey.map(step => ({
+    id: step.id,
+    title: step.title,
+    description: step.description,
+    status: step.status,
+    icon: step.icon,
+    imagem_url: step.image,
+    requirements: step.requirements,
+    reward: step.reward,
+    content: step.content
+  }));
+
+  const { error } = await supabase
+    .from('coffee_journey')
+    .upsert(formattedJourney);
+
+  if (error) {
+    console.error('Error seeding journey:', error.message);
     throw error;
   }
 };

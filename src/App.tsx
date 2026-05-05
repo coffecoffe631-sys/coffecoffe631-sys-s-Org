@@ -1,11 +1,12 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Search, Filter, MapPin, Cloud, Sun, Clock, ChevronRight, ChevronUp, ChevronDown, X, Heart, Share2, Coffee, Droplets, Zap, Loader2, Settings, Plus, Trash2, Lock, Sparkles, Edit, RotateCcw, Upload, Image as ImageIcon, User as UserIcon, LogOut, Mail, Maximize2, Check, Menu, MessageCircle, Eye, EyeOff, Trophy } from 'lucide-react';
+import { Search, Filter, MapPin, Cloud, Sun, Clock, ChevronRight, ChevronUp, ChevronDown, X, Heart, Share2, Coffee, Droplets, Zap, Loader2, Settings, Plus, Trash2, Lock, Sparkles, Edit, RotateCcw, Upload, Image as ImageIcon, User as UserIcon, LogOut, Mail, Maximize2, Check, Menu, MessageCircle, Eye, EyeOff, Trophy, Map, Compass } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Recipe, Ingredient, Step, WeatherCondition, recipes } from './data/recipes';
-import Gamification from './components/Gamification';
+import { coffeeJourney, JourneyStep } from './data/journey';
 import { useWeather } from './hooks/useWeather';
+import JourneyView from './components/JourneyView';
 import { getLocalCoffeeRecommendation } from './services/recommendationService';
-import { fetchRecipesFromSupabase, insertRecipeToSupabase, deleteRecipeFromSupabase, updateRecipeInSupabase, seedRecipes, fetchAppLogo, updateAppLogo } from './services/supabaseService';
+import { fetchRecipesFromSupabase, insertRecipeToSupabase, deleteRecipeFromSupabase, updateRecipeInSupabase, seedRecipes, fetchAppLogo, updateAppLogo, fetchJourneyFromSupabase, updateJourneyStepInSupabase, seedJourney, insertJourneyStepToSupabase, deleteJourneyStepFromSupabase } from './services/supabaseService';
 import { cn } from './lib/utils';
 import { supabase } from './lib/supabase';
 import { User } from '@supabase/supabase-js';
@@ -15,9 +16,10 @@ const DEFAULT_LOGO = "https://cdn-icons-png.flaticon.com/512/924/924514.png";
 export default function App() {
   const weather = useWeather();
   const [allRecipes, setAllRecipes] = useState<Recipe[]>([]);
+  const [currentJourney, setCurrentJourney] = useState<JourneyStep[]>(coffeeJourney);
   const [isLoadingSupabase, setIsLoadingSupabase] = useState(true);
   const [supabaseError, setSupabaseError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'home' | 'favorites' | 'gamification'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'favorites' | 'journey'>('home');
   
   // Admin State
   const [showAdminLogin, setShowAdminLogin] = useState(false);
@@ -75,9 +77,9 @@ export default function App() {
   const [showPassword, setShowPassword] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
-  const [isPremium, setIsPremium] = useState(false);
+  const [isPremium, setIsPremium] = useState(true);
   const [isCheckingSubscription, setIsCheckingSubscription] = useState(false);
-  const [subscriptionChecked, setSubscriptionChecked] = useState(false);
+  const [subscriptionChecked, setSubscriptionChecked] = useState(true);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [view, setView] = useState<'landing' | 'auth'>('landing');
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -130,7 +132,7 @@ export default function App() {
     return "Boa noite";
   };
 
-  const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || (isAdminAuthenticated ? 'Desenvolvedor' : 'Barista');
+  const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Barista';
   const capitalizedName = userName.charAt(0).toUpperCase() + userName.slice(1);
   
   const categories = ['Espresso', 'Latte', 'Cappuccino', 'Cold Brew', 'Specialty'];
@@ -150,11 +152,30 @@ export default function App() {
   useEffect(() => {
     const loadSupabaseData = async () => {
       try {
-        const dbRecipes = await fetchRecipesFromSupabase();
-        setAllRecipes(dbRecipes || []);
+        const [dbRecipes, dbJourney] = await Promise.all([
+          fetchRecipesFromSupabase(),
+          fetchJourneyFromSupabase()
+        ]);
+
+        if (dbRecipes && dbRecipes.length > 0) {
+          setAllRecipes(dbRecipes);
+        } else {
+          await seedRecipes(recipes);
+          const freshRecipes = await fetchRecipesFromSupabase();
+          setAllRecipes(freshRecipes);
+        }
+
+        if (dbJourney && dbJourney.length > 0) {
+          setCurrentJourney(dbJourney);
+        } else {
+          await seedJourney(coffeeJourney);
+          const freshJourney = await fetchJourneyFromSupabase();
+          setCurrentJourney(freshJourney);
+        }
+
         setSupabaseError(null);
       } catch (err: any) {
-        console.error("Failed to load recipes from Supabase:", err);
+        console.error("Failed to load data from Supabase:", err);
         setSupabaseError(err.message || "Erro de conexão");
       } finally {
         setIsLoadingSupabase(false);
@@ -168,6 +189,8 @@ export default function App() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       setIsInitialAuthCheck(false);
+    }).catch(() => {
+      setIsInitialAuthCheck(false);
     });
 
     // Listen for auth changes
@@ -176,22 +199,25 @@ export default function App() {
       setIsInitialAuthCheck(false);
     });
 
-    return () => subscription.unsubscribe();
+    // Safety timeout for preview
+    const timeout = setTimeout(() => setIsInitialAuthCheck(false), 2000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeout);
+    };
   }, []);
 
   useEffect(() => {
     const checkUserSubscription = async () => {
+      // Bypassing for preview
+      setIsPremium(true);
+      setSubscriptionChecked(true);
+      return;
+
       if (!user?.email) {
         setIsPremium(false);
         setSubscriptionChecked(false);
-        return;
-      }
-
-      // Developer bypass: Grant premium and admin access to the developer email
-      if (user.email === 'coffecoffe631@gmail.com') {
-        setIsPremium(true);
-        setIsAdminAuthenticated(true);
-        setSubscriptionChecked(true);
         return;
       }
 
@@ -497,7 +523,6 @@ export default function App() {
     e.preventDefault();
     if (adminPassword === 'replanificando.1234') {
       setIsAdminAuthenticated(true);
-      setIsPremium(true);
       setShowAdminLogin(false);
       setShowAdminPanel(true);
       setAdminPassword('');
@@ -523,7 +548,8 @@ export default function App() {
     }
 
     setIsSubmitting(true);
-    console.log("Submitting recipe:", newRecipe);
+    console.log("Submitting recipe image URL:", newRecipe.image);
+    console.log("Full recipe object:", newRecipe);
     try {
       let updatedRecipe: Recipe | null = null;
       if (editingRecipeId) {
@@ -537,7 +563,7 @@ export default function App() {
             name: item.nome,
             country: item.pais || 'Brasil',
             description: item.descricao || '',
-            image: item.imagem || '',
+            image: item.imagem_url || 'https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=1000&auto=format&fit=crop',
             ingredients: Array.isArray(item.ingredientes) ? item.ingredientes.map((i: any) => typeof i === 'string' ? i : i.name) : [],
             equipment: Array.isArray(item.equipamentos) ? item.equipamentos : [],
             detailedIngredients: Array.isArray(item.ingredientes) ? item.ingredientes : [],
@@ -807,7 +833,7 @@ export default function App() {
     }
   };
 
-  if (isInitialAuthCheck || (user && isCheckingSubscription) || (user && !subscriptionChecked)) {
+  if (false && (isInitialAuthCheck || (user && isCheckingSubscription) || (user && !subscriptionChecked))) {
     return (
       <div className="min-h-screen bg-coffee-50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
@@ -823,20 +849,11 @@ export default function App() {
     );
   }
 
-  // Se não tem usuário e não é admin, mostra Landing ou Auth
-  if (!user && !isAdminAuthenticated) {
+  // Se não tem usuário, mostra Landing ou Auth
+  if (false && !user) {
     if (view === 'landing') {
       return (
         <div className="min-h-screen bg-coffee-50 flex flex-col items-center justify-center p-6 relative overflow-hidden">
-          {/* Fixed Dev Button for Landing */}
-          <button 
-            onClick={() => setShowAdminLogin(true)}
-            className="fixed top-6 right-6 z-50 bg-white/80 backdrop-blur-sm p-3 rounded-2xl shadow-xl border border-coffee-100 text-coffee-400 hover:text-amber-600 transition-all hover:scale-110 active:scale-95"
-            title="Painel Dev"
-          >
-            <Settings size={24} />
-          </button>
-
           {/* Background Decorations */}
           <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
             <div className="absolute -top-24 -left-24 w-96 h-96 bg-coffee-100 rounded-full blur-3xl opacity-60" />
@@ -942,74 +959,8 @@ export default function App() {
               >
                 Já sou assinante? Fazer Login
               </button>
-
-              <div className="pt-6 flex justify-center border-t border-coffee-50">
-                <button 
-                  onClick={() => setShowAdminLogin(true)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-full bg-amber-50 text-amber-600 text-[10px] font-bold uppercase tracking-widest hover:bg-amber-100 transition-all border border-amber-100"
-                >
-                  <Settings size={12} />
-                  Acesso Desenvolvedor
-                </button>
-              </div>
             </div>
           </motion.div>
-
-          {/* Admin Login Modal for Landing */}
-          <AnimatePresence>
-            {showAdminLogin && (
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-coffee-950/80 backdrop-blur-sm"
-              >
-                <motion.div 
-                  initial={{ scale: 0.9, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  className="bg-white rounded-[2rem] p-8 w-full max-w-sm shadow-2xl border border-coffee-100"
-                >
-                  <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-xl font-serif font-bold text-coffee-900 flex items-center gap-2">
-                      <Lock size={20} className="text-coffee-500" />
-                      Painel Dev
-                    </h3>
-                    <button onClick={() => setShowAdminLogin(false)} className="text-coffee-400 hover:text-coffee-600">
-                      <X size={24} />
-                    </button>
-                  </div>
-                  <form onSubmit={handleAdminLogin} className="space-y-4">
-                    <div>
-                      <label className="block text-[10px] font-bold text-coffee-400 uppercase tracking-widest mb-2">Senha de Acesso</label>
-                      <div className="relative">
-                        <input 
-                          type={showAdminPassword ? "text" : "password"} 
-                          value={adminPassword}
-                          onChange={(e) => setAdminPassword(e.target.value)}
-                          className="w-full bg-coffee-50 border border-coffee-100 rounded-xl py-3 px-4 pr-10 focus:outline-none focus:ring-2 focus:ring-coffee-200"
-                          placeholder="••••••••"
-                          autoFocus
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowAdminPassword(!showAdminPassword)}
-                          className="absolute inset-y-0 right-3 flex items-center text-coffee-300 hover:text-coffee-500 transition-colors"
-                        >
-                          {showAdminPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                        </button>
-                      </div>
-                    </div>
-                    <button 
-                      type="submit"
-                      className="w-full bg-coffee-900 text-white py-3 rounded-xl font-bold hover:bg-coffee-800 transition-colors"
-                    >
-                      Entrar
-                    </button>
-                  </form>
-                </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
       );
     }
@@ -1135,79 +1086,14 @@ export default function App() {
             </button>
           </form>
         </motion.div>
-
-        {/* Admin Login Modal for Auth View */}
-        <AnimatePresence>
-          {showAdminLogin && (
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-coffee-950/80 backdrop-blur-sm"
-            >
-              <motion.div 
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className="bg-white rounded-[2rem] p-8 w-full max-w-sm shadow-2xl border border-coffee-100"
-              >
-                <div className="flex justify-between items-center mb-6">
-                  <h3 className="text-xl font-serif font-bold text-coffee-900 flex items-center gap-2">
-                    <Lock size={20} className="text-coffee-500" />
-                    Painel Dev
-                  </h3>
-                  <button onClick={() => setShowAdminLogin(false)} className="text-coffee-400 hover:text-coffee-600">
-                    <X size={24} />
-                  </button>
-                </div>
-                <form onSubmit={handleAdminLogin} className="space-y-4">
-                  <div>
-                    <label className="block text-[10px] font-bold text-coffee-400 uppercase tracking-widest mb-2">Senha de Acesso</label>
-                    <div className="relative">
-                      <input 
-                        type={showAdminPassword ? "text" : "password"} 
-                        value={adminPassword}
-                        onChange={(e) => setAdminPassword(e.target.value)}
-                        className="w-full bg-coffee-50 border border-coffee-100 rounded-xl py-3 px-4 pr-10 focus:outline-none focus:ring-2 focus:ring-coffee-200"
-                        placeholder="••••••••"
-                        autoFocus
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowAdminPassword(!showAdminPassword)}
-                        className="absolute inset-y-0 right-3 flex items-center text-coffee-300 hover:text-coffee-500 transition-colors"
-                      >
-                        {showAdminPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                      </button>
-                    </div>
-                  </div>
-                  <button 
-                    type="submit"
-                    className="w-full bg-coffee-900 text-white py-3 rounded-xl font-bold hover:bg-coffee-800 transition-colors"
-                  >
-                    Entrar
-                  </button>
-                </form>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
     );
   }
 
   // Se tem usuário mas não é premium, mostra Acesso Restrito
-  if (!isPremium && user?.email !== 'coffecoffe631@gmail.com' && !isAdminAuthenticated) {
+  if (!isPremium) {
     return (
       <div className="min-h-screen bg-coffee-50 flex flex-col items-center justify-center p-6 relative overflow-hidden">
-        {/* Fixed Dev Button for Restricted Access */}
-        <button 
-          onClick={() => setShowAdminLogin(true)}
-          className="fixed top-6 right-6 z-50 bg-white/80 backdrop-blur-sm p-3 rounded-2xl shadow-xl border border-coffee-100 text-coffee-400 hover:text-amber-600 transition-all hover:scale-110 active:scale-95"
-          title="Painel Dev"
-        >
-          <Settings size={24} />
-        </button>
-
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
           <div className="absolute -top-24 -left-24 w-96 h-96 bg-coffee-100 rounded-full blur-3xl opacity-60" />
           <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-coffee-200 rounded-full blur-3xl opacity-40" />
@@ -1224,7 +1110,7 @@ export default function App() {
             </div>
             <h1 className="text-2xl font-serif font-bold text-coffee-900 mb-4">Acesso Restrito</h1>
             <p className="text-sm text-coffee-600 mb-6">
-              Olá, <span className="font-bold text-coffee-900">{user.email}</span>! 
+              Olá, <span className="font-bold text-coffee-900">{user?.email || 'Barista'}</span>! 
               Identificamos que você ainda não possui uma assinatura ativa.
             </p>
             
@@ -1261,74 +1147,8 @@ export default function App() {
             >
               Sair da conta
             </button>
-
-            <div className="pt-4 flex justify-center">
-              <button 
-                onClick={() => setShowAdminLogin(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-full bg-amber-50 text-amber-600 text-[10px] font-bold uppercase tracking-widest hover:bg-amber-100 transition-all border border-amber-100"
-              >
-                <Settings size={12} />
-                Acesso Desenvolvedor
-              </button>
-            </div>
           </div>
         </motion.div>
-
-        {/* Admin Login Modal for Restricted Access */}
-        <AnimatePresence>
-          {showAdminLogin && (
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-coffee-950/80 backdrop-blur-sm"
-            >
-              <motion.div 
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className="bg-white rounded-[2rem] p-8 w-full max-w-sm shadow-2xl border border-coffee-100"
-              >
-                <div className="flex justify-between items-center mb-6">
-                  <h3 className="text-xl font-serif font-bold text-coffee-900 flex items-center gap-2">
-                    <Lock size={20} className="text-coffee-500" />
-                    Painel Dev
-                  </h3>
-                  <button onClick={() => setShowAdminLogin(false)} className="text-coffee-400 hover:text-coffee-600">
-                    <X size={24} />
-                  </button>
-                </div>
-                <form onSubmit={handleAdminLogin} className="space-y-4">
-                  <div>
-                    <label className="block text-[10px] font-bold text-coffee-400 uppercase tracking-widest mb-2">Senha de Acesso</label>
-                    <div className="relative">
-                      <input 
-                        type={showAdminPassword ? "text" : "password"} 
-                        value={adminPassword}
-                        onChange={(e) => setAdminPassword(e.target.value)}
-                        className="w-full bg-coffee-50 border border-coffee-100 rounded-xl py-3 px-4 pr-10 focus:outline-none focus:ring-2 focus:ring-coffee-200"
-                        placeholder="••••••••"
-                        autoFocus
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowAdminPassword(!showAdminPassword)}
-                        className="absolute inset-y-0 right-3 flex items-center text-coffee-300 hover:text-coffee-500 transition-colors"
-                      >
-                        {showAdminPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                      </button>
-                    </div>
-                  </div>
-                  <button 
-                    type="submit"
-                    className="w-full bg-coffee-900 text-white py-3 rounded-xl font-bold hover:bg-coffee-800 transition-colors"
-                  >
-                    Entrar
-                  </button>
-                </form>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
     );
   }
@@ -1352,15 +1172,6 @@ export default function App() {
           </div>
           <div>
             <h1 className="text-xl font-serif font-bold text-coffee-900 leading-none">Cheirinho Mineiro</h1>
-            {user?.email === 'coffecoffe631@gmail.com' && (
-              <button 
-                onClick={() => setShowAdminPanel(true)}
-                className="mt-1 flex items-center gap-1 text-[8px] font-bold uppercase tracking-widest bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full border border-amber-200 hover:bg-amber-200 transition-colors"
-              >
-                <Settings size={8} />
-                Painel Dev
-              </button>
-            )}
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -1437,22 +1248,6 @@ export default function App() {
                           </div>
                           Editar Nome
                         </button>
-
-                        {user?.email === 'coffecoffe631@gmail.com' && (
-                          <button 
-                            onClick={() => {
-                              setShowAdminPanel(true);
-                              setShowUserMenu(false);
-                            }}
-                            className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-amber-600 hover:bg-amber-50 rounded-xl transition-colors"
-                          >
-                            <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600">
-                              <Settings size={16} />
-                            </div>
-                            Painel Dev
-                          </button>
-                        )}
-
                         <a 
                           href="https://wa.me/5531999999999" // Link para o WhatsApp
                           target="_blank"
@@ -1485,248 +1280,289 @@ export default function App() {
         </div>
       </header>
 
-      {activeTab === 'gamification' ? (
-        <Gamification userName={capitalizedName} />
-      ) : (
-        <main className="px-6 py-8 space-y-8 max-w-5xl mx-auto">
-          {/* Welcome Message */}
-          {user && (
-            <motion.div 
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-center py-2"
-            >
-              <p className="text-2xl font-serif font-bold text-coffee-900 leading-relaxed">
-                Olá, {capitalizedName}! {getGreeting()} {welcomePhrase}
-              </p>
-            </motion.div>
-          )}
-
-        {/* Search & Filters */}
-        <section className="space-y-4">
-          <div className="relative group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-coffee-400 group-focus-within:text-coffee-600 transition-colors" size={20} />
-            <input 
-              type="text" 
-              placeholder={activeTab === 'home' ? "Buscar por nome ou país..." : "Buscar nos favoritos..."}
-              className="w-full bg-white border border-coffee-100 rounded-2xl py-4 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-coffee-200 transition-all shadow-sm"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            <button 
-              onClick={() => setShowFilters(!showFilters)}
-              className={cn(
-                "absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-xl transition-colors",
-                showFilters ? "bg-coffee-900 text-white" : "bg-coffee-100 text-coffee-700"
-              )}
-            >
-              <Filter size={18} />
-            </button>
-          </div>
-
-          <AnimatePresence>
-            {showFilters && (
+      <main className="px-6 py-8 space-y-8 max-w-5xl mx-auto">
+        {activeTab === 'journey' ? (
+          <JourneyView 
+            journey={currentJourney} 
+            isAdmin={isAdminAuthenticated} 
+            onUpdateStep={async (updatedStep) => {
+              await updateJourneyStepInSupabase(updatedStep);
+              setCurrentJourney(prev => prev.map(s => s.id === updatedStep.id ? updatedStep : s));
+            }}
+            onAddStep={async (newStep) => {
+              const res = await insertJourneyStepToSupabase(newStep);
+              if (res && res[0]) {
+                const added = {
+                  ...newStep,
+                  id: res[0].id.toString(),
+                  content: typeof res[0].content === 'string' ? JSON.parse(res[0].content) : res[0].content
+                } as JourneyStep;
+                setCurrentJourney(prev => [...prev, added]);
+              } else {
+                const refreshed = await fetchJourneyFromSupabase();
+                setCurrentJourney(refreshed);
+              }
+            }}
+            onDeleteStep={async (id) => {
+              await deleteJourneyStepFromSupabase(id);
+              setCurrentJourney(prev => prev.filter(s => s.id !== id));
+            }}
+          />
+        ) : (
+          <>
+            {/* Welcome Message */}
+            {user && (
               <motion.div 
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-center py-2"
               >
-                <div className="bg-white rounded-2xl p-4 border border-coffee-100 shadow-sm space-y-4">
-                  <div>
-                    <h3 className="text-xs font-bold uppercase text-coffee-400 mb-2 tracking-widest">Ingredientes</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {allIngredients.length > 0 ? (
-                        allIngredients.map(ing => (
-                          <button
-                            key={ing}
-                            onClick={() => toggleIngredient(ing)}
-                            className={cn(
-                              "px-3 py-1.5 rounded-full text-xs font-medium transition-all",
-                              pendingIngredients.includes(ing) 
-                                ? "bg-coffee-800 text-white" 
-                                : "bg-coffee-50 text-coffee-600 hover:bg-coffee-100"
-                            )}
-                          >
-                            {ing}
-                          </button>
-                        ))
-                      ) : (
-                        <p className="text-[10px] text-coffee-300 italic">Nenhum ingrediente encontrado nas receitas atuais.</p>
-                      )}
-                    </div>
-                  </div>
-                  <div>
-                    <h3 className="text-xs font-bold uppercase text-coffee-400 mb-2 tracking-widest">Equipamentos</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {allEquipment.length > 0 ? (
-                        allEquipment.map(eq => (
-                          <button
-                            key={eq}
-                            onClick={() => toggleEquipment(eq)}
-                            className={cn(
-                              "px-3 py-1.5 rounded-full text-xs font-medium transition-all",
-                              pendingEquipment.includes(eq) 
-                                ? "bg-coffee-800 text-white" 
-                                : "bg-coffee-50 text-coffee-600 hover:bg-coffee-100"
-                            )}
-                          >
-                            {eq}
-                          </button>
-                        ))
-                      ) : (
-                        <p className="text-[10px] text-coffee-300 italic">Nenhum equipamento encontrado nas receitas atuais.</p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3 pt-2 border-t border-coffee-50">
-                    <button
-                      onClick={applyFilters}
-                      className="flex-1 bg-coffee-900 text-white py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-coffee-800 transition-all flex items-center justify-center gap-2"
-                    >
-                      Aplicar Filtros
-                    </button>
-                    <button
-                      onClick={clearFilters}
-                      className="px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest text-coffee-400 hover:text-coffee-600 transition-all"
-                    >
-                      Limpar
-                    </button>
-                  </div>
-                </div>
+                <p className="text-2xl font-serif font-bold text-coffee-900 leading-relaxed">
+                  Olá, {capitalizedName}! {getGreeting()} {welcomePhrase}
+                </p>
               </motion.div>
             )}
-          </AnimatePresence>
 
-          <div className="flex gap-3 overflow-x-auto no-scrollbar sm:justify-center px-6 -mx-6">
-            <button 
-              onClick={() => setSelectedCategory(null)}
-              className={cn(
-                "px-6 py-3 rounded-2xl whitespace-nowrap text-sm font-medium transition-all",
-                !selectedCategory ? "bg-coffee-900 text-white shadow-lg shadow-coffee-900/20" : "bg-white text-coffee-600 border border-coffee-100"
-              )}
-            >
-              Todos
-            </button>
-            {categories.map(cat => (
-              <button 
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                className={cn(
-                  "px-6 py-3 rounded-2xl whitespace-nowrap text-sm font-medium transition-all",
-                  selectedCategory === cat ? "bg-coffee-900 text-white shadow-lg shadow-coffee-900/20" : "bg-white text-coffee-600 border border-coffee-100"
+            {/* Search & Filters */}
+            <section className="space-y-4">
+              <div className="relative group">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-coffee-400 group-focus-within:text-coffee-600 transition-colors" size={20} />
+                <input 
+                  type="text" 
+                  placeholder={activeTab === 'home' ? "Buscar por nome ou país..." : "Buscar nos favoritos..."}
+                  className="w-full bg-white border border-coffee-100 rounded-2xl py-4 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-coffee-200 transition-all shadow-sm"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                <button 
+                  onClick={() => setShowFilters(!showFilters)}
+                  className={cn(
+                    "absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-xl transition-colors",
+                    showFilters ? "bg-coffee-900 text-white" : "bg-coffee-100 text-coffee-700"
+                  )}
+                >
+                  <Filter size={18} />
+                </button>
+              </div>
+
+              <AnimatePresence>
+                {showFilters && (
+                  <motion.div 
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="bg-white rounded-2xl p-4 border border-coffee-100 shadow-sm space-y-4">
+                      <div>
+                        <h3 className="text-xs font-bold uppercase text-coffee-400 mb-2 tracking-widest">Ingredientes</h3>
+                        <div className="flex flex-wrap gap-2">
+                          {allIngredients.length > 0 ? (
+                            allIngredients.map(ing => (
+                              <button
+                                key={ing}
+                                onClick={() => toggleIngredient(ing)}
+                                className={cn(
+                                  "px-3 py-1.5 rounded-full text-xs font-medium transition-all",
+                                  pendingIngredients.includes(ing) 
+                                    ? "bg-coffee-800 text-white" 
+                                    : "bg-coffee-50 text-coffee-600 hover:bg-coffee-100"
+                                )}
+                              >
+                                {ing}
+                              </button>
+                            ))
+                          ) : (
+                            <p className="text-[10px] text-coffee-300 italic">Nenhum ingrediente encontrado nas receitas atuais.</p>
+                          )}
+                        </div>
+                      </div>
+                      <div>
+                        <h3 className="text-xs font-bold uppercase text-coffee-400 mb-2 tracking-widest">Equipamentos</h3>
+                        <div className="flex flex-wrap gap-2">
+                          {allEquipment.length > 0 ? (
+                            allEquipment.map(eq => (
+                              <button
+                                key={eq}
+                                onClick={() => toggleEquipment(eq)}
+                                className={cn(
+                                  "px-3 py-1.5 rounded-full text-xs font-medium transition-all",
+                                  pendingEquipment.includes(eq) 
+                                    ? "bg-coffee-800 text-white" 
+                                    : "bg-coffee-50 text-coffee-600 hover:bg-coffee-100"
+                                )}
+                              >
+                                {eq}
+                              </button>
+                            ))
+                          ) : (
+                            <p className="text-[10px] text-coffee-300 italic">Nenhum equipamento encontrado nas receitas atuais.</p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3 pt-2 border-t border-coffee-50">
+                        <button
+                          onClick={applyFilters}
+                          className="flex-1 bg-coffee-900 text-white py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-coffee-800 transition-all flex items-center justify-center gap-2"
+                        >
+                          Aplicar Filtros
+                        </button>
+                        <button
+                          onClick={clearFilters}
+                          className="px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest text-coffee-400 hover:text-coffee-600 transition-all"
+                        >
+                          Limpar
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
                 )}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-        </section>
+              </AnimatePresence>
 
-        {/* Recipe Grid */}
-        <section className="space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <h2 className="text-xl sm:text-2xl font-serif font-bold text-coffee-950 break-words">
-              {activeTab === 'favorites' ? 'Meus Favoritos' : (searchQuery || selectedCategory ? 'Resultados' : 'Explorar Sabores')}
-            </h2>
-            <span className="text-[10px] sm:text-xs font-bold text-coffee-400 uppercase tracking-widest shrink-0">{filteredRecipes.length} Receitas</span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredRecipes.map((recipe, idx) => (
-              <motion.div 
-                key={recipe.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.1 }}
-                onClick={() => {
-                  setSelectedRecipe(recipe);
-                  setCurrentStepIndex(0);
+              <div 
+                className="overflow-x-auto no-scrollbar -mx-6 px-6 scroll-smooth touch-pan-x" 
+                style={{ 
+                  scrollbarWidth: 'none', 
+                  msOverflowStyle: 'none',
+                  WebkitOverflowScrolling: 'touch'
                 }}
-                className="group bg-white rounded-[2.5rem] p-4 border border-coffee-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer overflow-hidden relative"
               >
-                <div className="relative aspect-square rounded-[2rem] overflow-hidden mb-4">
-                  <img 
-                    src={recipe.image} 
-                    alt={recipe.name} 
-                    referrerPolicy="no-referrer"
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                  />
-                  <div className="absolute top-4 right-4 flex flex-col gap-2">
+                <style>{`
+                  .no-scrollbar::-webkit-scrollbar {
+                    display: none;
+                  }
+                `}</style>
+                <div className="flex gap-3 w-max py-1 min-w-full">
+                  <button 
+                    onClick={() => setSelectedCategory(null)}
+                    className={cn(
+                      "px-6 py-3 rounded-2xl whitespace-nowrap text-sm font-medium transition-all shrink-0",
+                      !selectedCategory ? "bg-coffee-900 text-white shadow-lg shadow-coffee-900/20" : "bg-white text-coffee-600 border border-coffee-100"
+                    )}
+                  >
+                    Todos
+                  </button>
+                  {categories.map(cat => (
                     <button 
-                      onClick={(e) => toggleFavorite(e, recipe.id)}
+                      key={cat}
+                      onClick={() => setSelectedCategory(cat)}
                       className={cn(
-                        "p-2.5 backdrop-blur-md rounded-full shadow-sm transition-all",
-                        favorites.includes(recipe.id) 
-                          ? "bg-coffee-500 text-white" 
-                          : "bg-white/80 text-coffee-900 hover:bg-white"
+                        "px-6 py-3 rounded-2xl whitespace-nowrap text-sm font-medium transition-all shrink-0",
+                        selectedCategory === cat ? "bg-coffee-900 text-white shadow-lg shadow-coffee-900/20" : "bg-white text-coffee-600 border border-coffee-100"
                       )}
                     >
-                      <Heart size={18} fill={favorites.includes(recipe.id) ? "currentColor" : "none"} />
+                      {cat}
                     </button>
-                  </div>
-                  <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">
-                    <div className="bg-coffee-950/80 backdrop-blur-md px-3 py-1.5 rounded-xl text-white text-[10px] font-bold uppercase tracking-widest border border-white/10">
-                      {recipe.category}
-                    </div>
-                  </div>
+                  ))}
                 </div>
-                <div className="px-2 pb-2">
-                  <div className="flex items-center gap-1 text-coffee-400 mb-1">
-                    <MapPin size={12} />
-                    <span className="text-[10px] font-bold uppercase tracking-widest">{recipe.country}</span>
-                  </div>
-                  <h3 className="text-xl font-serif font-bold text-coffee-950 mb-1 break-words">{recipe.name}</h3>
-                  <div className="flex items-center gap-4 text-coffee-400">
-                    <div className="flex items-center gap-1">
-                      <Clock size={14} />
-                      <span className="text-xs font-medium">{recipe.prepTime}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Coffee size={14} />
-                      <span className="text-xs font-medium">{recipe.difficulty}</span>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-
-          {filteredRecipes.length === 0 && (
-            <div className="py-20 text-center space-y-4">
-              <div className="w-20 h-20 bg-coffee-100 rounded-full flex items-center justify-center mx-auto text-coffee-300 p-4">
-                <img src={appLogo || DEFAULT_LOGO} alt="No results" className="w-full h-full object-contain opacity-30" referrerPolicy="no-referrer" />
               </div>
-              <p className="text-coffee-500 font-serif italic">
-                {activeTab === 'favorites' ? 'Você ainda não favoritou nenhuma receita.' : 'Nenhuma receita encontrada com esses filtros.'}
-              </p>
-              {activeTab === 'home' && (
-                <button 
-                  onClick={() => {
-                    setSearchQuery('');
-                    setSelectedCategory(null);
-                    setActiveIngredients([]);
-                    setActiveEquipment([]);
-                  }}
-                  className="text-coffee-800 font-bold text-sm underline underline-offset-4"
-                >
-                  Limpar todos os filtros
-                </button>
+            </section>
+
+            {/* Recipe Grid */}
+            <section className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <h2 className="text-xl sm:text-2xl font-serif font-bold text-coffee-950 break-words">
+                  {activeTab === 'favorites' ? 'Meus Favoritos' : (searchQuery || selectedCategory ? 'Resultados' : 'Explorar Sabores')}
+                </h2>
+                <span className="text-[10px] sm:text-xs font-bold text-coffee-400 uppercase tracking-widest shrink-0">{filteredRecipes.length} Receitas</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredRecipes.map((recipe, idx) => (
+                  <motion.div 
+                    key={recipe.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.1 }}
+                    onClick={() => {
+                      setSelectedRecipe(recipe);
+                      setCurrentStepIndex(0);
+                    }}
+                    className="group bg-white rounded-[2.5rem] p-4 border border-coffee-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer overflow-hidden relative"
+                  >
+                    <div className="relative aspect-square rounded-[2rem] overflow-hidden mb-4">
+                      <img 
+                        src={recipe.image} 
+                        alt={recipe.name} 
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                      />
+                      <div className="absolute top-4 right-4 flex flex-col gap-2">
+                        <button 
+                          onClick={(e) => toggleFavorite(e, recipe.id)}
+                          className={cn(
+                            "p-2.5 backdrop-blur-md rounded-full shadow-sm transition-all",
+                            favorites.includes(recipe.id) 
+                              ? "bg-coffee-500 text-white" 
+                              : "bg-white/80 text-coffee-900 hover:bg-white"
+                          )}
+                        >
+                          <Heart size={18} fill={favorites.includes(recipe.id) ? "currentColor" : "none"} />
+                        </button>
+                      </div>
+                      <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">
+                        <div className="bg-coffee-950/80 backdrop-blur-md px-3 py-1.5 rounded-xl text-white text-[10px] font-bold uppercase tracking-widest border border-white/10">
+                          {recipe.category}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="px-2 pb-2">
+                      <div className="flex items-center gap-1 text-coffee-400 mb-1">
+                        <MapPin size={12} />
+                        <span className="text-[10px] font-bold uppercase tracking-widest">{recipe.country}</span>
+                      </div>
+                      <h3 className="text-xl font-serif font-bold text-coffee-950 mb-1 break-words">{recipe.name}</h3>
+                      <div className="flex items-center gap-4 text-coffee-400">
+                        <div className="flex items-center gap-1">
+                          <Clock size={14} />
+                          <span className="text-xs font-medium">{recipe.prepTime}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Coffee size={14} />
+                          <span className="text-xs font-medium">{recipe.difficulty}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+
+              {filteredRecipes.length === 0 && (
+                <div className="py-20 text-center space-y-4">
+                  <div className="w-20 h-20 bg-coffee-100 rounded-full flex items-center justify-center mx-auto text-coffee-300 p-4">
+                    <img src={appLogo || DEFAULT_LOGO} alt="No results" className="w-full h-full object-contain opacity-30" referrerPolicy="no-referrer" />
+                  </div>
+                  <p className="text-coffee-500 font-serif italic">
+                    {activeTab === 'favorites' ? 'Você ainda não favoritou nenhuma receita.' : 'Nenhuma receita encontrada com esses filtros.'}
+                  </p>
+                  {activeTab === 'home' && (
+                    <button 
+                      onClick={() => {
+                        setSearchQuery('');
+                        setSelectedCategory(null);
+                        setActiveIngredients([]);
+                        setActiveEquipment([]);
+                      }}
+                      className="text-coffee-800 font-bold text-sm underline underline-offset-4"
+                    >
+                      Limpar todos os filtros
+                    </button>
+                  )}
+                  {activeTab === 'favorites' && (
+                    <button 
+                      onClick={() => setActiveTab('home')}
+                      className="text-coffee-800 font-bold text-sm underline underline-offset-4"
+                    >
+                      Explorar Receitas
+                    </button>
+                  )}
+                </div>
               )}
-              {activeTab === 'favorites' && (
-                <button 
-                  onClick={() => setActiveTab('home')}
-                  className="text-coffee-800 font-bold text-sm underline underline-offset-4"
-                >
-                  Explorar Receitas
-                </button>
-              )}
-            </div>
-          )}
-        </section>
+            </section>
+          </>
+        )}
       </main>
-      )}
 
       {/* Edit Name Modal */}
       <AnimatePresence>
@@ -1921,23 +1757,20 @@ export default function App() {
                 <button 
                   onClick={() => setActiveTab('home')}
                   className={cn("p-2 transition-colors", activeTab === 'home' ? "text-white" : "text-coffee-600")}
-                  title="Início"
                 >
                   <Coffee size={24} />
                 </button>
 
                 <button 
-                  onClick={() => setActiveTab('gamification')}
-                  className={cn("p-2 transition-colors", activeTab === 'gamification' ? "text-white" : "text-coffee-600")}
-                  title="Progresso"
+                  onClick={() => setActiveTab('journey')}
+                  className={cn("p-2 transition-colors", activeTab === 'journey' ? "text-white" : "text-coffee-600")}
                 >
-                  <Trophy size={24} fill={activeTab === 'gamification' ? "currentColor" : "none"} />
+                  <Trophy size={24} />
                 </button>
 
                 <button 
                   onClick={() => setActiveTab('favorites')}
                   className={cn("p-2 transition-colors", activeTab === 'favorites' ? "text-white" : "text-coffee-600")}
-                  title="Favoritos"
                 >
                   <Heart size={24} fill={activeTab === 'favorites' ? "currentColor" : "none"} />
                 </button>
@@ -2239,9 +2072,9 @@ export default function App() {
                             </div>
                             <input 
                               value={newRecipe.image}
-                              onChange={(e) => setNewRecipe({...newRecipe, image: e.target.value})}
+                              onChange={(e) => setNewRecipe({...newRecipe, image: e.target.value.trim()})}
                               className="w-full bg-white border border-coffee-100 rounded-xl py-2.5 pl-10 pr-4 text-sm"
-                              placeholder="Ou cole uma URL aqui..."
+                              placeholder="https://exemplo.com/imagem.jpg"
                             />
                           </div>
                         </div>
@@ -2382,8 +2215,8 @@ export default function App() {
                             </div>
                             <input 
                               value={tempStep.image}
-                              onChange={(e) => setTempStep({...tempStep, image: e.target.value})}
-                              placeholder="URL da Imagem ou use o botão ao lado"
+                              onChange={(e) => setTempStep({...tempStep, image: e.target.value.trim()})}
+                              placeholder="URL da Imagem (Ex: https://...)"
                               className="w-full bg-coffee-50 border border-coffee-100 rounded-xl py-2 pl-9 pr-3 text-sm focus:ring-2 focus:ring-coffee-200 outline-none"
                             />
                           </div>
@@ -2901,21 +2734,6 @@ export default function App() {
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Floating Dev Button */}
-      {user?.email === 'coffecoffe631@gmail.com' && (
-        <motion.button
-          initial={{ scale: 0, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          onClick={() => setShowAdminPanel(true)}
-          className="fixed top-24 left-6 z-[100] bg-amber-500 text-white p-3 rounded-2xl shadow-2xl border-2 border-white flex items-center gap-2 group"
-        >
-          <Settings size={20} className="group-hover:rotate-90 transition-transform duration-500" />
-          <span className="text-xs font-bold uppercase tracking-widest pr-1">Painel Dev</span>
-        </motion.button>
-      )}
     </div>
   );
 }
