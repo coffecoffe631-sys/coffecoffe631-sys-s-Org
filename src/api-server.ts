@@ -16,7 +16,7 @@ logToFile("Servidor api-server.ts carregado");
 let stripeInstance: Stripe | null = null;
 
 const getStripe = () => {
-  const key = process.env.STRIPE_SECRET_KEY || process.env.CHAVE_SECRETA || "";
+  const key = process.env.STRIPE_SECRET_KEY || "";
   if (!stripeInstance && key) {
     stripeInstance = new Stripe(key);
   }
@@ -52,7 +52,7 @@ app.get("/ping", (req, res) => {
 // API routes
 app.get("/api/checkout", async (req, res) => {
   const stripe = getStripe();
-  const stripePriceId = process.env.STRIPE_PRICE_ID || process.env.ID_DO_PRECO;
+  const stripePriceId = process.env.STRIPE_PRICE_ID;
   
   if (!stripe || !stripePriceId) {
     return res.status(500).send("Configuração do Stripe ausente no servidor.");
@@ -114,8 +114,8 @@ app.get("/api/health", (req, res) => {
 app.get("/api/config-status", (req, res) => {
   res.json({
     stripe: {
-      hasSecretKey: !!(process.env.STRIPE_SECRET_KEY || process.env.CHAVE_SECRETA),
-      hasPriceId: !!(process.env.STRIPE_PRICE_ID || process.env.ID_DO_PRECO),
+      hasSecretKey: !!process.env.STRIPE_SECRET_KEY,
+      hasPriceId: !!process.env.STRIPE_PRICE_ID,
       hasWebhookSecret: !!process.env.STRIPE_WEBHOOK_SECRET
     },
     env: process.env.NODE_ENV
@@ -133,17 +133,13 @@ app.post("/api/create-checkout-session", async (req, res) => {
   try {
     console.log('>>> [SERVER] Recebida requisição para create-checkout-session');
     console.log('>>> [SERVER] Body:', req.body);
-    console.log('>>> [SERVER] Env Keys:', Object.keys(process.env).filter(k => k.includes('STRIPE') || k.includes('CHAVE') || k.includes('ID')));
 
     logToFile(`Iniciando checkout para email: ${email}`);
     
-    const stripeKey = process.env.STRIPE_SECRET_KEY || process.env.CHAVE_SECRETA;
-    const stripePriceId = priceId || process.env.STRIPE_PRICE_ID || process.env.ID_DO_PRECO;
+    const stripeKey = process.env.STRIPE_SECRET_KEY;
+    const stripePriceId = priceId || process.env.STRIPE_PRICE_ID;
 
     logToFile(`Stripe Key presente: ${!!stripeKey}, Price ID: ${stripePriceId}`);
-
-    console.log('>>> [SERVER] Stripe Key encontrada:', stripeKey ? 'SIM (termina em ' + stripeKey.slice(-4) + ')' : 'NÃO');
-    console.log('>>> [SERVER] Price ID encontrado:', stripePriceId ? 'SIM (' + stripePriceId + ')' : 'NÃO');
 
     if (!stripeKey || !stripePriceId) {
       console.warn('>>> [SERVER] Configuração do Stripe ausente!');
