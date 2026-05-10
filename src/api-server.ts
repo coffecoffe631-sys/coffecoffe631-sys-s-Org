@@ -208,13 +208,25 @@ app.get("/api/check-subscription", async (req, res) => {
       return res.json({ isPremium: false });
     }
 
+    // Buscamos as assinaturas sem filtrar apenas por 'active' para saber se está 'past_due'
     const subscriptions = await stripe.subscriptions.list({
       customer: customers.data[0].id,
-      status: "active",
       limit: 1,
     });
 
-    res.json({ isPremium: subscriptions.data.length > 0 });
+    if (subscriptions.data.length === 0) {
+      return res.json({ isPremium: false });
+    }
+
+    const sub = subscriptions.data[0];
+    const isPremium = sub.status === "active" || sub.status === "trialing" || sub.status === "past_due";
+
+    res.json({ 
+      isPremium,
+      status: sub.status,
+      currentPeriodEnd: sub.current_period_end, // Unix timestamp do Stripe
+      cancelAtPeriodEnd: sub.cancel_at_period_end
+    });
   } catch (error: any) {
     console.error("Erro ao verificar assinatura:", error);
     res.status(500).json({ error: error.message });

@@ -78,6 +78,11 @@ export default function App() {
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [isPremium, setIsPremium] = useState(true);
+  const [subscriptionDetails, setSubscriptionDetails] = useState<{
+    status?: string,
+    currentPeriodEnd?: number,
+    cancelAtPeriodEnd?: boolean
+  } | null>(null);
   const [isCheckingSubscription, setIsCheckingSubscription] = useState(false);
   const [subscriptionChecked, setSubscriptionChecked] = useState(true);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
@@ -210,11 +215,6 @@ export default function App() {
 
   useEffect(() => {
     const checkUserSubscription = async () => {
-      // Bypassing for preview
-      setIsPremium(true);
-      setSubscriptionChecked(true);
-      return;
-
       if (!user?.email) {
         setIsPremium(false);
         setSubscriptionChecked(false);
@@ -227,6 +227,11 @@ export default function App() {
         if (res.ok) {
           const data = await res.json();
           setIsPremium(data.isPremium);
+          setSubscriptionDetails({
+            status: data.status,
+            currentPeriodEnd: data.currentPeriodEnd,
+            cancelAtPeriodEnd: data.cancelAtPeriodEnd
+          });
         }
       } catch (err) {
         console.error("Erro ao verificar assinatura:", err);
@@ -833,7 +838,7 @@ export default function App() {
     }
   };
 
-  if (false && (isInitialAuthCheck || (user && isCheckingSubscription) || (user && !subscriptionChecked))) {
+  if (isInitialAuthCheck || (user && isCheckingSubscription) || (user && !subscriptionChecked)) {
     return (
       <div className="min-h-screen bg-coffee-50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
@@ -850,7 +855,7 @@ export default function App() {
   }
 
   // Se não tem usuário, mostra Landing ou Auth
-  if (false && !user) {
+  if (!user) {
     if (view === 'landing') {
       return (
         <div className="min-h-screen bg-coffee-50 flex flex-col items-center justify-center p-6 relative overflow-hidden">
@@ -1155,6 +1160,35 @@ export default function App() {
 
   return (
     <div className="min-h-screen pb-24">
+      {/* Subscription Banner */}
+      {user && subscriptionDetails && isPremium && (
+        <div className={cn(
+          "px-4 py-2 text-center text-[10px] font-bold uppercase tracking-widest transition-colors",
+          subscriptionDetails.status === 'past_due' ? "bg-red-500 text-white animate-pulse" : "bg-coffee-900/5 text-coffee-400"
+        )}>
+          {subscriptionDetails.status === 'past_due' ? (
+            <div className="flex items-center justify-center gap-2">
+              <Zap size={12} className="fill-current" />
+              <span>Pagamento Pendente! Regularize para não perder o acesso.</span>
+              <button 
+                onClick={handleManageSubscription}
+                className="underline ml-2 hover:text-white/80"
+              >
+                Pagar Agora
+              </button>
+            </div>
+          ) : subscriptionDetails.currentPeriodEnd ? (
+            <div className="flex items-center justify-center gap-2">
+              <Coffee size={12} />
+              <span>
+                Próximo faturamento: {new Date(subscriptionDetails.currentPeriodEnd * 1000).toLocaleDateString('pt-BR')}
+                {subscriptionDetails.cancelAtPeriodEnd && " (Assinatura Cancelada)"}
+              </span>
+            </div>
+          ) : null}
+        </div>
+      )}
+
       {configError && (
         <div className="bg-red-600 text-white px-4 py-2 text-center text-sm font-bold sticky top-0 z-[100] shadow-lg animate-pulse">
           ⚠️ {configError}
