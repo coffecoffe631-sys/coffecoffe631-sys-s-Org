@@ -2,7 +2,7 @@
 @import "tailwindcss";
 
 @theme {
-  --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  --font-serif: "Cormorant Garamond", serif;
   --font-sans: "Inter", sans-serif;
 
   --color-coffee-50: #fdfaf7;

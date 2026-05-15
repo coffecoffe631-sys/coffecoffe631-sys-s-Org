@@ -1351,7 +1351,7 @@ export default function App() {
                 animate={{ opacity: 1, y: 0 }}
                 className="text-center py-2"
               >
-                <p className="text-2xl font-sans font-bold text-coffee-900 leading-relaxed">
+                <p className="text-2xl font-serif font-bold text-coffee-900 leading-relaxed">
                   Olá, {capitalizedName}! {getGreeting()} {welcomePhrase}
                 </p>
               </motion.div>
