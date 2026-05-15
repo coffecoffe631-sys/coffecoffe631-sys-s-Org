@@ -889,7 +889,7 @@ export default function App() {
               <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-2xl sm:rounded-[2rem] bg-coffee-900 flex items-center justify-center mb-4 sm:mb-6 shadow-xl shadow-coffee-900/20 rotate-3 overflow-hidden p-3 sm:p-4">
                 <img src={appLogo || DEFAULT_LOGO} alt="Logo" className="w-full h-full object-contain brightness-0 invert" referrerPolicy="no-referrer" />
               </div>
-              <h1 className="text-2xl sm:text-4xl font-serif font-bold text-coffee-900 mb-2 sm:mb-4 px-2">Seu acesso está quase liberado ☕</h1>
+              <h1 className="text-2xl sm:text-4xl font-sans font-bold text-coffee-900 mb-2 sm:mb-4 px-2">Seu acesso está quase liberado ☕</h1>
               <p className="text-sm sm:text-lg text-coffee-600 max-w-md mx-auto leading-relaxed px-4">
                 Em menos de 1 minuto você já pode começar a preparar cafés incríveis em casa
               </p>
@@ -932,7 +932,7 @@ export default function App() {
             <div className="space-y-6 sm:space-y-8">
               <div className="flex flex-col items-center gap-1 sm:gap-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-coffee-900 text-3xl sm:text-5xl font-serif font-black tracking-tighter">Apenas R$37/mês</span>
+                  <span className="text-coffee-900 text-3xl sm:text-5xl font-sans font-black tracking-tighter">Apenas R$37/mês</span>
                 </div>
                 <span className="text-coffee-400 text-[10px] sm:text-xs font-bold uppercase tracking-widest">Cancele quando quiser</span>
                 <span className="text-amber-600 text-[10px] sm:text-xs font-black uppercase tracking-widest mt-1">Teste por 15 dias. Sem risco.</span>
@@ -993,7 +993,7 @@ export default function App() {
             <div className="w-20 h-20 rounded-[2rem] bg-coffee-900 flex items-center justify-center mb-6 shadow-xl shadow-coffee-900/20 rotate-3 overflow-hidden p-4">
               <img src={appLogo || DEFAULT_LOGO} alt="Logo" className="w-full h-full object-contain brightness-0 invert" referrerPolicy="no-referrer" />
             </div>
-            <h1 className="text-3xl font-serif font-bold text-coffee-900 mb-2">Cheirinho Mineiro</h1>
+            <h1 className="text-3xl font-sans font-bold text-coffee-900 mb-2">Cheirinho Mineiro</h1>
             <p className="text-sm text-coffee-500 font-medium">Sua jornada pelo café artesanal começa aqui.</p>
           </div>
 
@@ -1113,7 +1113,7 @@ export default function App() {
             <div className="w-20 h-20 rounded-[2rem] bg-amber-100 flex items-center justify-center mb-6 shadow-xl shadow-amber-900/10">
               <Lock size={40} className="text-amber-600" />
             </div>
-            <h1 className="text-2xl font-serif font-bold text-coffee-900 mb-4">Acesso Restrito</h1>
+            <h1 className="text-2xl font-sans font-bold text-coffee-900 mb-4">Acesso Restrito</h1>
             <p className="text-sm text-coffee-600 mb-6">
               Olá, <span className="font-bold text-coffee-900">{user?.email || 'Barista'}</span>! 
               Identificamos que você ainda não possui uma assinatura ativa.
@@ -1129,7 +1129,7 @@ export default function App() {
               <div className="mt-4 pt-4 border-t border-coffee-100 flex items-center justify-between">
                 <span className="text-[10px] font-bold text-coffee-400 uppercase tracking-widest">Preço Especial</span>
                 <div className="flex items-center gap-1">
-                  <span className="text-2xl font-serif font-black text-coffee-900 tracking-tighter">37 R$</span>
+                  <span className="text-2xl font-sans font-black text-coffee-900 tracking-tighter">37 R$</span>
                   <span className="text-[10px] font-bold text-coffee-400 uppercase">/mês</span>
                 </div>
               </div>
@@ -1205,7 +1205,7 @@ export default function App() {
             <img src={appLogo || DEFAULT_LOGO} alt="App Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
           </div>
           <div>
-            <h1 className="text-xl font-serif font-bold text-coffee-900 leading-none">Cheirinho Mineiro</h1>
+            <h1 className="text-xl font-sans font-bold text-coffee-900 leading-none">Cheirinho Mineiro</h1>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -1351,7 +1351,7 @@ export default function App() {
                 animate={{ opacity: 1, y: 0 }}
                 className="text-center py-2"
               >
-                <p className="text-2xl font-serif font-bold text-coffee-900 leading-relaxed">
+                <p className="text-2xl font-sans font-bold text-coffee-900 leading-relaxed">
                   Olá, {capitalizedName}! {getGreeting()} {welcomePhrase}
                 </p>
               </motion.div>
@@ -1496,7 +1496,7 @@ export default function App() {
             {/* Recipe Grid */}
             <section className="space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <h2 className="text-xl sm:text-2xl font-serif font-bold text-coffee-950 break-words">
+                <h2 className="text-xl sm:text-2xl font-sans font-bold text-coffee-950 break-words">
                   {activeTab === 'favorites' ? 'Meus Favoritos' : (searchQuery || selectedCategory ? 'Resultados' : 'Explorar Sabores')}
                 </h2>
                 <span className="text-[10px] sm:text-xs font-bold text-coffee-400 uppercase tracking-widest shrink-0">{filteredRecipes.length} Receitas</span>
@@ -1546,7 +1546,7 @@ export default function App() {
                         <MapPin size={12} />
                         <span className="text-[10px] font-bold uppercase tracking-widest">{recipe.country}</span>
                       </div>
-                      <h3 className="text-xl font-serif font-bold text-coffee-950 mb-1 break-words">{recipe.name}</h3>
+                      <h3 className="text-xl font-sans font-bold text-coffee-950 mb-1 break-words">{recipe.name}</h3>
                       <div className="flex items-center gap-4 text-coffee-400">
                         <div className="flex items-center gap-1">
                           <Clock size={14} />
@@ -1567,7 +1567,7 @@ export default function App() {
                   <div className="w-20 h-20 bg-coffee-100 rounded-full flex items-center justify-center mx-auto text-coffee-300 p-4">
                     <img src={appLogo || DEFAULT_LOGO} alt="No results" className="w-full h-full object-contain opacity-30" referrerPolicy="no-referrer" />
                   </div>
-                  <p className="text-coffee-500 font-serif italic">
+                  <p className="text-coffee-500 font-sans italic">
                     {activeTab === 'favorites' ? 'Você ainda não favoritou nenhuma receita.' : 'Nenhuma receita encontrada com esses filtros.'}
                   </p>
                   {activeTab === 'home' && (
@@ -1627,7 +1627,7 @@ export default function App() {
                   <Edit size={32} className="text-coffee-600" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-serif font-bold text-coffee-900">Editar Nome</h2>
+                  <h2 className="text-2xl font-sans font-bold text-coffee-900">Editar Nome</h2>
                   <p className="text-sm text-coffee-500 mt-1">Como você gostaria de ser chamado?</p>
                 </div>
                 
@@ -1686,11 +1686,11 @@ export default function App() {
                 <div className="w-16 h-16 rounded-2xl bg-amber-100 flex items-center justify-center mx-auto mb-6 rotate-3">
                   <Sparkles size={32} className="text-amber-600" />
                 </div>
-                <h2 className="text-2xl font-serif font-bold text-coffee-900">Assinatura Ativa</h2>
+                <h2 className="text-2xl font-sans font-bold text-coffee-900">Assinatura Ativa</h2>
                 <div className="flex flex-col items-center gap-0">
                   <span className="text-coffee-400 text-[10px] line-through font-bold mb-[-2px]">De R$ 49,90</span>
                   <div className="flex items-center gap-1">
-                    <span className="text-4xl font-serif font-black text-coffee-900 tracking-tighter">37 R$</span>
+                    <span className="text-4xl font-sans font-black text-coffee-900 tracking-tighter">37 R$</span>
                     <span className="text-[10px] font-bold text-coffee-400 uppercase tracking-widest leading-none">/ mês</span>
                   </div>
                 </div>
@@ -1856,7 +1856,7 @@ export default function App() {
                   <span className="text-[10px] font-bold text-amber-400 uppercase tracking-[0.2em]">Seleção do Barista</span>
                 </div>
                 
-                <h3 className="text-3xl font-serif font-bold text-white mb-6 leading-tight">
+                <h3 className="text-3xl font-sans font-bold text-white mb-6 leading-tight">
                   Por que o <span className="text-amber-400">{recommendedRecipe.name}</span> hoje?
                 </h3>
                 
@@ -1864,7 +1864,7 @@ export default function App() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.3 }}
-                  className="text-coffee-100 text-xl leading-relaxed mb-10 font-medium italic font-serif"
+                  className="text-coffee-100 text-xl leading-relaxed mb-10 font-medium italic font-sans"
                 >
                   "{recommendation?.reason}"
                 </motion.div>
@@ -1910,7 +1910,7 @@ export default function App() {
               className="bg-white rounded-[2rem] p-8 w-full max-w-sm shadow-2xl border border-coffee-100"
             >
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-serif font-bold text-coffee-900 flex items-center gap-2">
+                <h3 className="text-xl font-sans font-bold text-coffee-900 flex items-center gap-2">
                   <Lock size={20} className="text-coffee-500" />
                   Painel Dev
                 </h3>
@@ -1967,7 +1967,7 @@ export default function App() {
             >
               <div className="flex justify-between items-center mb-8 sticky top-0 bg-white py-2 z-10">
                 <div>
-                  <h3 className="text-2xl font-serif font-bold text-coffee-900">Gerenciar Receitas</h3>
+                  <h3 className="text-2xl font-sans font-bold text-coffee-900">Gerenciar Receitas</h3>
                   <p className="text-xs text-coffee-400 font-medium">Adicione ou remova itens do Supabase</p>
                 </div>
                 <div className="flex items-center gap-3">
@@ -2490,10 +2490,10 @@ export default function App() {
                   </div>
 
                   <div className="text-center space-y-8 max-w-2xl">
-                    <h2 className="text-3xl sm:text-5xl font-serif font-black text-coffee-950 tracking-tight">
+                    <h2 className="text-3xl sm:text-5xl font-sans font-black text-coffee-950 tracking-tight">
                       {selectedRecipe.steps[currentStepIndex].title}
                     </h2>
-                    <p className="text-xl sm:text-3xl font-serif font-semibold text-coffee-900 leading-relaxed italic whitespace-pre-line">
+                    <p className="text-xl sm:text-3xl font-sans font-semibold text-coffee-900 leading-relaxed italic whitespace-pre-line">
                       {selectedRecipe.steps[currentStepIndex].description.split('\n').map((line, i) => (
                         <span key={i} className="block mb-4 last:mb-0">
                           {line.includes('Dica do Barista') ? (
@@ -2609,7 +2609,7 @@ export default function App() {
                       <span>•</span>
                       <span>{selectedRecipe.difficulty}</span>
                     </div>
-                    <h2 className="text-3xl sm:text-4xl font-serif font-bold text-coffee-950 break-words">{selectedRecipe.name}</h2>
+                    <h2 className="text-3xl sm:text-4xl font-sans font-bold text-coffee-950 break-words">{selectedRecipe.name}</h2>
                     <p className="text-coffee-600 italic leading-relaxed break-words">{selectedRecipe.description}</p>
                   </div>
 
@@ -2635,7 +2635,7 @@ export default function App() {
                   </div>
 
                   <div className="space-y-4">
-                    <h3 className="text-xl font-serif font-bold text-coffee-950">Ingredientes</h3>
+                    <h3 className="text-xl font-sans font-bold text-coffee-950">Ingredientes</h3>
                     <div className="grid grid-cols-1 gap-3">
                       {(selectedRecipe.detailedIngredients && selectedRecipe.detailedIngredients.length > 0) ? (
                         selectedRecipe.detailedIngredients.map((ing, i) => (
@@ -2660,7 +2660,7 @@ export default function App() {
 
                   {selectedRecipe.equipment && selectedRecipe.equipment.length > 0 && (
                     <div className="space-y-4">
-                      <h3 className="text-xl font-serif font-bold text-coffee-950">Equipamentos</h3>
+                      <h3 className="text-xl font-sans font-bold text-coffee-950">Equipamentos</h3>
                       <div className="flex flex-wrap gap-2">
                         {selectedRecipe.equipment.map((eq, i) => (
                           <div key={i} className="bg-white border border-coffee-100 px-4 py-2 rounded-xl text-xs font-bold text-coffee-600 shadow-sm">
@@ -2673,7 +2673,7 @@ export default function App() {
 
                   <div className="space-y-8 pt-4">
                     <div className="flex items-center justify-between relative">
-                      <h3 className="text-xl font-serif font-bold text-coffee-950">Modo de Preparo</h3>
+                      <h3 className="text-xl font-sans font-bold text-coffee-950">Modo de Preparo</h3>
                       <div className="flex items-center gap-2">
                         {selectedRecipe.steps && selectedRecipe.steps.length > 0 && (
                           <>
@@ -2721,7 +2721,7 @@ export default function App() {
                               </div>
 
                               <div className="max-w-xs mx-auto">
-                                <p className="text-lg sm:text-xl font-serif text-coffee-800/90 leading-relaxed italic">
+                                <p className="text-lg sm:text-xl font-sans text-coffee-800/90 leading-relaxed italic">
                                   {selectedRecipe.steps[currentStepIndex].description}
                                 </p>
                               </div>

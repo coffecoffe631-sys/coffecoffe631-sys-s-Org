@@ -100,7 +100,7 @@ export default function JourneyView({ journey, isAdmin, onUpdateStep, onAddStep,
           <Trophy size={14} className="text-amber-600" />
           <span className="text-[10px] font-bold text-amber-800 uppercase tracking-[0.2em]">Jornada do Conhecimento</span>
         </div>
-        <h2 className="text-3xl font-serif font-bold text-coffee-950">Seu Roadmap Barista</h2>
+        <h2 className="text-3xl font-sans font-bold text-coffee-950">Seu Roadmap Barista</h2>
         <p className="text-coffee-500 max-w-sm mx-auto">Complete os desafios e evolua suas habilidades para destravar recompensas exclusivas.</p>
         
         {isAdmin && (
@@ -246,7 +246,7 @@ export default function JourneyView({ journey, isAdmin, onUpdateStep, onAddStep,
                       <span className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-80">
                         {selectedStep.status === 'completed' ? 'Missão Concluída' : selectedStep.status === 'current' ? 'Em Progresso' : 'Bloqueado'}
                       </span>
-                      <h3 className="text-3xl sm:text-4xl font-serif font-bold leading-tight">{selectedStep.title}</h3>
+                      <h3 className="text-3xl sm:text-4xl font-sans font-bold leading-tight">{selectedStep.title}</h3>
                     </div>
                   </div>
                 </div>
@@ -275,7 +275,7 @@ export default function JourneyView({ journey, isAdmin, onUpdateStep, onAddStep,
                           <div className="w-1.5 h-6 bg-coffee-800 rounded-full" />
                           <h4 className="text-xs font-black uppercase tracking-[0.2em] text-coffee-400">Visão Geral</h4>
                         </div>
-                        <p className="text-coffee-700 text-lg sm:text-xl leading-relaxed font-serif">
+                        <p className="text-coffee-700 text-lg sm:text-xl leading-relaxed font-sans">
                           {selectedStep.content.overview}
                         </p>
                       </div>
@@ -375,7 +375,7 @@ export default function JourneyView({ journey, isAdmin, onUpdateStep, onAddStep,
               className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl relative z-10 overflow-y-auto max-h-[90vh] no-scrollbar"
             >
               <div className="p-8 border-b border-coffee-100 flex items-center justify-between sticky top-0 bg-white z-20">
-                <h3 className="text-2xl font-serif font-bold text-coffee-950">{isAddingMode ? 'Adicionar Nova Etapa' : 'Editar Etapa da Jornada'}</h3>
+                <h3 className="text-2xl font-sans font-bold text-coffee-950">{isAddingMode ? 'Adicionar Nova Etapa' : 'Editar Etapa da Jornada'}</h3>
                 <div className="flex items-center gap-2">
                   {!isAddingMode && (
                     <button 
