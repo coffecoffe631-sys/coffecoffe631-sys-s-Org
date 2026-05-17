@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Search, Filter, MapPin, Cloud, Sun, Clock, ChevronRight, ChevronUp, ChevronDown, X, Heart, Share2, Coffee, Droplets, Zap, Loader2, Settings, Plus, Trash2, Lock, Sparkles, Edit, RotateCcw, Upload, Image as ImageIcon, User as UserIcon, LogOut, Mail, Maximize2, Check, Menu, MessageCircle, Eye, EyeOff, Trophy, Map, Compass } from 'lucide-react';
+import { Search, Filter, MapPin, Cloud, CloudRain, Sun, Clock, ChevronRight, ChevronUp, ChevronDown, X, Heart, Share2, Coffee, Droplets, Zap, Loader2, Settings, Plus, Trash2, Lock, Sparkles, Edit, RotateCcw, Upload, Image as ImageIcon, User as UserIcon, LogOut, Mail, Maximize2, Check, Menu, MessageCircle, Eye, EyeOff, Trophy, Map, Compass } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Recipe, Ingredient, Step, WeatherCondition, recipes } from './data/recipes';
 import { coffeeJourney, JourneyStep } from './data/journey';
@@ -1344,17 +1344,42 @@ export default function App() {
           />
         ) : (
           <>
-            {/* Welcome Message */}
+            {/* Welcome Message & Weather */}
             {user && (
-              <motion.div 
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="text-center py-2"
-              >
-                <p className="text-2xl font-serif font-bold text-coffee-900 leading-relaxed">
-                  Olá, {capitalizedName}! {getGreeting()} {welcomePhrase}
-                </p>
-              </motion.div>
+              <div className="flex flex-col items-center gap-4 py-2">
+                <motion.div 
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-center"
+                >
+                  <p className="text-2xl font-serif font-bold text-coffee-900 leading-relaxed">
+                    Olá, {capitalizedName}! {getGreeting()} {welcomePhrase}
+                  </p>
+                </motion.div>
+
+                {!weather.loading && !weather.error && (
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="flex items-center gap-3 px-4 py-2 bg-white rounded-2xl border border-coffee-100 shadow-sm"
+                    title={`Clima em ${weather.location}`}
+                  >
+                    <div className="flex items-center gap-2 text-coffee-500">
+                      {weather.condition.includes('Ensolarado') ? <Sun size={18} className="text-amber-500" /> : 
+                       weather.condition.includes('Chuvoso') ? <CloudRain size={18} className="text-blue-500" /> : 
+                       <Cloud size={18} />}
+                      <span className="text-sm font-bold text-coffee-900">{weather.temp}ºC</span>
+                    </div>
+                    <div className="w-px h-4 bg-coffee-100" />
+                    <span className="text-[10px] font-bold text-coffee-400 uppercase tracking-widest">{weather.condition}</span>
+                    <div className="w-px h-4 bg-coffee-100" />
+                    <div className="flex items-center gap-1 text-[10px] font-bold text-coffee-400 uppercase tracking-widest">
+                      <MapPin size={10} />
+                      <span className="truncate max-w-[80px]">{weather.location}</span>
+                    </div>
+                  </motion.div>
+                )}
+              </div>
             )}
 
             {/* Search & Filters */}
