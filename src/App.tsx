@@ -1344,9 +1344,9 @@ export default function App() {
           />
         ) : (
           <>
-            {/* Welcome Message & Weather */}
+            {/* Welcome Message */}
             {user && (
-              <div className="flex flex-col items-center gap-4 py-2">
+              <div className="flex flex-col items-center gap-2 py-2">
                 <motion.div 
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -1356,29 +1356,6 @@ export default function App() {
                     Olá, {capitalizedName}! {getGreeting()} {welcomePhrase}
                   </p>
                 </motion.div>
-
-                {!weather.loading && !weather.error && (
-                  <motion.div 
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="flex items-center gap-3 px-4 py-2 bg-white rounded-2xl border border-coffee-100 shadow-sm"
-                    title={`Clima em ${weather.location}`}
-                  >
-                    <div className="flex items-center gap-2 text-coffee-500">
-                      {weather.condition.includes('Ensolarado') ? <Sun size={18} className="text-amber-500" /> : 
-                       weather.condition.includes('Chuvoso') ? <CloudRain size={18} className="text-blue-500" /> : 
-                       <Cloud size={18} />}
-                      <span className="text-sm font-bold text-coffee-900">{weather.temp}ºC</span>
-                    </div>
-                    <div className="w-px h-4 bg-coffee-100" />
-                    <span className="text-[10px] font-bold text-coffee-400 uppercase tracking-widest">{weather.condition}</span>
-                    <div className="w-px h-4 bg-coffee-100" />
-                    <div className="flex items-center gap-1 text-[10px] font-bold text-coffee-400 uppercase tracking-widest">
-                      <MapPin size={10} />
-                      <span className="truncate max-w-[80px]">{weather.location}</span>
-                    </div>
-                  </motion.div>
-                )}
               </div>
             )}
 
@@ -1798,9 +1775,16 @@ export default function App() {
                       <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <Sparkles size={10} className="text-amber-400 fill-amber-400" />
-                        <span className="text-[10px] font-bold text-amber-400 uppercase tracking-[0.2em] block">Especial para você</span>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5">
+                          <Sparkles size={10} className="text-amber-400 fill-amber-400" />
+                          <span className="text-[10px] font-bold text-amber-400 uppercase tracking-[0.2em] block">Especial para você</span>
+                        </div>
+                        {!weather.loading && !weather.error && (
+                          <div className="flex items-center gap-1 text-white/50 text-[10px] font-bold">
+                            {weather.temp}ºC
+                          </div>
+                        )}
                       </div>
                       <h4 className="text-sm font-bold text-white truncate">{recommendedRecipe.name}</h4>
                     </div>
@@ -1876,10 +1860,32 @@ export default function App() {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
                 </motion.div>
                 
-                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-400/20 border border-amber-400/30 mb-6">
+                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-400/20 border border-amber-400/30 mb-2">
                   <Sparkles size={14} className="text-amber-400" fill="currentColor" />
                   <span className="text-[10px] font-bold text-amber-400 uppercase tracking-[0.2em]">Seleção do Barista</span>
                 </div>
+
+                {!weather.loading && !weather.error && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center gap-3 px-3 py-1.5 bg-white/5 border border-white/10 rounded-full mb-6"
+                  >
+                    <div className="flex items-center gap-1.5 text-white">
+                      {weather.condition.includes('Ensolarado') ? <Sun size={14} className="text-amber-400" /> : 
+                       weather.condition.includes('Chuvoso') ? <CloudRain size={14} className="text-blue-400" /> : 
+                       <Cloud size={14} className="text-coffee-300" />}
+                      <span className="text-xs font-bold">{weather.temp}ºC</span>
+                    </div>
+                    <div className="w-px h-3 bg-white/10" />
+                    <span className="text-[9px] font-bold text-white/40 uppercase tracking-widest">{weather.condition}</span>
+                    <div className="w-px h-3 bg-white/10" />
+                    <div className="flex items-center gap-1 text-[9px] font-bold text-white/40 uppercase tracking-widest">
+                      <MapPin size={10} />
+                      <span className="truncate max-w-[60px]">{weather.location}</span>
+                    </div>
+                  </motion.div>
+                )}
                 
                 <h3 className="text-3xl font-sans font-bold text-white mb-6 leading-tight">
                   Por que o <span className="text-amber-400">{recommendedRecipe.name}</span> hoje?
