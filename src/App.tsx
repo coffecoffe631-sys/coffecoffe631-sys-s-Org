@@ -162,13 +162,22 @@ export default function App() {
           fetchJourneyFromSupabase()
         ]);
 
-        if (dbRecipes && dbRecipes.length > 0) {
-          setAllRecipes(dbRecipes);
-        } else {
-          await seedRecipes(recipes);
-          const freshRecipes = await fetchRecipesFromSupabase();
-          setAllRecipes(freshRecipes);
+        let finalRecipes = dbRecipes || [];
+
+        // 1. Delete all core default recipes from Supabase and local list if they exist
+        const coreNames = ["Pão de Queijo Latte", "Cold Brew de Rapadura", "Espresso Mineiro", "Cappuccino de Avelã e Cacau", "Affogato de Milho Verde"];
+        const hasCoreRecipes = finalRecipes.some(r => coreNames.includes(r.name));
+
+        if (hasCoreRecipes) {
+          try {
+            await supabase.from('receitas_cafe').delete().in('nome', coreNames);
+            finalRecipes = finalRecipes.filter(r => !coreNames.includes(r.name));
+          } catch (e) {
+            console.error("Erro deletando receitas padrão do banco de dados:", e);
+          }
         }
+
+        setAllRecipes(finalRecipes);
 
         if (dbJourney && dbJourney.length > 0) {
           setCurrentJourney(dbJourney);
