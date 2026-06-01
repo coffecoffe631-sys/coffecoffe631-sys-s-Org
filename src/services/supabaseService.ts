@@ -162,17 +162,21 @@ export const fetchJourneyFromSupabase = async (): Promise<JourneyStep[]> => {
       return [];
     }
     
-    return data.map((item: any) => ({
-      id: item.id.toString(),
-      title: item.title,
-      description: item.description,
-      status: item.status,
-      icon: item.icon,
-      image: item.imagem_url || 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=1000&auto=format&fit=crop',
-      requirements: item.requirements,
-      reward: item.reward,
-      content: typeof item.content === 'string' ? JSON.parse(item.content) : item.content
-    }));
+    return data.map((item: any) => {
+      const parsedContent = typeof item.content === 'string' ? JSON.parse(item.content) : item.content;
+      return {
+        id: item.id.toString(),
+        title: item.title,
+        description: item.description,
+        status: item.status,
+        icon: item.icon,
+        image: item.imagem_url || 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=1000&auto=format&fit=crop',
+        requirements: item.requirements,
+        reward: item.reward,
+        audioUrl: item.audio_url || parsedContent?.audioUrl || parsedContent?.audio_url || '',
+        content: parsedContent
+      };
+    });
   } catch (err) {
     console.error('Error in fetchJourneyFromSupabase:', err);
     return [];
@@ -180,6 +184,11 @@ export const fetchJourneyFromSupabase = async (): Promise<JourneyStep[]> => {
 };
 
 export const updateJourneyStepInSupabase = async (step: JourneyStep) => {
+  const finalContent = {
+    ...step.content,
+    audioUrl: step.audioUrl
+  };
+
   const { error } = await supabase
     .from('coffee_journey')
     .update({
@@ -190,7 +199,7 @@ export const updateJourneyStepInSupabase = async (step: JourneyStep) => {
       imagem_url: step.image,
       requirements: step.requirements,
       reward: step.reward,
-      content: step.content
+      content: finalContent
     })
     .eq('id', step.id);
 
@@ -201,6 +210,11 @@ export const updateJourneyStepInSupabase = async (step: JourneyStep) => {
 };
 
 export const insertJourneyStepToSupabase = async (step: Omit<JourneyStep, 'id'>) => {
+  const finalContent = {
+    ...(typeof step.content === 'object' ? step.content : JSON.parse(step.content as any || '{}')),
+    audioUrl: step.audioUrl
+  };
+
   const { data, error } = await supabase
     .from('coffee_journey')
     .insert([{
@@ -211,7 +225,7 @@ export const insertJourneyStepToSupabase = async (step: Omit<JourneyStep, 'id'>)
       imagem_url: step.image,
       requirements: step.requirements,
       reward: step.reward,
-      content: typeof step.content === 'object' ? step.content : JSON.parse(step.content as any)
+      content: finalContent
     }])
     .select();
 

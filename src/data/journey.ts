@@ -8,6 +8,7 @@ export interface JourneyStep {
   image?: string;
   requirements?: string;
   reward?: string;
+  audioUrl?: string;
   content?: {
     overview: string;
     tasks: string[];

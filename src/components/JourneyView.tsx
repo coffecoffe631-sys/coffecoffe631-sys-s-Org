@@ -1,9 +1,166 @@
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { JourneyStep } from '../data/journey';
-import { Trophy, Check, Lock, Sparkles, Droplets, Waves, Leaf, Coffee, ChevronRight, Zap, X, Maximize2, Edit, Save, Plus, Trash2, Image as ImageIcon } from 'lucide-react';
+import { Trophy, Check, Lock, Sparkles, Droplets, Waves, Leaf, Coffee, ChevronRight, Zap, X, Maximize2, Edit, Save, Plus, Trash2, Image as ImageIcon, Play, Pause, Volume2, VolumeX, Headphones } from 'lucide-react';
 import { cn } from '../lib/utils';
+
+function AudioPlayer({ src }: { src: string }) {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [isMuted, setIsMuted] = useState(false);
+  const [playbackRate, setPlaybackRate] = useState(1);
+
+  useEffect(() => {
+    // Reset player when source changes
+    setIsPlaying(false);
+    setCurrentTime(0);
+    setDuration(0);
+    setPlaybackRate(1);
+    if (audioRef.current) {
+      audioRef.current.load();
+      audioRef.current.playbackRate = 1;
+    }
+  }, [src]);
+
+  const togglePlay = () => {
+    if (!audioRef.current) return;
+    if (isPlaying) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    } else {
+      audioRef.current.play().catch(err => {
+        console.error("Audio playback failed:", err);
+      });
+      setIsPlaying(true);
+    }
+  };
+
+  const handleTimeUpdate = () => {
+    if (!audioRef.current) return;
+    setCurrentTime(audioRef.current.currentTime);
+  };
+
+  const handleLoadedMetadata = () => {
+    if (!audioRef.current) return;
+    setDuration(audioRef.current.duration);
+    // Maintain set playback speed on metadata reload
+    audioRef.current.playbackRate = playbackRate;
+  };
+
+  const handleAudioEnded = () => {
+    setIsPlaying(false);
+    setCurrentTime(0);
+  };
+
+  const formatTime = (time: number) => {
+    if (isNaN(time)) return '00:00';
+    const mins = Math.floor(time / 60);
+    const secs = Math.floor(time % 60);
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!audioRef.current) return;
+    const value = parseFloat(e.target.value);
+    audioRef.current.currentTime = value;
+    setCurrentTime(value);
+  };
+
+  const toggleMute = () => {
+    if (!audioRef.current) return;
+    audioRef.current.muted = !isMuted;
+    setIsMuted(!isMuted);
+  };
+
+  const handleSpeedChange = () => {
+    if (!audioRef.current) return;
+    const rates = [1, 1.25, 1.5, 1.75, 2];
+    const currentIndex = rates.indexOf(playbackRate);
+    const nextIndex = (currentIndex + 1) % rates.length;
+    const nextRate = rates[nextIndex];
+    audioRef.current.playbackRate = nextRate;
+    setPlaybackRate(nextRate);
+  };
+
+  return (
+    <div className="p-5 bg-coffee-50 border border-coffee-100/80 rounded-[2rem] space-y-3 w-full shadow-sm">
+      <audio
+        ref={audioRef}
+        src={src}
+        onTimeUpdate={handleTimeUpdate}
+        onLoadedMetadata={handleLoadedMetadata}
+        onEnded={handleAudioEnded}
+      />
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3 text-coffee-950">
+          <div className="w-10 h-10 rounded-2xl bg-coffee-100 flex items-center justify-center text-coffee-800 shrink-0">
+            <Headphones size={18} className={cn(isPlaying && "animate-bounce")} />
+          </div>
+          <div>
+            <span className="block text-xs font-black uppercase tracking-wider text-coffee-900">Áudio do Desafio</span>
+            <span className="block text-[10px] text-coffee-500 font-semibold">{isPlaying ? "Tocando material..." : "Clique para ouvir o áudio"}</span>
+          </div>
+        </div>
+        
+        {isPlaying && (
+          <div className="flex items-end gap-0.5 h-4 px-1 shrink-0">
+            <span className="w-0.5 bg-coffee-900 rounded-full animate-pulse h-3" />
+            <span className="w-0.5 bg-coffee-900 rounded-full animate-bounce h-4" />
+            <span className="w-0.5 bg-coffee-900 rounded-full animate-pulse h-2" />
+            <span className="w-0.5 bg-coffee-900 rounded-full animate-bounce h-3" />
+          </div>
+        )}
+      </div>
+
+      <div className="flex items-center gap-4 pt-1">
+        {/* Play Button */}
+        <button
+          onClick={togglePlay}
+          className="w-12 h-12 flex items-center justify-center rounded-2xl bg-coffee-950 text-white hover:bg-coffee-900 transition-all shadow-md shrink-0 active:scale-95"
+        >
+          {isPlaying ? <Pause size={20} className="fill-white" /> : <Play size={20} className="fill-white translate-x-0.5" />}
+        </button>
+
+        {/* Progress Slider */}
+        <div className="flex-1 space-y-1 select-none">
+          <input
+            type="range"
+            min={0}
+            max={duration || 100}
+            value={currentTime}
+            onChange={handleSliderChange}
+            className="w-full accent-coffee-950 h-1.5 bg-coffee-200/60 rounded-lg cursor-pointer outline-none"
+          />
+          <div className="flex justify-between text-[10px] font-mono text-coffee-500 font-bold">
+            <span>{formatTime(currentTime)}</span>
+            <span>{formatTime(duration)}</span>
+          </div>
+        </div>
+
+        {/* Speed Option */}
+        <button
+          onClick={handleSpeedChange}
+          className="px-2.5 py-1.5 text-xs font-black text-coffee-800 bg-coffee-100 hover:bg-coffee-200/80 rounded-xl transition-all shrink-0 font-mono active:scale-95"
+          title="Alterar velocidade de reprodução"
+        >
+          {playbackRate.toFixed(2).replace('.00', '')}x
+        </button>
+
+        {/* Mute Button */}
+        <button
+          onClick={toggleMute}
+          className="p-2.5 text-coffee-600 hover:bg-coffee-100 rounded-xl transition-colors shrink-0"
+          title={isMuted ? "Ativar som" : "Desativar som"}
+        >
+          {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function renderFormattedContent(text: string) {
   if (!text) return null;
@@ -248,13 +405,50 @@ export default function JourneyView({ journey, isAdmin, onUpdateStep, onAddStep,
       {/* Step Detail Modal */}
       <AnimatePresence>
         {selectedStep && (
-          <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[300] bg-white flex flex-col overflow-hidden select-text">
+            {/* Header Barra Superior Imersiva */}
+            <div className="w-full bg-white border-b border-coffee-100/80 sticky top-0 z-30 shrink-0 select-none">
+              <div className="max-w-4xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between">
+                <button 
+                  onClick={closeDetails}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-coffee-50 text-coffee-800 font-bold text-xs sm:text-sm uppercase tracking-wider hover:bg-coffee-100 transition-all select-none active:scale-95"
+                >
+                  <ChevronRight size={16} className="rotate-180" />
+                  <span>Voltar</span>
+                </button>
+
+                <div className="hidden sm:block text-center max-w-xs truncate">
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-900 bg-amber-50 px-2.5 py-1 rounded-md border border-amber-200">
+                    {selectedStep.requirements || "Jornada do Café"}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {isAdmin && (
+                    <button 
+                      onClick={() => handleEditStart(selectedStep)}
+                      className="p-2 sm:px-4 sm:py-2 rounded-xl text-coffee-800 bg-coffee-100 hover:bg-coffee-200 font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-1.5"
+                      title="Editar Etapa"
+                    >
+                      <Edit size={14} />
+                      <span className="hidden sm:inline">Editar</span>
+                    </button>
+                  )}
+                  <button 
+                    onClick={closeDetails}
+                    className="p-2.5 rounded-xl bg-coffee-50 hover:bg-coffee-100 text-coffee-800 transition-all shadow-sm flex items-center justify-center active:scale-95"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+              </div>
+            </div>
              <motion.div 
                initial={{ opacity: 0 }}
                animate={{ opacity: 1 }}
                exit={{ opacity: 0 }}
                onClick={closeDetails}
-               className="absolute inset-0 bg-coffee-950/80 backdrop-blur-md"
+               className="absolute hidden"
              />
              <motion.div 
                layout
@@ -264,17 +458,19 @@ export default function JourneyView({ journey, isAdmin, onUpdateStep, onAddStep,
                  opacity: 1, 
                  y: 0,
                  width: '100%',
-                 maxWidth: '520px',
-                 borderRadius: '2.5rem'
+                 maxWidth: '100%',
+                 borderRadius: '0px'
                }}
                exit={{ scale: 0.9, opacity: 0, y: 20 }}
-               className="bg-white shadow-2xl relative z-10 max-h-[85vh] sm:max-h-[90vh] overflow-hidden flex flex-col border border-coffee-100 w-full"
+               className="bg-white relative z-10 h-full flex flex-col border-none w-full"
              >
                 {/* Unified Scrollable Container wrapping both Banner and Content */}
-                <div className="flex-1 overflow-y-auto min-h-0 divide-y divide-coffee-100/30">
+                <div className="flex-1 overflow-y-auto min-h-0 bg-white/50 no-scrollbar relative z-10 selection:bg-amber-100 selection:text-amber-950 pb-24">
                   
                   {/* Image Section */}
-                  <div className="relative aspect-[4/3] w-full bg-coffee-50 overflow-hidden shrink-0">
+                  <div className="max-w-3xl mx-auto px-6 py-8 sm:py-12 space-y-10 w-full">
+                    {/* Banner com alta resolução responsivo */}
+                    <div className="w-full aspect-[16/9] sm:aspect-[21/9] relative rounded-[2rem] overflow-hidden bg-coffee-50 border-4 sm:border-8 border-white shadow-xl mx-auto shrink-0 select-none">
                     <img 
                       src={selectedStep.image || 'https://images.unsplash.com/photo-1507133750040-4a8f57021571?q=80&w=1000'} 
                       alt={selectedStep.title} 
@@ -284,7 +480,7 @@ export default function JourneyView({ journey, isAdmin, onUpdateStep, onAddStep,
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/35" />
                     
                     {/* Floating Action Buttons */}
-                    <div className="absolute top-6 right-6 flex items-center gap-2">
+                    <div className="hidden">
                       {isAdmin && (
                         <button 
                           onClick={() => handleEditStart(selectedStep)}
@@ -316,9 +512,9 @@ export default function JourneyView({ journey, isAdmin, onUpdateStep, onAddStep,
                   </div>
   
                   {/* Modal Content - Text, Title, Subtitle & Description */}
-                  <div className="p-8 space-y-6 bg-white">
+                  <div className="space-y-8">
                     <div className="space-y-3">
-                      <h3 className="text-2xl sm:text-3xl font-sans font-black text-coffee-950 tracking-tight leading-tight">
+                      <h3 className="text-3xl sm:text-4xl md:text-5xl font-sans font-black text-coffee-950 tracking-tight leading-tight">
                         {selectedStep.title}
                       </h3>
                       
@@ -332,30 +528,77 @@ export default function JourneyView({ journey, isAdmin, onUpdateStep, onAddStep,
   
                     {/* Separator Line */}
                     <div className="h-px bg-coffee-100/60 w-full" />
+
+                    {/* Audio Player, if available */}
+                    {selectedStep.audioUrl && (
+                      <div className="w-full">
+                        <AudioPlayer src={selectedStep.audioUrl} />
+                      </div>
+                    )}
   
                     {/* Description formatted dynamically with markdown separations */}
-                    <div className="space-y-4">
+                    <div className="prose prose-coffee max-w-none text-coffee-900 leading-relaxed space-y-6 text-base sm:text-lg">
                       {renderFormattedContent(selectedStep.description)}
                       
                       {selectedStep.content?.overview && selectedStep.content.overview !== selectedStep.description && (
-                        <div className="mt-4 pt-4 border-t border-coffee-100/60">
+                        <div className="mt-8 pt-6 border-t border-coffee-100/60 font-sans">
+                          <h4 className="text-base sm:text-lg font-black text-coffee-950 uppercase tracking-[0.15em] mb-4">Visão Geral Detalhada</h4>
                           {renderFormattedContent(selectedStep.content.overview)}
                         </div>
                       )}
                     </div>
+
+                    {/* Checklist dos desafios práticos */}
+                    {selectedStep.content?.tasks && selectedStep.content.tasks.length > 0 && (
+                      <div className="mt-8 p-6 sm:p-8 bg-coffee-50/50 border border-coffee-100 rounded-3xl space-y-4 font-sans select-none font-semibold">
+                        <h4 className="text-xs font-black uppercase tracking-[0.2em] text-coffee-900 flex items-center gap-1.5">
+                          <Check className="text-coffee-600 stroke-[3]" size={14} />
+                          Lista de Desafios Práticos
+                        </h4>
+                        <div className="space-y-3">
+                          {selectedStep.content.tasks.map((task, idx) => (
+                            <div key={idx} className="flex items-start gap-3 p-3 bg-white border border-coffee-100 rounded-xl">
+                              <div className="mt-0.5 w-5 h-5 rounded-md bg-coffee-50 border border-coffee-150 flex items-center justify-center shrink-0">
+                                <span className="text-xs font-bold text-coffee-400 font-mono">{idx + 1}</span>
+                              </div>
+                              <span className="text-sm font-semibold text-coffee-800 leading-snug">{task}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Dicas adicionais do barista */}
+                    {selectedStep.content?.tips && selectedStep.content.tips.length > 0 && (
+                      <div className="mt-6 p-6 sm:p-8 bg-amber-50/50 border border-amber-100 rounded-3xl space-y-4 font-sans select-none font-semibold">
+                        <h4 className="text-xs font-black uppercase tracking-[0.2em] text-amber-900 flex items-center gap-1.5">
+                          <Sparkles className="text-amber-500" size={14} />
+                          Dicas Técnicas Importantes
+                        </h4>
+                        <ul className="space-y-3">
+                          {selectedStep.content.tips.map((tip, idx) => (
+                            <li key={idx} className="text-sm font-semibold text-amber-950 list-none flex items-start gap-2.5">
+                              <span className="text-amber-500 mt-1 select-none">•</span>
+                              <span>{tip}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </div>
 
-                </div>
- 
-                {/* Clean Bottom Actions - Pinned */}
-                <div className="p-6 bg-white border-t border-coffee-50 shrink-0">
-                  <button 
-                    onClick={closeDetails}
-                    className="w-full bg-coffee-950 text-white py-4 rounded-2xl font-black uppercase tracking-[0.2em] hover:bg-coffee-900 transition-all shadow-lg hover:shadow-coffee-950/10 active:scale-[0.98] text-xs"
-                  >
-                    Fechar Detalhes
-                  </button>
-                </div>
+                  {/* Botão de Conclusão e Saída */}
+                  <div className="pt-8 flex justify-center selection:bg-transparent">
+                    <button 
+                      onClick={closeDetails}
+                      className="w-full max-w-sm bg-coffee-950 text-white py-4 rounded-2xl font-black uppercase tracking-[0.2em] hover:bg-coffee-900 transition-all shadow-lg hover:shadow-coffee-950/10 active:scale-[0.98] text-xs"
+                    >
+                      Concluir Desafio
+                    </button>
+                  </div>
+
+                </div> {/* Fechamento do max-w-3xl */}
+              </div> {/* Fechamento do flex-1 com scroll */}
              </motion.div>
           </div>
         )}
@@ -489,6 +732,21 @@ export default function JourneyView({ journey, isAdmin, onUpdateStep, onAddStep,
                       className="w-full bg-coffee-50 border border-coffee-100 rounded-2xl p-4 focus:ring-2 focus:ring-coffee-200 outline-none"
                     />
                   </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-black uppercase tracking-widest text-coffee-400">Link do Áudio (Ouvir ao invés de ler - opcional)</label>
+                  <div className="relative">
+                    <Headphones className="absolute left-4 top-1/2 -translate-y-1/2 text-coffee-400 pointer-events-none" size={18} />
+                    <input 
+                      type="text" 
+                      placeholder="Ex: https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
+                      value={editingStep.audioUrl || ''} 
+                      onChange={(e) => setEditingStep({ ...editingStep, audioUrl: e.target.value })}
+                      className="w-full bg-coffee-50 border border-coffee-100 rounded-2xl p-4 pl-12 focus:ring-2 focus:ring-coffee-200 outline-none text-sm"
+                    />
+                  </div>
+                  <p className="text-[10px] text-coffee-400">Insira um link direto de áudio (MP3, WAV, etc.) para que os usuários possam reproduzir o conteúdo diretamente na tela do desafio.</p>
                 </div>
 
                 {/* Content Detail */}
