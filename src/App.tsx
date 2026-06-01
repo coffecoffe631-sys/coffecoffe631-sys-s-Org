@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Search, Filter, MapPin, Cloud, CloudRain, Sun, Clock, ChevronRight, ChevronUp, ChevronDown, X, Heart, Share2, Coffee, Droplets, Zap, Loader2, Settings, Plus, Trash2, Lock, Sparkles, Edit, RotateCcw, Upload, Image as ImageIcon, User as UserIcon, LogOut, Mail, Maximize2, Check, Menu, MessageCircle, Eye, EyeOff, Trophy, Map, Compass } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Recipe, Ingredient, Step, WeatherCondition, recipes } from './data/recipes';
@@ -12,6 +12,153 @@ import { supabase } from './lib/supabase';
 import { User } from '@supabase/supabase-js';
 
 const DEFAULT_LOGO = "https://cdn-icons-png.flaticon.com/512/924/924514.png";
+
+function renderFormattedContent(text: string) {
+  if (!text) return null;
+
+  const lines = text.split(/\r?\n/);
+  const elements: React.ReactNode[] = [];
+  let currentGroup: React.ReactNode[] = [];
+  let keyIdx = 0;
+
+  const flushGroup = () => {
+    if (currentGroup.length > 0) {
+      elements.push(
+        <div key={`group-${keyIdx++}`} className="space-y-4">
+          {...currentGroup}
+        </div>
+      );
+      currentGroup = [];
+    }
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const rawLine = lines[i];
+    const line = rawLine.trim();
+
+    if (!line) {
+      continue;
+    }
+
+    if (line === '---' || line.startsWith('---')) {
+      flushGroup();
+      elements.push(
+        <div key={`divider-${keyIdx++}`} className="h-px bg-coffee-100/60 my-6" />
+      );
+    } else if (line.startsWith('###')) {
+      flushGroup();
+      const headerText = line.replace(/^###\s*/, '').trim();
+      elements.push(
+        <h4 key={`header-${keyIdx++}`} className="text-base sm:text-lg font-black text-coffee-950 uppercase tracking-[0.15em] mt-6 first:mt-2 mb-3">
+          {headerText}
+        </h4>
+      );
+    } else {
+      const isQuoted = (line.startsWith('"') && line.endsWith('"')) || (line.startsWith('“') && line.endsWith('”'));
+      const textContent = isQuoted ? line.slice(1, -1) : line;
+
+      if (isQuoted) {
+        currentGroup.push(
+          <p key={`para-${keyIdx++}`} className="text-coffee-600 text-sm sm:text-base leading-relaxed font-sans italic border-l-4 border-amber-500 pl-4 py-1 bg-amber-50/30 rounded-r-2xl my-2">
+            “{textContent}”
+          </p>
+        );
+      } else {
+        currentGroup.push(
+          <p key={`para-${keyIdx++}`} className="text-coffee-800 text-sm sm:text-base leading-relaxed font-sans font-medium text-justify">
+            {line}
+          </p>
+        );
+      }
+    }
+  }
+
+  flushGroup();
+
+  return <div className="space-y-4">{elements}</div>;
+}
+
+function renderStepContent(text: string) {
+  if (!text) return null;
+
+  const lines = text.split(/\r?\n/);
+  const elements: React.ReactNode[] = [];
+  let currentGroup: React.ReactNode[] = [];
+  let keyIdx = 0;
+
+  const flushGroup = () => {
+    if (currentGroup.length > 0) {
+      elements.push(
+        <div key={`group-${keyIdx++}`} className="space-y-6 w-full">
+          {...currentGroup}
+        </div>
+      );
+      currentGroup = [];
+    }
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const rawLine = lines[i];
+    const line = rawLine.trim();
+
+    if (!line) {
+      continue;
+    }
+
+    if (line === '---' || line.startsWith('---')) {
+      flushGroup();
+      elements.push(
+        <div key={`divider-${keyIdx++}`} className="h-px bg-coffee-200/60 my-8 w-full max-w-xl mx-auto" />
+      );
+    } else if (line.startsWith('###')) {
+      flushGroup();
+      const headerText = line.replace(/^###\s*/, '').trim();
+      elements.push(
+        <h4 key={`header-${keyIdx++}`} className="text-lg sm:text-xl font-sans font-black text-coffee-950 uppercase tracking-[0.15em] mt-8 first:mt-2 mb-4 text-center">
+          {headerText}
+        </h4>
+      );
+    } else {
+      const isQuoted = (line.startsWith('"') && line.endsWith('"')) || (line.startsWith('“') && line.endsWith('”'));
+      const textContent = isQuoted ? line.slice(1, -1) : line;
+
+      // Handle custom Barista advice
+      const hasDica = line.includes('Dica do Barista') || line.startsWith('💡') || line.toLowerCase().includes('dica:');
+
+      if (hasDica) {
+        flushGroup();
+        const cleanLine = line.replace(/^(💡\s*)?(Dica do Barista:?|Dica:?)\s*/i, '').trim();
+        elements.push(
+          <div key={`dica-${keyIdx++}`} className="p-6 sm:p-8 bg-amber-50/80 border border-amber-200/50 rounded-[2rem] text-left shadow-sm w-full max-w-xl mx-auto my-4">
+            <span className="font-sans font-black text-amber-900 text-xs sm:text-sm uppercase tracking-widest block mb-2 flex items-center gap-2">
+              <Sparkles size={16} className="text-amber-500 animate-pulse" />
+              Dica do Barista
+            </span>
+            <p className="text-sm sm:text-base md:text-lg font-sans font-semibold text-amber-950 leading-relaxed">
+              {cleanLine}
+            </p>
+          </div>
+        );
+      } else if (isQuoted) {
+        currentGroup.push(
+          <p key={`para-${keyIdx++}`} className="text-coffee-600 text-base sm:text-xl leading-relaxed font-sans italic border-l-4 border-amber-500 pl-4 py-1 bg-amber-50/30 rounded-r-2xl my-2 max-w-xl mx-auto">
+            “{textContent}”
+          </p>
+        );
+      } else {
+        currentGroup.push(
+          <p key={`para-${keyIdx++}`} className="text-coffee-800 text-base sm:text-xl leading-relaxed font-sans font-semibold text-center sm:text-justify max-w-xl mx-auto">
+            {line}
+          </p>
+        );
+      }
+    }
+  }
+
+  flushGroup();
+
+  return <div className="space-y-6 w-full select-text">{elements}</div>;
+}
 
 export default function App() {
   const weather = useWeather();
@@ -2508,7 +2655,7 @@ export default function App() {
               </button>
             </div>
 
-            <div className="flex-1 flex flex-col items-center justify-start sm:justify-center p-6 pt-24 pb-32 sm:p-12 sm:pt-24 sm:pb-32 max-w-5xl mx-auto w-full overflow-y-auto no-scrollbar relative z-10">
+            <div className="flex-1 flex flex-col items-center justify-start p-6 pt-24 pb-36 sm:p-12 sm:pt-28 sm:pb-40 max-w-2xl mx-auto w-full overflow-y-auto no-scrollbar relative z-10 select-text">
               <AnimatePresence mode="wait">
                 <motion.div 
                   key={currentStepIndex}
@@ -2516,9 +2663,9 @@ export default function App() {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
                   transition={{ duration: 0.4 }}
-                  className="w-full flex flex-col items-center gap-6 sm:gap-12"
+                  className="w-full flex flex-col items-center gap-6 sm:gap-8"
                 >
-                  <div className="w-full max-w-[280px] aspect-[2/3] relative rounded-[2.5rem] overflow-hidden bg-coffee-50 border-8 border-white shadow-2xl mx-auto">
+                  <div className="w-full max-w-[280px] aspect-[2/3] relative rounded-[2.5rem] overflow-hidden bg-coffee-50 border-8 border-white shadow-2xl mx-auto shrink-0">
                     <img 
                       src={selectedRecipe.steps[currentStepIndex].image || `https://picsum.photos/seed/${selectedRecipe.steps[currentStepIndex].title + currentStepIndex}/1024/1536`} 
                       alt={selectedRecipe.steps[currentStepIndex].title}
@@ -2529,24 +2676,13 @@ export default function App() {
                     <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/paper.png')]" />
                   </div>
 
-                  <div className="text-center space-y-8 max-w-2xl">
-                    <h2 className="text-3xl sm:text-5xl font-sans font-black text-coffee-950 tracking-tight">
+                  <div className="w-full space-y-4 text-center">
+                    <h2 className="text-2xl sm:text-4xl font-sans font-black text-coffee-950 tracking-tight leading-tight">
                       {selectedRecipe.steps[currentStepIndex].title}
                     </h2>
-                    <p className="text-xl sm:text-3xl font-sans font-semibold text-coffee-900 leading-relaxed italic whitespace-pre-line">
-                      {selectedRecipe.steps[currentStepIndex].description.split('\n').map((line, i) => (
-                        <span key={i} className="block mb-4 last:mb-0">
-                          {line.includes('Dica do Barista') ? (
-                            <>
-                              <span className="font-black text-coffee-950 not-italic block mb-1">💡 Dica do Barista</span>
-                              {line.replace('Dica do Barista', '').trim()}
-                            </>
-                          ) : (
-                            line
-                          )}
-                        </span>
-                      ))}
-                    </p>
+                    <div className="w-full text-left">
+                      {renderStepContent(selectedRecipe.steps[currentStepIndex].description)}
+                    </div>
                   </div>
                 </motion.div>
               </AnimatePresence>
@@ -2610,199 +2746,224 @@ export default function App() {
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
-              className="bg-coffee-50 w-full max-w-3xl h-full sm:h-[90vh] sm:rounded-[3rem] overflow-hidden flex flex-col shadow-2xl"
+              className="bg-coffee-50 w-full max-w-3xl h-full sm:h-[90vh] sm:rounded-[3rem] overflow-hidden flex flex-col shadow-2xl border border-coffee-100"
             >
-              <div className="relative h-72 sm:h-80 shrink-0">
-                <img src={selectedRecipe.image} alt={selectedRecipe.name} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
-                <div className="absolute top-6 right-6 flex gap-2">
-                  <button 
-                    onClick={(e) => toggleFavorite(e, selectedRecipe.id)}
-                    className={cn(
-                      "w-10 h-10 backdrop-blur-md rounded-full flex items-center justify-center shadow-lg transition-all",
-                      favorites.includes(selectedRecipe.id) 
-                        ? "bg-coffee-500 text-white" 
-                        : "bg-white/80 text-coffee-950"
-                    )}
-                  >
-                    <Heart size={20} fill={favorites.includes(selectedRecipe.id) ? "currentColor" : "none"} />
-                  </button>
-                  <button 
-                    onClick={() => setSelectedRecipe(null)}
-                    className="w-10 h-10 bg-white/80 backdrop-blur-md rounded-full flex items-center justify-center text-coffee-950 shadow-lg"
-                  >
-                    <X size={20} />
-                  </button>
-                </div>
-                <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-coffee-50 to-transparent"></div>
-              </div>
-
-              <div className="px-8 pb-10 overflow-y-auto no-scrollbar flex-1 -mt-10 relative z-10">
-                <div className="space-y-6">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-coffee-500 text-xs font-bold uppercase tracking-widest">
-                      <div className="flex items-center gap-1">
-                        <MapPin size={12} />
-                        <span>{selectedRecipe.country}</span>
-                      </div>
-                      <span>•</span>
-                      <span>{selectedRecipe.category}</span>
-                      <span>•</span>
-                      <span>{selectedRecipe.difficulty}</span>
-                    </div>
-                    <h2 className="text-3xl sm:text-4xl font-sans font-bold text-coffee-950 break-words">{selectedRecipe.name}</h2>
-                    <p className="text-coffee-600 italic leading-relaxed break-words">{selectedRecipe.description}</p>
-                  </div>
-
-                  <div className="flex gap-8 py-4 border-y border-coffee-200">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-coffee-100 flex items-center justify-center text-coffee-800">
-                        <Clock size={20} />
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-bold text-coffee-400 uppercase tracking-widest">Tempo</p>
-                        <p className="text-sm font-bold text-coffee-900">{selectedRecipe.prepTime}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-coffee-100 flex items-center justify-center text-coffee-800">
-                        <Droplets size={20} />
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-bold text-coffee-400 uppercase tracking-widest">Dificuldade</p>
-                        <p className="text-sm font-bold text-coffee-900">{selectedRecipe.difficulty}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <h3 className="text-xl font-sans font-bold text-coffee-950">Ingredientes</h3>
-                    <div className="grid grid-cols-1 gap-3">
-                      {(selectedRecipe.detailedIngredients && selectedRecipe.detailedIngredients.length > 0) ? (
-                        selectedRecipe.detailedIngredients.map((ing, i) => (
-                          <div key={i} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-coffee-100 shadow-sm">
-                            <span className="text-sm font-medium text-coffee-800">{ing.name}</span>
-                            {ing.amount && (
-                              <span className="text-xs font-bold text-coffee-400 bg-coffee-50 px-3 py-1 rounded-lg uppercase tracking-wider">{ing.amount}</span>
-                            )}
-                          </div>
-                        ))
-                      ) : (selectedRecipe.ingredients && selectedRecipe.ingredients.length > 0) ? (
-                        selectedRecipe.ingredients.map((ing, i) => (
-                          <div key={i} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-coffee-100 shadow-sm">
-                            <span className="text-sm font-medium text-coffee-800">{ing}</span>
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-coffee-400 italic text-sm px-2">Nenhum ingrediente listado.</p>
+              {/* Unified Scrollable Container wrapping both Banner image and Recipe Contents */}
+              <div className="flex-grow overflow-y-auto no-scrollbar flex-1 min-h-0 relative z-10 select-text">
+                <div className="relative h-72 sm:h-80 w-full shrink-0">
+                  <img src={selectedRecipe.image} alt={selectedRecipe.name} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+                  <div className="absolute top-6 right-6 flex gap-2 z-20">
+                    <button 
+                      onClick={(e) => toggleFavorite(e, selectedRecipe.id)}
+                      className={cn(
+                        "w-10 h-10 backdrop-blur-md rounded-full flex items-center justify-center shadow-lg transition-all",
+                        favorites.includes(selectedRecipe.id) 
+                          ? "bg-coffee-500 text-white" 
+                          : "bg-white/80 text-coffee-950"
                       )}
-                    </div>
+                    >
+                      <Heart size={20} fill={favorites.includes(selectedRecipe.id) ? "currentColor" : "none"} />
+                    </button>
+                    <button 
+                      onClick={() => setSelectedRecipe(null)}
+                      className="w-10 h-10 bg-white/80 backdrop-blur-md rounded-full flex items-center justify-center text-coffee-950 shadow-lg"
+                    >
+                      <X size={20} />
+                    </button>
                   </div>
+                  <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-coffee-50 to-transparent"></div>
+                </div>
 
-                  {selectedRecipe.equipment && selectedRecipe.equipment.length > 0 && (
-                    <div className="space-y-4">
-                      <h3 className="text-xl font-sans font-bold text-coffee-950">Equipamentos</h3>
-                      <div className="flex flex-wrap gap-2">
-                        {selectedRecipe.equipment.map((eq, i) => (
-                          <div key={i} className="bg-white border border-coffee-100 px-4 py-2 rounded-xl text-xs font-bold text-coffee-600 shadow-sm">
-                            {eq}
-                          </div>
-                        ))}
+                <div className="px-8 pb-10 overflow-visible -mt-10 relative z-10">
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-coffee-500 text-xs font-bold uppercase tracking-widest">
+                        <div className="flex items-center gap-1">
+                          <MapPin size={12} />
+                          <span>{selectedRecipe.country}</span>
+                        </div>
+                        <span>•</span>
+                        <span>{selectedRecipe.category}</span>
+                        <span>•</span>
+                        <span>{selectedRecipe.difficulty}</span>
+                      </div>
+                      <h2 className="text-3xl sm:text-4xl font-sans font-black text-coffee-950 break-words leading-tight">{selectedRecipe.name}</h2>
+                      
+                      {/* Formatted description with markdown compatibility */}
+                      <div className="text-coffee-600 leading-relaxed font-sans mt-2">
+                        {renderFormattedContent(selectedRecipe.description)}
                       </div>
                     </div>
-                  )}
 
-                  <div className="space-y-8 pt-4">
-                    <div className="flex items-center justify-between relative">
-                      <h3 className="text-xl font-sans font-bold text-coffee-950">Modo de Preparo</h3>
-                      <div className="flex items-center gap-2">
-                        {selectedRecipe.steps && selectedRecipe.steps.length > 0 && (
-                          <>
-                            <button 
-                              onClick={() => setIsFullScreenSteps(true)}
-                              className="p-2 rounded-full bg-white border border-coffee-100 text-coffee-600 hover:bg-coffee-900 hover:text-white transition-all shadow-sm"
-                              title="Tela Cheia"
-                            >
-                              <Maximize2 size={16} />
-                            </button>
-                            <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-coffee-100 shadow-sm">
-                              <span className="text-coffee-900 font-bold text-sm">{currentStepIndex + 1}</span>
-                              <span className="text-coffee-300 text-[10px]">/</span>
-                              <span className="text-coffee-400 text-[10px]">{selectedRecipe.steps.length}</span>
+                    <div className="flex gap-8 py-4 border-y border-coffee-200">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-coffee-100 flex items-center justify-center text-coffee-800">
+                          <Clock size={20} />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-coffee-400 uppercase tracking-widest">Tempo</p>
+                          <p className="text-sm font-bold text-coffee-900">{selectedRecipe.prepTime}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-coffee-100 flex items-center justify-center text-coffee-800">
+                          <Droplets size={20} />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-coffee-400 uppercase tracking-widest">Dificuldade</p>
+                          <p className="text-sm font-bold text-coffee-900">{selectedRecipe.difficulty}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <h3 className="text-xl font-sans font-bold text-coffee-950">Ingredientes</h3>
+                      <div className="grid grid-cols-1 gap-3">
+                        {(selectedRecipe.detailedIngredients && selectedRecipe.detailedIngredients.length > 0) ? (
+                          selectedRecipe.detailedIngredients.map((ing, i) => (
+                            <div key={i} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-coffee-100 shadow-sm">
+                              <span className="text-sm font-medium text-coffee-800">{ing.name}</span>
+                              {ing.amount && (
+                                <span className="text-xs font-bold text-coffee-400 bg-coffee-50 px-3 py-1 rounded-lg uppercase tracking-wider">{ing.amount}</span>
+                              )}
                             </div>
-                          </>
+                          ))
+                        ) : (selectedRecipe.ingredients && selectedRecipe.ingredients.length > 0) ? (
+                          selectedRecipe.ingredients.map((ing, i) => (
+                            <div key={i} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-coffee-100 shadow-sm">
+                              <span className="text-sm font-medium text-coffee-800">{ing}</span>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-coffee-400 italic text-sm px-2">Nenhum ingrediente listado.</p>
                         )}
                       </div>
                     </div>
 
-                    {selectedRecipe.steps && selectedRecipe.steps.length > 0 ? (
-                      <div className="bg-white rounded-[3rem] p-8 border border-coffee-100 shadow-sm space-y-10 text-center relative overflow-hidden">
-                        {/* Background decoration */}
-                        <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-coffee-50/30 to-transparent pointer-events-none" />
-                        
-                        <AnimatePresence mode="wait">
-                          {selectedRecipe.steps[currentStepIndex] && (
-                            <motion.div 
-                              key={currentStepIndex}
-                              initial={{ opacity: 0, scale: 0.95 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              exit={{ opacity: 0, scale: 1.05 }}
-                              transition={{ duration: 0.3 }}
-                              className="space-y-8"
-                            >
-                              <div className="w-full max-w-[224px] aspect-[2/3] mx-auto relative rounded-[2rem] overflow-hidden bg-coffee-50 border-4 border-white shadow-xl rotate-1">
-                                <img 
-                                  src={selectedRecipe.steps[currentStepIndex].image || `https://picsum.photos/seed/${selectedRecipe.steps[currentStepIndex].title + currentStepIndex}/1024/1536`} 
-                                  alt={selectedRecipe.steps[currentStepIndex].title}
-                                  referrerPolicy="no-referrer"
-                                  className="w-full h-full object-cover opacity-95 filter sepia-[0.1] contrast-[1.05]"
-                                />
-                                {/* Subtle paper texture overlay */}
-                                <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/paper.png')]" />
+                    {selectedRecipe.equipment && selectedRecipe.equipment.length > 0 && (
+                      <div className="space-y-4">
+                        <h3 className="text-xl font-sans font-bold text-coffee-950">Equipamentos</h3>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedRecipe.equipment.map((eq, i) => (
+                            <div key={i} className="bg-white border border-coffee-100 px-4 py-2 rounded-xl text-xs font-bold text-coffee-600 shadow-sm">
+                              {eq}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="space-y-8 pt-4">
+                      <div className="flex items-center justify-between relative">
+                        <h3 className="text-xl font-sans font-bold text-coffee-950">Modo de Preparo</h3>
+                        <div className="flex items-center gap-2">
+                          {selectedRecipe.steps && selectedRecipe.steps.length > 0 && (
+                            <>
+                              <button 
+                                onClick={() => setIsFullScreenSteps(true)}
+                                className="p-2 rounded-full bg-white border border-coffee-100 text-coffee-600 hover:bg-coffee-900 hover:text-white transition-all shadow-sm"
+                                title="Tela Cheia"
+                              >
+                                <Maximize2 size={16} />
+                              </button>
+                              <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-coffee-100 shadow-sm">
+                                <span className="text-coffee-900 font-bold text-sm">{currentStepIndex + 1}</span>
+                                <span className="text-coffee-300 text-[10px]">/</span>
+                                <span className="text-coffee-400 text-[10px]">{selectedRecipe.steps.length}</span>
                               </div>
-
-                              <div className="max-w-xs mx-auto">
-                                <p className="text-lg sm:text-xl font-sans text-coffee-800/90 leading-relaxed italic">
-                                  {selectedRecipe.steps[currentStepIndex].description}
-                                </p>
-                              </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-
-                        <div className="flex flex-col items-center gap-4 pt-4">
-                          <button 
-                            onClick={() => {
-                              if (currentStepIndex < selectedRecipe.steps.length - 1) {
-                                setCurrentStepIndex(prev => prev + 1);
-                              } else {
-                                setCurrentStepIndex(0);
-                              }
-                            }}
-                            className="bg-white border border-coffee-100 px-10 py-4 rounded-full shadow-sm flex items-center gap-3 group hover:bg-coffee-900 hover:text-white transition-all active:scale-95"
-                          >
-                            <span className="text-xs font-bold uppercase tracking-[0.2em] text-coffee-800 group-hover:text-white">
-                              {currentStepIndex < selectedRecipe.steps.length - 1 ? 'Continuar' : 'Reiniciar'}
-                            </span>
-                            <ChevronRight size={16} className="text-coffee-400 group-hover:text-white transition-colors" />
-                          </button>
-
-                          {currentStepIndex > 0 && (
-                            <button 
-                              onClick={() => setCurrentStepIndex(prev => prev - 1)}
-                              className="text-[10px] font-bold text-coffee-300 uppercase tracking-widest hover:text-coffee-500 transition-colors"
-                            >
-                              Voltar passo anterior
-                            </button>
+                            </>
                           )}
                         </div>
                       </div>
-                    ) : (
-                      <div className="bg-white rounded-[3rem] p-12 border border-coffee-100 shadow-sm text-center">
-                        <p className="text-coffee-400 italic">Modo de preparo não disponível para esta receita.</p>
-                      </div>
-                    )}
+
+                      {selectedRecipe.steps && selectedRecipe.steps.length > 0 ? (
+                        <div className="bg-white rounded-[3rem] p-8 border border-coffee-100 shadow-sm space-y-10 text-center relative overflow-hidden">
+                          {/* Background decoration */}
+                          <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-coffee-50/30 to-transparent pointer-events-none" />
+                          
+                          <AnimatePresence mode="wait">
+                            {selectedRecipe.steps[currentStepIndex] && (
+                              <motion.div 
+                                key={currentStepIndex}
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 1.05 }}
+                                transition={{ duration: 0.3 }}
+                                className="space-y-8"
+                              >
+                                <div className="w-full max-w-[224px] aspect-[2/3] mx-auto relative rounded-[2rem] overflow-hidden bg-coffee-50 border-4 border-white shadow-xl rotate-1">
+                                  <img 
+                                    src={selectedRecipe.steps[currentStepIndex].image || `https://picsum.photos/seed/${selectedRecipe.steps[currentStepIndex].title + currentStepIndex}/1024/1536`} 
+                                    alt={selectedRecipe.steps[currentStepIndex].title}
+                                    referrerPolicy="no-referrer"
+                                    className="w-full h-full object-cover opacity-95 filter sepia-[0.1] contrast-[1.05]"
+                                  />
+                                  {/* Subtle paper texture overlay */}
+                                  <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/paper.png')]" />
+                                </div>
+
+                                <div className="text-left max-w-md mx-auto space-y-4">
+                                  {renderFormattedContent(selectedRecipe.steps[currentStepIndex].description)}
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+
+                          <div className="flex flex-col items-center gap-4 pt-4">
+                            <button 
+                              onClick={() => {
+                                if (currentStepIndex < selectedRecipe.steps.length - 1) {
+                                  setCurrentStepIndex(prev => prev + 1);
+                                } else {
+                                  setCurrentStepIndex(0);
+                                }
+                              }}
+                              className="bg-white border border-coffee-100 px-10 py-4 rounded-full shadow-sm flex items-center gap-3 group hover:bg-coffee-900 hover:text-white transition-all active:scale-95"
+                            >
+                              <span className="text-xs font-bold uppercase tracking-[0.2em] text-coffee-800 group-hover:text-white">
+                                {currentStepIndex < selectedRecipe.steps.length - 1 ? 'Continuar' : 'Reiniciar'}
+                              </span>
+                              <ChevronRight size={16} className="text-coffee-400 group-hover:text-white transition-colors" />
+                            </button>
+
+                            {currentStepIndex > 0 && (
+                              <button 
+                                onClick={() => setCurrentStepIndex(prev => prev - 1)}
+                                className="text-[10px] font-bold text-coffee-300 uppercase tracking-widest hover:text-coffee-500 transition-colors"
+                              >
+                                Voltar passo anterior
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="bg-white rounded-[3rem] p-12 border border-coffee-100 shadow-sm text-center">
+                          <p className="text-coffee-400 italic">Modo de preparo não disponível para esta receita.</p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
+              </div>
+
+              {/* Clean Bottom Actions - Pinned */}
+              <div className="p-6 bg-white border-t border-coffee-100 shrink-0 flex gap-3 sm:gap-4">
+                <button 
+                  onClick={() => setSelectedRecipe(null)}
+                  className="px-5 sm:px-6 bg-coffee-100 text-coffee-800 py-4 rounded-2xl font-black uppercase tracking-[0.15em] hover:bg-coffee-200 transition-all active:scale-[0.98] text-xs"
+                >
+                  Voltar
+                </button>
+                <button 
+                  onClick={() => {
+                    setCurrentStepIndex(0);
+                    setIsFullScreenSteps(true);
+                  }}
+                  className="flex-1 bg-coffee-950 text-white py-4 rounded-2xl font-black uppercase tracking-[0.2em] hover:bg-coffee-900 transition-all shadow-lg hover:shadow-coffee-950/10 active:scale-[0.98] text-xs flex items-center justify-center gap-2"
+                >
+                  <Coffee size={14} className="stroke-[2.5]" />
+                  <span>Preparar Receita</span>
+                </button>
               </div>
             </motion.div>
           </motion.div>

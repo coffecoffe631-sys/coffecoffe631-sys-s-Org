@@ -5,6 +5,71 @@ import { JourneyStep } from '../data/journey';
 import { Trophy, Check, Lock, Sparkles, Droplets, Waves, Leaf, Coffee, ChevronRight, Zap, X, Maximize2, Edit, Save, Plus, Trash2, Image as ImageIcon } from 'lucide-react';
 import { cn } from '../lib/utils';
 
+function renderFormattedContent(text: string) {
+  if (!text) return null;
+
+  const lines = text.split(/\r?\n/);
+  const elements: React.ReactNode[] = [];
+  let currentGroup: React.ReactNode[] = [];
+  let keyIdx = 0;
+
+  const flushGroup = () => {
+    if (currentGroup.length > 0) {
+      elements.push(
+        <div key={`group-${keyIdx++}`} className="space-y-4">
+          {...currentGroup}
+        </div>
+      );
+      currentGroup = [];
+    }
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const rawLine = lines[i];
+    const line = rawLine.trim();
+
+    if (!line) {
+      continue;
+    }
+
+    if (line === '---' || line.startsWith('---')) {
+      flushGroup();
+      elements.push(
+        <div key={`divider-${keyIdx++}`} className="h-px bg-coffee-100/60 my-6" />
+      );
+    } else if (line.startsWith('###')) {
+      flushGroup();
+      const headerText = line.replace(/^###\s*/, '').trim();
+      elements.push(
+        <h4 key={`header-${keyIdx++}`} className="text-base sm:text-lg font-black text-coffee-950 uppercase tracking-[0.15em] mt-6 first:mt-2 mb-3">
+          {headerText}
+        </h4>
+      );
+    } else {
+      const isQuoted = (line.startsWith('"') && line.endsWith('"')) || (line.startsWith('“') && line.endsWith('”'));
+      const textContent = isQuoted ? line.slice(1, -1) : line;
+
+      if (isQuoted) {
+        currentGroup.push(
+          <p key={`para-${keyIdx++}`} className="text-coffee-600 text-sm sm:text-base leading-relaxed font-sans italic border-l-4 border-amber-500 pl-4 py-1 bg-amber-50/30 rounded-r-2xl my-2">
+            “{textContent}”
+          </p>
+        );
+      } else {
+        currentGroup.push(
+          <p key={`para-${keyIdx++}`} className="text-coffee-800 text-sm sm:text-base leading-relaxed font-sans font-medium text-justify">
+            {line}
+          </p>
+        );
+      }
+    }
+  }
+
+  flushGroup();
+
+  return <div className="space-y-4">{elements}</div>;
+}
+
 interface JourneyViewProps {
   journey: JourneyStep[];
   isAdmin: boolean;
@@ -183,7 +248,7 @@ export default function JourneyView({ journey, isAdmin, onUpdateStep, onAddStep,
       {/* Step Detail Modal */}
       <AnimatePresence>
         {selectedStep && (
-          <div className="fixed inset-0 z-[300] flex items-center justify-center p-0 sm:p-4">
+          <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
              <motion.div 
                initial={{ opacity: 0 }}
                animate={{ opacity: 1 }}
@@ -198,159 +263,98 @@ export default function JourneyView({ journey, isAdmin, onUpdateStep, onAddStep,
                  scale: 1, 
                  opacity: 1, 
                  y: 0,
-                 width: isFullScreen ? '100%' : '100%',
-                 maxWidth: isFullScreen ? '100%' : '600px',
-                 height: isFullScreen ? '100%' : 'auto',
-                 maxHeight: isFullScreen ? '100%' : '90vh',
-                 borderRadius: isFullScreen ? 0 : '2.5rem'
+                 width: '100%',
+                 maxWidth: '520px',
+                 borderRadius: '2.5rem'
                }}
                exit={{ scale: 0.9, opacity: 0, y: 20 }}
-               className="bg-white shadow-2xl relative z-10 overflow-y-auto no-scrollbar scroll-smooth flex flex-col"
+               className="bg-white shadow-2xl relative z-10 max-h-[85vh] sm:max-h-[90vh] overflow-hidden flex flex-col border border-coffee-100 w-full"
              >
-                {/* Modal Header */}
-                <div className={cn(
-                  "p-8 sm:p-10 text-white relative shrink-0 transition-colors",
-                  selectedStep.status === 'completed' ? "bg-emerald-600" : 
-                  selectedStep.status === 'current' ? "bg-amber-600" : "bg-coffee-900"
-                )}>
-                  <div className="absolute top-6 right-6 flex items-center gap-2">
-                    {isAdmin && (
-                      <button 
-                        onClick={() => handleEditStart(selectedStep)}
-                        className="p-2.5 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
-                        title="Editar Etapa"
-                      >
-                        <Edit size={18} />
-                      </button>
-                    )}
-                    <button 
-                      onClick={() => setIsFullScreen(!isFullScreen)}
-                      className="p-2.5 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
-                      title={isFullScreen ? "Sair da tela cheia" : "Tela cheia"}
-                    >
-                      {isFullScreen ? <ChevronRight className="rotate-90" size={18} /> : <Maximize2 size={18} />}
-                    </button>
-                    <button 
-                      onClick={closeDetails}
-                      className="p-2.5 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
-                    >
-                      <X size={18} />
-                    </button>
-                  </div>
+                {/* Unified Scrollable Container wrapping both Banner and Content */}
+                <div className="flex-1 overflow-y-auto min-h-0 divide-y divide-coffee-100/30">
                   
-                <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 text-center sm:text-left mt-4 sm:mt-0">
-                    <div className="w-20 h-20 rounded-3xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0 overflow-hidden">
-                      <GetStepIcon name={selectedStep.icon} size={40} />
+                  {/* Image Section */}
+                  <div className="relative aspect-[4/3] w-full bg-coffee-50 overflow-hidden shrink-0">
+                    <img 
+                      src={selectedStep.image || 'https://images.unsplash.com/photo-1507133750040-4a8f57021571?q=80&w=1000'} 
+                      alt={selectedStep.title} 
+                      className="w-full h-full object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/35" />
+                    
+                    {/* Floating Action Buttons */}
+                    <div className="absolute top-6 right-6 flex items-center gap-2">
+                      {isAdmin && (
+                        <button 
+                          onClick={() => handleEditStart(selectedStep)}
+                          className="p-2.5 rounded-full bg-white/20 hover:bg-white/35 backdrop-blur-md text-white transition-all shadow-sm"
+                          title="Editar Etapa"
+                        >
+                          <Edit size={16} />
+                        </button>
+                      )}
+                      <button 
+                        onClick={closeDetails}
+                        className="p-2.5 rounded-full bg-white/20 hover:bg-white/35 backdrop-blur-md text-white transition-all shadow-sm"
+                      >
+                        <X size={16} />
+                      </button>
                     </div>
-                    <div className="space-y-1">
-                      <span className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-80">
-                        {selectedStep.status === 'completed' ? 'Missão Concluída' : selectedStep.status === 'current' ? 'Em Progresso' : 'Bloqueado'}
+                    
+                    {/* Bottom Image Subtitle status tag */}
+                    <div className="absolute bottom-6 left-6">
+                      <span className={cn(
+                        "px-3.5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.15em] text-white shadow-md backdrop-blur-md border",
+                        selectedStep.status === 'completed' ? "bg-emerald-500/80 border-emerald-400/20" : 
+                        selectedStep.status === 'current' ? "bg-amber-500/80 border-amber-400/20" : 
+                        "bg-coffee-950/85 border-white/20"
+                      )}>
+                        {selectedStep.status === 'completed' ? 'Concluída' : selectedStep.status === 'current' ? 'Em Progresso' : 'Bloqueada'}
                       </span>
-                      <h3 className="text-3xl sm:text-4xl font-sans font-bold leading-tight">{selectedStep.title}</h3>
                     </div>
                   </div>
+  
+                  {/* Modal Content - Text, Title, Subtitle & Description */}
+                  <div className="p-8 space-y-6 bg-white">
+                    <div className="space-y-3">
+                      <h3 className="text-2xl sm:text-3xl font-sans font-black text-coffee-950 tracking-tight leading-tight">
+                        {selectedStep.title}
+                      </h3>
+                      
+                      {/* Subtitle - placed properly below the Title with beautiful visual separation */}
+                      <div className="pt-1 select-none">
+                        <span className="inline-block px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-xl text-xs font-bold text-amber-900 uppercase tracking-widest shadow-sm">
+                          {selectedStep.requirements || 'Aprendizado • Jornada do Café'}
+                        </span>
+                      </div>
+                    </div>
+  
+                    {/* Separator Line */}
+                    <div className="h-px bg-coffee-100/60 w-full" />
+  
+                    {/* Description formatted dynamically with markdown separations */}
+                    <div className="space-y-4">
+                      {renderFormattedContent(selectedStep.description)}
+                      
+                      {selectedStep.content?.overview && selectedStep.content.overview !== selectedStep.description && (
+                        <div className="mt-4 pt-4 border-t border-coffee-100/60">
+                          {renderFormattedContent(selectedStep.content.overview)}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
                 </div>
-
-                {/* Modal Content */}
-                <div className={cn(
-                  "p-8 sm:p-10 space-y-10 flex-1",
-                  isFullScreen ? "max-w-4xl mx-auto w-full" : ""
-                )}>
-                  {selectedStep.image && (
-                    <div className="relative aspect-[16/9] sm:aspect-[21/9] rounded-[2rem] overflow-hidden shadow-lg border border-coffee-100">
-                      <img 
-                        src={selectedStep.image} 
-                        alt={selectedStep.title} 
-                        className="w-full h-full object-cover"
-                        referrerPolicy="no-referrer"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-coffee-950/20 to-transparent" />
-                    </div>
-                  )}
-
-                  {selectedStep.content && (
-                    <>
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-2">
-                          <div className="w-1.5 h-6 bg-coffee-800 rounded-full" />
-                          <h4 className="text-xs font-black uppercase tracking-[0.2em] text-coffee-400">Visão Geral</h4>
-                        </div>
-                        <p className="text-coffee-700 text-lg sm:text-xl leading-relaxed font-sans">
-                          {selectedStep.content.overview}
-                        </p>
-                      </div>
-
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-2">
-                          <div className="w-1.5 h-6 bg-coffee-800 rounded-full" />
-                          <h4 className="text-xs font-black uppercase tracking-[0.2em] text-coffee-400">Lista de Missões</h4>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {selectedStep.content.tasks.map((task, i) => (
-                            <div key={i} className="flex items-start gap-4 p-5 rounded-3xl bg-coffee-50 border border-coffee-100/50 hover:bg-white hover:shadow-lg transition-all duration-300">
-                              <div className={cn(
-                                "w-6 h-6 rounded-lg flex items-center justify-center shrink-0 mt-0.5",
-                                selectedStep.status === 'completed' ? "bg-emerald-100 text-emerald-600" : "bg-white border border-coffee-200 text-coffee-300 shadow-sm"
-                              )}>
-                                {selectedStep.status === 'completed' ? <Check size={14} strokeWidth={3} /> : <span className="text-[10px] font-bold">{i+1}</span>}
-                              </div>
-                              <span className="text-base font-bold text-coffee-900 leading-snug">{task}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      {selectedStep.content.tips && selectedStep.content.tips.length > 0 && (
-                        <div className="space-y-4">
-                          <div className="flex items-center gap-2">
-                            <div className="w-1.5 h-6 bg-coffee-800 rounded-full" />
-                            <h4 className="text-xs font-black uppercase tracking-[0.2em] text-coffee-400">Dicas de Especialista</h4>
-                          </div>
-                          <div className="bg-amber-50/50 rounded-3xl p-6 border border-amber-100">
-                            <ul className="space-y-4">
-                              {selectedStep.content.tips.map((tip, i) => (
-                                <li key={i} className="flex gap-3 text-coffee-700">
-                                  <Sparkles size={18} className="text-amber-500 shrink-0" />
-                                  <span className="text-base italic">{tip}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        </div>
-                      )}
-                    </>
-                  )}
-
-                  {selectedStep.reward && (
-                    <div className="p-8 rounded-[2.5rem] bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-amber-200 flex flex-col sm:flex-row items-center justify-between gap-6">
-                      <div className="flex items-center gap-5">
-                         <div className="w-16 h-16 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-lg shadow-amber-500/30">
-                            <Trophy size={32} />
-                         </div>
-                         <div className="text-center sm:text-left">
-                            <p className="text-xs font-black text-amber-800 uppercase tracking-[0.2em] mb-1">Recompensa Exclusiva</p>
-                            <p className="text-2xl font-black text-amber-950">{selectedStep.reward}</p>
-                         </div>
-                      </div>
-                      {selectedStep.status === 'completed' ? (
-                        <div className="px-6 py-2 bg-emerald-500 text-white text-xs font-black rounded-xl uppercase tracking-widest shadow-lg shadow-emerald-500/20">Desbloqueado</div>
-                      ) : (
-                        <div className="flex items-center gap-2 text-amber-300">
-                          <Lock size={20} />
-                          <span className="text-xs font-bold uppercase tracking-widest">Bloqueado</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  <div className="pt-4">
-                    <button 
-                      onClick={closeDetails}
-                      className="w-full bg-coffee-950 text-white py-5 rounded-2xl font-black uppercase tracking-[0.2em] hover:bg-coffee-900 transition-all shadow-xl hover:shadow-coffee-950/20 active:scale-[0.98]"
-                    >
-                      Continuar Jornada
-                    </button>
-                  </div>
+ 
+                {/* Clean Bottom Actions - Pinned */}
+                <div className="p-6 bg-white border-t border-coffee-50 shrink-0">
+                  <button 
+                    onClick={closeDetails}
+                    className="w-full bg-coffee-950 text-white py-4 rounded-2xl font-black uppercase tracking-[0.2em] hover:bg-coffee-900 transition-all shadow-lg hover:shadow-coffee-950/10 active:scale-[0.98] text-xs"
+                  >
+                    Fechar Detalhes
+                  </button>
                 </div>
              </motion.div>
           </div>
