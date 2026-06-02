@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { JourneyStep } from '../data/journey';
-import { Trophy, Check, Lock, Sparkles, Droplets, Waves, Leaf, Coffee, ChevronRight, Zap, X, Maximize2, Edit, Save, Plus, Trash2, Image as ImageIcon, Play, Pause, Volume2, VolumeX, Headphones } from 'lucide-react';
+import { Trophy, Check, Lock, Sparkles, Droplets, Waves, Leaf, Coffee, ChevronRight, Zap, X, Maximize2, Edit, Save, Plus, Trash2, Image as ImageIcon, Play, Pause, Volume2, VolumeX, Headphones, BookOpen } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 function AudioPlayer({ src }: { src: string }) {
@@ -319,11 +319,11 @@ export default function JourneyView({ journey, isAdmin, onUpdateStep, onAddStep,
     <div className="space-y-12 pb-12">
       <div className="text-center space-y-2">
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-100 border border-amber-200 mb-2">
-          <Trophy size={14} className="text-amber-600" />
-          <span className="text-[10px] font-bold text-amber-800 uppercase tracking-[0.2em]">Jornada do Conhecimento</span>
+          <BookOpen size={14} className="text-amber-600" />
+          <span className="text-[10px] font-bold text-amber-800 uppercase tracking-[0.2em]">Guia de Aprendizado</span>
         </div>
-        <h2 className="text-3xl font-sans font-bold text-coffee-950">Seu Roadmap Barista</h2>
-        <p className="text-coffee-500 max-w-sm mx-auto">Complete os desafios e evolua suas habilidades para destravar recompensas exclusivas.</p>
+        <h2 className="text-3xl font-sans font-bold text-coffee-950">Explorar e Aprender</h2>
+        <p className="text-coffee-500 max-w-sm mx-auto">Explore lições práticas sobre café e descubra segredos essenciais do grão à xícara de forma leve e acolhedora.</p>
         
         {isAdmin && (
           <div className="pt-6">
@@ -672,10 +672,10 @@ export default function JourneyView({ journey, isAdmin, onUpdateStep, onAddStep,
                       type="text" 
                       value={editingStep.icon} 
                       onChange={(e) => setEditingStep({ ...editingStep, icon: e.target.value })}
-                      placeholder="Ex: Leaf, Trophy ou https://..."
+                      placeholder="Ex: Leaf, BookOpen ou https://..."
                       className="w-full bg-coffee-50 border border-coffee-100 rounded-2xl p-4 focus:ring-2 focus:ring-coffee-200 outline-none"
                     />
-                    <p className="text-[10px] text-coffee-400">Opções: Seed, Leaf, Droplets, Waves, Sparkles, Trophy, Coffee ou URL de imagem.</p>
+                    <p className="text-[10px] text-coffee-400">Opções: Seed, Leaf, Droplets, Waves, Sparkles, BookOpen, Coffee ou URL de imagem.</p>
                   </div>
                   <div className="space-y-2">
                     <label className="text-xs font-black uppercase tracking-widest text-coffee-400">Preview do Ícone</label>
@@ -881,7 +881,7 @@ export default function JourneyView({ journey, isAdmin, onUpdateStep, onAddStep,
                     disabled={isSaving}
                     className="flex-[2] bg-coffee-950 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg hover:bg-coffee-900 disabled:opacity-50 transition-all"
                   >
-                    {isSaving ? <Trophy className="animate-bounce" size={20} /> : <Save size={20} />}
+                    {isSaving ? <BookOpen className="animate-pulse" size={20} /> : <Save size={20} />}
                     {isSaving ? 'Salvando...' : isAddingMode ? 'Adicionar Etapa' : 'Salvar Alterações'}
                   </button>
                 </div>
@@ -957,7 +957,8 @@ function GetStepIcon({ name, size = 24 }: { name: string, size?: number }) {
     case 'Droplets': return <Droplets size={size} />;
     case 'Waves': return <Waves size={size} />;
     case 'Sparkles': return <Sparkles size={size} />;
-    case 'Trophy': return <Trophy size={size} />;
+    case 'Trophy':
+    case 'BookOpen': return <BookOpen size={size} />;
     case 'Coffee': return <Coffee size={size} />;
     default: return <Zap size={size} />;
   }

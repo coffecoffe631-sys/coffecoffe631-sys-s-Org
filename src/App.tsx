@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Search, Filter, MapPin, Cloud, CloudRain, Sun, Clock, ChevronRight, ChevronUp, ChevronDown, X, Heart, Share2, Coffee, Droplets, Zap, Loader2, Settings, Plus, Trash2, Lock, Sparkles, Edit, RotateCcw, Upload, Image as ImageIcon, User as UserIcon, LogOut, Mail, Maximize2, Check, Menu, MessageCircle, Eye, EyeOff, Trophy, Map, Compass } from 'lucide-react';
+import { Search, Filter, MapPin, Cloud, CloudRain, Sun, Clock, ChevronRight, ChevronUp, ChevronDown, X, Heart, Share2, Coffee, Droplets, Zap, Loader2, Settings, Plus, Trash2, Lock, Sparkles, Edit, RotateCcw, Upload, Image as ImageIcon, User as UserIcon, LogOut, Mail, Maximize2, Check, Menu, MessageCircle, Eye, EyeOff, Trophy, Map, Compass, Cookie, BookOpen } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Recipe, Ingredient, Step, WeatherCondition, recipes } from './data/recipes';
+import { Recipe, Ingredient, Step, WeatherCondition, recipes, defaultAccompaniments } from './data/recipes';
 import { coffeeJourney, JourneyStep } from './data/journey';
 import { useWeather } from './hooks/useWeather';
 import JourneyView from './components/JourneyView';
@@ -166,7 +166,13 @@ export default function App() {
   const [currentJourney, setCurrentJourney] = useState<JourneyStep[]>(coffeeJourney);
   const [isLoadingSupabase, setIsLoadingSupabase] = useState(true);
   const [supabaseError, setSupabaseError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'home' | 'favorites' | 'journey'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'accompaniments' | 'favorites' | 'journey'>('home');
+  
+  // Weather Config State
+  const [showWeatherModal, setShowWeatherModal] = useState(false);
+  const [editTemp, setEditTemp] = useState(20);
+  const [editLocation, setEditLocation] = useState('Belo Horizonte');
+  const [editCondition, setEditCondition] = useState('Ensolarado');
   
   // Admin State
   const [showAdminLogin, setShowAdminLogin] = useState(false);
@@ -287,7 +293,15 @@ export default function App() {
   const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Barista';
   const capitalizedName = userName.charAt(0).toUpperCase() + userName.slice(1);
   
-  const categories = ['Espresso', 'Latte', 'Cappuccino', 'Cold Brew', 'Specialty'];
+  const coffeeCategories = useMemo(() => ['Espresso', 'Latte', 'Cappuccino', 'Cold Brew', 'Specialty'], []);
+  const foodCategories = useMemo(() => ['Pães & Salgados', 'Bolos', 'Biscoitos & Doces'], []);
+
+  const categories = useMemo(() => {
+    if (activeTab === 'accompaniments') {
+      return foodCategories;
+    }
+    return coffeeCategories;
+  }, [activeTab, coffeeCategories, foodCategories]);
 
   const allIngredients = useMemo(() => 
     Array.from(new Set(allRecipes.flatMap(r => r.ingredients || [])))
@@ -324,6 +338,10 @@ export default function App() {
           }
         }
 
+        // Automatically inject default accompaniment recipes to ensure the section is richly populated!
+        const missingAccomps = defaultAccompaniments.filter(da => !finalRecipes.some(r => r.name === da.name));
+        finalRecipes = [...finalRecipes, ...missingAccomps];
+
         setAllRecipes(finalRecipes);
 
         if (dbJourney && dbJourney.length > 0) {
@@ -344,6 +362,15 @@ export default function App() {
     };
     loadSupabaseData();
   }, []);
+
+  useEffect(() => {
+    setSelectedCategory(null);
+    setSearchQuery('');
+    setActiveIngredients([]);
+    setActiveEquipment([]);
+    setPendingIngredients([]);
+    setPendingEquipment([]);
+  }, [activeTab]);
 
   useEffect(() => {
     // Check current session
@@ -619,10 +646,11 @@ export default function App() {
 
   useEffect(() => {
     if (!weather.loading && allRecipes.length > 0) {
-      const rec = getLocalCoffeeRecommendation({ temp: weather.temp, condition: weather.condition }, allRecipes);
+      const coffeeRecipesOnly = allRecipes.filter(r => !foodCategories.includes(r.category));
+      const rec = getLocalCoffeeRecommendation({ temp: weather.temp, condition: weather.condition }, coffeeRecipesOnly);
       setRecommendation(rec);
     }
-  }, [weather.loading, weather.temp, weather.condition, allRecipes]);
+  }, [weather.loading, weather.temp, weather.condition, allRecipes, foodCategories]);
 
   const toggleFavorite = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
@@ -636,9 +664,15 @@ export default function App() {
   [recommendation, allRecipes]);
 
   const filteredRecipes = useMemo(() => {
-    const baseList = activeTab === 'favorites' 
-      ? allRecipes.filter(r => favorites.includes(r.id))
-      : allRecipes;
+    let baseList = allRecipes;
+    if (activeTab === 'favorites') {
+      baseList = allRecipes.filter(r => favorites.includes(r.id));
+    } else if (activeTab === 'accompaniments') {
+      baseList = allRecipes.filter(r => foodCategories.includes(r.category));
+    } else {
+      // home tab (coffees)
+      baseList = allRecipes.filter(r => !foodCategories.includes(r.category));
+    }
 
     return baseList.filter(recipe => {
       const matchesSearch = recipe.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -652,7 +686,7 @@ export default function App() {
       
       return matchesSearch && matchesCategory && matchesIngredients && matchesEquipment;
     });
-  }, [searchQuery, selectedCategory, activeIngredients, activeEquipment, activeTab, favorites, allRecipes]);
+  }, [searchQuery, selectedCategory, activeIngredients, activeEquipment, activeTab, favorites, allRecipes, foodCategories]);
 
   const toggleIngredient = (ing: string) => {
     setPendingIngredients(prev => 
@@ -1515,14 +1549,57 @@ export default function App() {
               </div>
             )}
 
+            {/* Ambient Weather Indicator Banner */}
+            {!weather.loading && (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                onClick={() => {
+                  setEditTemp(weather.temp);
+                  setEditLocation(weather.location);
+                  setEditCondition(weather.condition);
+                  setShowWeatherModal(true);
+                }}
+                className="mx-auto flex items-center justify-center gap-3 px-4 py-2 bg-coffee-100/50 hover:bg-coffee-100 border border-coffee-200/40 rounded-full cursor-pointer transition-all shadow-sm max-w-fit mb-4"
+                title="Clique para ajustar o clima ou simulador"
+              >
+                <div className="flex items-center gap-1.5 text-coffee-800">
+                  {weather.condition.includes('Ensolarado') ? <Sun size={14} className="text-amber-500 fill-amber-100" /> : 
+                   weather.condition.includes('Chuvoso') ? <CloudRain size={14} className="text-blue-500" /> : 
+                   <Cloud size={14} className="text-coffee-600" />}
+                  <span className="text-xs font-bold font-mono">{weather.temp}ºC</span>
+                </div>
+                <div className="w-px h-3 bg-coffee-200" />
+                <span className="text-[10px] font-black uppercase text-coffee-600 tracking-wider font-sans">{weather.condition}</span>
+                <div className="w-px h-3 bg-coffee-200" />
+                <div className="flex items-center gap-1 text-[10px] font-black uppercase text-coffee-600 tracking-wider">
+                  <MapPin size={10} className="text-coffee-500" />
+                  <span className="truncate max-w-[120px]">{weather.location}</span>
+                </div>
+                {weather.isCustom && (
+                  <>
+                    <div className="w-px h-3 bg-coffee-200" />
+                    <span className="text-[9px] bg-amber-200 text-amber-900 px-1.5 py-0.5 rounded-md font-extrabold uppercase">Manual</span>
+                  </>
+                )}
+                <Edit size={10} className="text-coffee-400 ml-1" />
+              </motion.div>
+            )}
+
             {/* Search & Filters */}
             <section className="space-y-4">
               <div className="relative group">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-coffee-400 group-focus-within:text-coffee-600 transition-colors" size={20} />
                 <input 
                   type="text" 
-                  placeholder={activeTab === 'home' ? "Buscar por nome ou país..." : "Buscar nos favoritos..."}
-                  className="w-full bg-white border border-coffee-100 rounded-2xl py-4 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-coffee-200 transition-all shadow-sm"
+                  placeholder={
+                    activeTab === 'home' 
+                      ? "Buscar por nome ou país..." 
+                      : activeTab === 'accompaniments' 
+                        ? "Buscar bolos, cookies e acompanhamentos..." 
+                        : "Buscar nos favoritos..."
+                  }
+                  className="w-full bg-coffee-card border border-coffee-100/70 rounded-2xl py-4 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-coffee-200 transition-all shadow-sm"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -1545,7 +1622,7 @@ export default function App() {
                     exit={{ height: 0, opacity: 0 }}
                     className="overflow-hidden"
                   >
-                    <div className="bg-white rounded-2xl p-4 border border-coffee-100 shadow-sm space-y-4">
+                    <div className="bg-coffee-card rounded-2xl p-4 border border-coffee-100/70 shadow-sm space-y-4">
                       <div>
                         <h3 className="text-xs font-bold uppercase text-coffee-400 mb-2 tracking-widest">Ingredientes</h3>
                         <div className="flex flex-wrap gap-2">
@@ -1630,7 +1707,7 @@ export default function App() {
                     onClick={() => setSelectedCategory(null)}
                     className={cn(
                       "px-6 py-3 rounded-2xl whitespace-nowrap text-sm font-medium transition-all shrink-0",
-                      !selectedCategory ? "bg-coffee-900 text-white shadow-lg shadow-coffee-900/20" : "bg-white text-coffee-600 border border-coffee-100"
+                      !selectedCategory ? "bg-coffee-900 text-white shadow-lg shadow-coffee-900/20" : "bg-coffee-card text-coffee-600 border border-coffee-100"
                     )}
                   >
                     Todos
@@ -1641,7 +1718,7 @@ export default function App() {
                       onClick={() => setSelectedCategory(cat)}
                       className={cn(
                         "px-6 py-3 rounded-2xl whitespace-nowrap text-sm font-medium transition-all shrink-0",
-                        selectedCategory === cat ? "bg-coffee-900 text-white shadow-lg shadow-coffee-900/20" : "bg-white text-coffee-600 border border-coffee-100"
+                        selectedCategory === cat ? "bg-coffee-900 text-white shadow-lg shadow-coffee-900/20" : "bg-coffee-card text-coffee-600 border border-coffee-100"
                       )}
                     >
                       {cat}
@@ -1655,7 +1732,12 @@ export default function App() {
             <section className="space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <h2 className="text-xl sm:text-2xl font-sans font-bold text-coffee-950 break-words">
-                  {activeTab === 'favorites' ? 'Meus Favoritos' : (searchQuery || selectedCategory ? 'Resultados' : 'Explorar Sabores')}
+                  {activeTab === 'favorites' 
+                    ? 'Meus Favoritos' 
+                    : activeTab === 'accompaniments'
+                      ? (searchQuery || selectedCategory ? 'Resultados' : 'Acompanhamentos Perfeitos')
+                      : (searchQuery || selectedCategory ? 'Resultados' : 'Explorar Sabores')
+                  }
                 </h2>
                 <span className="text-[10px] sm:text-xs font-bold text-coffee-400 uppercase tracking-widest shrink-0">{filteredRecipes.length} Receitas</span>
               </div>
@@ -1671,7 +1753,7 @@ export default function App() {
                       setSelectedRecipe(recipe);
                       setCurrentStepIndex(0);
                     }}
-                    className="group bg-white rounded-[2.5rem] p-4 border border-coffee-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer overflow-hidden relative"
+                    className="group bg-coffee-card rounded-[2.5rem] p-4 border border-coffee-100/70 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer overflow-hidden relative"
                   >
                     <div className="relative aspect-square rounded-[2rem] overflow-hidden mb-4">
                       <img 
@@ -1711,7 +1793,7 @@ export default function App() {
                           <span className="text-xs font-medium">{recipe.prepTime}</span>
                         </div>
                         <div className="flex items-center gap-1">
-                          <Coffee size={14} />
+                          {foodCategories.includes(recipe.category) ? <Cookie size={14} /> : <Coffee size={14} />}
                           <span className="text-xs font-medium">{recipe.difficulty}</span>
                         </div>
                       </div>
@@ -1728,7 +1810,7 @@ export default function App() {
                   <p className="text-coffee-500 font-sans italic">
                     {activeTab === 'favorites' ? 'Você ainda não favoritou nenhuma receita.' : 'Nenhuma receita encontrada com esses filtros.'}
                   </p>
-                  {activeTab === 'home' && (
+                  {(activeTab === 'home' || activeTab === 'accompaniments') && (
                     <button 
                       onClick={() => {
                         setSearchQuery('');
@@ -1956,20 +2038,31 @@ export default function App() {
                 <button 
                   onClick={() => setActiveTab('home')}
                   className={cn("p-2 transition-colors", activeTab === 'home' ? "text-white" : "text-coffee-600")}
+                  title="Cafés"
                 >
                   <Coffee size={24} />
                 </button>
 
                 <button 
+                  onClick={() => setActiveTab('accompaniments')}
+                  className={cn("p-2 transition-colors", activeTab === 'accompaniments' ? "text-white" : "text-coffee-600")}
+                  title="Acompanhamentos"
+                >
+                  <Cookie size={24} />
+                </button>
+
+                <button 
                   onClick={() => setActiveTab('journey')}
                   className={cn("p-2 transition-colors", activeTab === 'journey' ? "text-white" : "text-coffee-600")}
+                  title="Aprender"
                 >
-                  <Trophy size={24} />
+                  <BookOpen size={24} />
                 </button>
 
                 <button 
                   onClick={() => setActiveTab('favorites')}
                   className={cn("p-2 transition-colors", activeTab === 'favorites' ? "text-white" : "text-coffee-600")}
+                  title="Favoritos"
                 >
                   <Heart size={24} fill={activeTab === 'favorites' ? "currentColor" : "none"} />
                 </button>
@@ -2025,7 +2118,14 @@ export default function App() {
                   <motion.div 
                     initial={{ opacity: 0, y: 5 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center gap-3 px-3 py-1.5 bg-white/5 border border-white/10 rounded-full mb-6"
+                    onClick={() => {
+                      setEditTemp(weather.temp);
+                      setEditLocation(weather.location);
+                      setEditCondition(weather.condition);
+                      setShowWeatherModal(true);
+                    }}
+                    className="flex items-center gap-3 px-3 py-1.5 bg-white/5 border border-white/10 rounded-full mb-6 cursor-pointer hover:bg-white/10 transition-colors"
+                    title="Ajustar clima atual"
                   >
                     <div className="flex items-center gap-1.5 text-white">
                       {weather.condition.includes('Ensolarado') ? <Sun size={14} className="text-amber-400" /> : 
@@ -2040,6 +2140,7 @@ export default function App() {
                       <MapPin size={10} />
                       <span className="truncate max-w-[60px]">{weather.location}</span>
                     </div>
+                    <Edit size={10} className="text-white/45 ml-1" />
                   </motion.div>
                 )}
                 
@@ -2076,6 +2177,118 @@ export default function App() {
                     Talvez mais tarde
                   </button>
                 </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Weather Customize Modal */}
+      <AnimatePresence>
+        {showWeatherModal && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[120] flex items-center justify-center p-6 bg-coffee-950/80 backdrop-blur-md"
+          >
+            <motion.div 
+              initial={{ scale: 0.95, y: 25, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.95, y: 25, opacity: 0 }}
+              className="relative w-full max-w-sm bg-white rounded-[2rem] p-8 shadow-2xl border border-coffee-100 flex flex-col gap-6"
+            >
+              <div className="flex items-center justify-between group">
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold text-coffee-400 uppercase tracking-widest">Simulador de Clima</span>
+                  <h3 className="text-xl font-sans font-bold text-coffee-950">Ajustar Temperatura</h3>
+                </div>
+                <button 
+                  onClick={() => setShowWeatherModal(false)}
+                  className="p-2 bg-coffee-100 text-coffee-600 rounded-full hover:bg-coffee-200 transition-colors pointer-events-auto"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {/* Temperature Slide/Input */}
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <label className="text-xs font-black uppercase tracking-widest text-coffee-400">Temperatura (ºC)</label>
+                    <span className="text-lg font-bold font-mono text-coffee-950">{editTemp}ºC</span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min="-5"
+                    max="45"
+                    value={editTemp}
+                    onChange={(e) => setEditTemp(parseInt(e.target.value))}
+                    className="w-full accent-coffee-900 cursor-pointer"
+                  />
+                  <div className="flex justify-between text-[10px] text-coffee-400 font-mono">
+                    <span>Frio (-5ºC)</span>
+                    <span>Agradável (20ºC)</span>
+                    <span>Quente (45ºC)</span>
+                  </div>
+                </div>
+
+                {/* City/Location Input */}
+                <div className="space-y-2">
+                  <label className="text-xs font-black uppercase tracking-widest text-coffee-400 block">Cidade / Região</label>
+                  <input 
+                    type="text" 
+                    value={editLocation}
+                    onChange={(e) => setEditLocation(e.target.value)}
+                    placeholder="Ex: Poços de Caldas"
+                    className="w-full bg-coffee-50 border border-coffee-100 rounded-xl p-3 text-sm font-sans focus:outline-none focus:ring-2 focus:ring-coffee-200"
+                  />
+                </div>
+
+                {/* Weather Condition selector */}
+                <div className="space-y-2">
+                  <label className="text-xs font-black uppercase tracking-widest text-coffee-400 block">Condição Climática</label>
+                  <select 
+                    value={editCondition}
+                    onChange={(e) => setEditCondition(e.target.value)}
+                    className="w-full bg-coffee-50 border border-coffee-100 rounded-xl p-3 text-sm font-sans focus:outline-none focus:ring-2 focus:ring-coffee-200 cursor-pointer"
+                  >
+                    <option value="Ensolarado">Ensolarado (Sol e calor)</option>
+                    <option value="Parcialmente Nublado">Parcialmente Nublado (Agradável)</option>
+                    <option value="Nublado">Nublado (Fresquinho)</option>
+                    <option value="Chuvoso">Chuvoso (Pede um café quentinho)</option>
+                    <option value="Nevando">Nevando (Muito frio)</option>
+                    <option value="Tempestade">Tempestade (Para ficar em casa)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                {weather.isCustom && (
+                  <button 
+                    onClick={() => {
+                      weather.clearWeatherOverride();
+                      setShowWeatherModal(false);
+                    }}
+                    className="flex-1 bg-red-50 text-red-600 font-bold py-3.5 rounded-xl hover:bg-red-100 transition-colors text-sm"
+                    title="Voltar ao clima detectado por GPS/IP"
+                  >
+                    Resetar
+                  </button>
+                )}
+                <button 
+                  onClick={() => {
+                    weather.saveWeatherOverride({
+                      temp: editTemp,
+                      location: editLocation,
+                      condition: editCondition
+                    });
+                    setShowWeatherModal(false);
+                  }}
+                  className="flex-[2] bg-coffee-950 text-white font-bold py-3.5 rounded-xl hover:bg-coffee-900 transition-colors text-sm shadow-md"
+                >
+                  Aplicar Clima
+                </button>
               </div>
             </motion.div>
           </motion.div>
@@ -2247,7 +2460,9 @@ export default function App() {
                         onChange={(e) => setNewRecipe({...newRecipe, category: e.target.value as any})}
                         className="w-full bg-white border border-coffee-100 rounded-xl py-2.5 px-4 text-sm"
                       >
-                        {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                        {['Espresso', 'Latte', 'Cappuccino', 'Cold Brew', 'Specialty', 'Pães & Salgados', 'Bolos', 'Biscoitos & Doces'].map(c => (
+                          <option key={c} value={c}>{c}</option>
+                        ))}
                       </select>
                     </div>
                     <div>
@@ -2821,7 +3036,7 @@ export default function App() {
                       <div className="grid grid-cols-1 gap-3">
                         {(selectedRecipe.detailedIngredients && selectedRecipe.detailedIngredients.length > 0) ? (
                           selectedRecipe.detailedIngredients.map((ing, i) => (
-                            <div key={i} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-coffee-100 shadow-sm">
+                            <div key={i} className="flex items-center justify-between p-4 bg-coffee-card rounded-2xl border border-coffee-100/70 shadow-sm">
                               <span className="text-sm font-medium text-coffee-800">{ing.name}</span>
                               {ing.amount && (
                                 <span className="text-xs font-bold text-coffee-400 bg-coffee-50 px-3 py-1 rounded-lg uppercase tracking-wider">{ing.amount}</span>
@@ -2830,7 +3045,7 @@ export default function App() {
                           ))
                         ) : (selectedRecipe.ingredients && selectedRecipe.ingredients.length > 0) ? (
                           selectedRecipe.ingredients.map((ing, i) => (
-                            <div key={i} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-coffee-100 shadow-sm">
+                            <div key={i} className="flex items-center justify-between p-4 bg-coffee-card rounded-2xl border border-coffee-100/70 shadow-sm">
                               <span className="text-sm font-medium text-coffee-800">{ing}</span>
                             </div>
                           ))
@@ -2845,7 +3060,7 @@ export default function App() {
                         <h3 className="text-xl font-sans font-bold text-coffee-950">Equipamentos</h3>
                         <div className="flex flex-wrap gap-2">
                           {selectedRecipe.equipment.map((eq, i) => (
-                            <div key={i} className="bg-white border border-coffee-100 px-4 py-2 rounded-xl text-xs font-bold text-coffee-600 shadow-sm">
+                            <div key={i} className="bg-coffee-card border border-coffee-100/70 px-4 py-2 rounded-xl text-xs font-bold text-coffee-600 shadow-sm">
                               {eq}
                             </div>
                           ))}
@@ -2861,12 +3076,12 @@ export default function App() {
                             <>
                               <button 
                                 onClick={() => setIsFullScreenSteps(true)}
-                                className="p-2 rounded-full bg-white border border-coffee-100 text-coffee-600 hover:bg-coffee-900 hover:text-white transition-all shadow-sm"
+                                className="p-2 rounded-full bg-coffee-card border border-coffee-100/70 text-coffee-600 hover:bg-coffee-900 hover:text-white transition-all shadow-sm"
                                 title="Tela Cheia"
                               >
                                 <Maximize2 size={16} />
                               </button>
-                              <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-coffee-100 shadow-sm">
+                              <div className="flex items-center gap-2 bg-coffee-card px-3 py-1.5 rounded-full border border-coffee-100/70 shadow-sm">
                                 <span className="text-coffee-900 font-bold text-sm">{currentStepIndex + 1}</span>
                                 <span className="text-coffee-300 text-[10px]">/</span>
                                 <span className="text-coffee-400 text-[10px]">{selectedRecipe.steps.length}</span>

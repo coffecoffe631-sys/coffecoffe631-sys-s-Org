@@ -5,10 +5,10 @@
   --font-serif: "Cormorant Garamond", serif;
   --font-sans: "Inter", sans-serif;
 
-  --color-coffee-50: #fdfaf7;
-  --color-coffee-100: #f7f0e8;
-  --color-coffee-200: #eedecf;
-  --color-coffee-300: #dfc4ad;
+  --color-coffee-50: #f4eee2;
+  --color-coffee-100: #eae0cf;
+  --color-coffee-200: #decbba;
+  --color-coffee-300: #cca78c;
   --color-coffee-400: #ca9f7f;
   --color-coffee-500: #b8835d;
   --color-coffee-600: #a66d4b;
@@ -16,6 +16,7 @@
   --color-coffee-800: #714836;
   --color-coffee-900: #5d3d2f;
   --color-coffee-950: #321f18;
+  --color-coffee-card: #faf6ee;
 }
 
 @layer base {
