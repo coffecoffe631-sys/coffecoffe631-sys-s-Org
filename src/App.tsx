@@ -13,6 +13,23 @@ import { User } from '@supabase/supabase-js';
 
 const DEFAULT_LOGO = "https://cdn-icons-png.flaticon.com/512/924/924514.png";
 
+function parseInlineFormatting(text: string): React.ReactNode {
+  if (!text) return "";
+  const regex = /(\*\*.*?\*\*|__.*?__|\*.*?\*|_.*?_)/g;
+  const splitParts = text.split(regex);
+  return splitParts.map((part, i) => {
+    if ((part.startsWith('**') && part.endsWith('**')) || (part.startsWith('__') && part.endsWith('__'))) {
+      const inner = part.startsWith('**') ? part.slice(2, -2) : part.slice(2, -2);
+      return <strong key={i} className="font-extrabold text-coffee-950 font-sans">{inner}</strong>;
+    }
+    if ((part.startsWith('*') && part.endsWith('*')) || (part.startsWith('_') && part.endsWith('_'))) {
+      const inner = part.startsWith('*') ? part.slice(1, -1) : part.slice(1, -1);
+      return <em key={i} className="italic font-sans">{inner}</em>;
+    }
+    return part;
+  });
+}
+
 function renderFormattedContent(text: string) {
   if (!text) return null;
 
@@ -45,14 +62,40 @@ function renderFormattedContent(text: string) {
       elements.push(
         <div key={`divider-${keyIdx++}`} className="h-px bg-coffee-100/60 my-6" />
       );
-    } else if (line.startsWith('###')) {
+    } else if (line.startsWith('#')) {
       flushGroup();
-      const headerText = line.replace(/^###\s*/, '').trim();
-      elements.push(
-        <h4 key={`header-${keyIdx++}`} className="text-base sm:text-lg font-black text-coffee-950 uppercase tracking-[0.15em] mt-6 first:mt-2 mb-3">
-          {headerText}
-        </h4>
-      );
+      const match = line.match(/^(#{1,6})\s*(.*)$/);
+      if (match) {
+        const level = match[1].length;
+        const headerText = match[2].trim();
+        const parsedText = parseInlineFormatting(headerText);
+        
+        if (level === 1) {
+          elements.push(
+            <h2 key={`header-${keyIdx++}`} className="text-2xl sm:text-3xl font-sans font-black text-coffee-950 mt-8 first:mt-2 mb-4 leading-tight">
+              {parsedText}
+            </h2>
+          );
+        } else if (level === 2) {
+          elements.push(
+            <h3 key={`header-${keyIdx++}`} className="text-xl sm:text-2xl font-sans font-extrabold text-coffee-900 mt-6 first:mt-2 mb-3 leading-snug">
+              {parsedText}
+            </h3>
+          );
+        } else {
+          elements.push(
+            <h4 key={`header-${keyIdx++}`} className="text-base sm:text-lg font-black text-coffee-800 uppercase tracking-[0.12em] mt-5 first:mt-2 mb-2 leading-normal">
+              {parsedText}
+            </h4>
+          );
+        }
+      } else {
+        elements.push(
+          <p key={`para-${keyIdx++}`} className="text-coffee-850 text-sm sm:text-base leading-relaxed font-sans font-medium text-justify">
+            {parseInlineFormatting(line)}
+          </p>
+        );
+      }
     } else {
       const isQuoted = (line.startsWith('"') && line.endsWith('"')) || (line.startsWith('“') && line.endsWith('”'));
       const textContent = isQuoted ? line.slice(1, -1) : line;
@@ -60,13 +103,13 @@ function renderFormattedContent(text: string) {
       if (isQuoted) {
         currentGroup.push(
           <p key={`para-${keyIdx++}`} className="text-coffee-600 text-sm sm:text-base leading-relaxed font-sans italic border-l-4 border-amber-500 pl-4 py-1 bg-amber-50/30 rounded-r-2xl my-2">
-            “{textContent}”
+            “{parseInlineFormatting(textContent)}”
           </p>
         );
       } else {
         currentGroup.push(
           <p key={`para-${keyIdx++}`} className="text-coffee-800 text-sm sm:text-base leading-relaxed font-sans font-medium text-justify">
-            {line}
+            {parseInlineFormatting(line)}
           </p>
         );
       }
@@ -110,14 +153,40 @@ function renderStepContent(text: string) {
       elements.push(
         <div key={`divider-${keyIdx++}`} className="h-px bg-coffee-200/60 my-8 w-full max-w-xl mx-auto" />
       );
-    } else if (line.startsWith('###')) {
+    } else if (line.startsWith('#')) {
       flushGroup();
-      const headerText = line.replace(/^###\s*/, '').trim();
-      elements.push(
-        <h4 key={`header-${keyIdx++}`} className="text-lg sm:text-xl font-sans font-black text-coffee-950 uppercase tracking-[0.15em] mt-8 first:mt-2 mb-4 text-center">
-          {headerText}
-        </h4>
-      );
+      const match = line.match(/^(#{1,6})\s*(.*)$/);
+      if (match) {
+        const level = match[1].length;
+        const headerText = match[2].trim();
+        const parsedText = parseInlineFormatting(headerText);
+        
+        if (level === 1) {
+          elements.push(
+            <h2 key={`header-${keyIdx++}`} className="text-xl sm:text-2xl font-sans font-black text-coffee-950 mt-8 first:mt-2 mb-4 text-center">
+              {parsedText}
+            </h2>
+          );
+        } else if (level === 2) {
+          elements.push(
+            <h3 key={`header-${keyIdx++}`} className="text-lg sm:text-xl font-sans font-extrabold text-coffee-900 mt-6 first:mt-2 mb-3 text-center">
+              {parsedText}
+            </h3>
+          );
+        } else {
+          elements.push(
+            <h4 key={`header-${keyIdx++}`} className="text-base sm:text-lg font-sans font-black text-coffee-800 uppercase tracking-[0.15em] mt-5 first:mt-2 mb-2 text-center">
+              {parsedText}
+            </h4>
+          );
+        }
+      } else {
+        elements.push(
+          <p key={`para-${keyIdx++}`} className="text-coffee-800 text-base sm:text-xl leading-relaxed font-sans font-semibold text-center sm:text-justify max-w-xl mx-auto">
+            {parseInlineFormatting(line)}
+          </p>
+        );
+      }
     } else {
       const isQuoted = (line.startsWith('"') && line.endsWith('"')) || (line.startsWith('“') && line.endsWith('”'));
       const textContent = isQuoted ? line.slice(1, -1) : line;
@@ -135,20 +204,20 @@ function renderStepContent(text: string) {
               Dica do Barista
             </span>
             <p className="text-sm sm:text-base md:text-lg font-sans font-semibold text-amber-950 leading-relaxed">
-              {cleanLine}
+              {parseInlineFormatting(cleanLine)}
             </p>
           </div>
         );
       } else if (isQuoted) {
         currentGroup.push(
           <p key={`para-${keyIdx++}`} className="text-coffee-600 text-base sm:text-xl leading-relaxed font-sans italic border-l-4 border-amber-500 pl-4 py-1 bg-amber-50/30 rounded-r-2xl my-2 max-w-xl mx-auto">
-            “{textContent}”
+            “{parseInlineFormatting(textContent)}”
           </p>
         );
       } else {
         currentGroup.push(
           <p key={`para-${keyIdx++}`} className="text-coffee-800 text-base sm:text-xl leading-relaxed font-sans font-semibold text-center sm:text-justify max-w-xl mx-auto">
-            {line}
+            {parseInlineFormatting(line)}
           </p>
         );
       }
@@ -1030,7 +1099,7 @@ export default function App() {
 
   if (isInitialAuthCheck || (user && isCheckingSubscription) || (user && !subscriptionChecked)) {
     return (
-      <div className="min-h-screen bg-coffee-50 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="w-16 h-16 rounded-full bg-coffee-100 flex items-center justify-center border-4 border-coffee-200 p-3">
             <img src={appLogo || DEFAULT_LOGO} alt="Loading Logo" className="w-full h-full object-contain animate-pulse" referrerPolicy="no-referrer" />
@@ -1048,7 +1117,7 @@ export default function App() {
   if (!user) {
     if (view === 'landing') {
       return (
-        <div className="min-h-screen bg-coffee-50 flex flex-col items-center justify-center p-6 relative overflow-hidden">
+        <div className="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden">
           {/* Background Decorations */}
           <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
             <div className="absolute -top-24 -left-24 w-96 h-96 bg-coffee-100 rounded-full blur-3xl opacity-60" />
@@ -1161,7 +1230,7 @@ export default function App() {
     }
 
     return (
-      <div className="min-h-screen bg-coffee-50 flex items-center justify-center p-6 relative overflow-hidden">
+      <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden">
         {/* Background Decorations */}
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
           <div className="absolute -top-24 -left-24 w-96 h-96 bg-coffee-100 rounded-full blur-3xl opacity-60" />
@@ -1288,7 +1357,7 @@ export default function App() {
   // Se tem usuário mas não é premium, mostra Acesso Restrito
   if (!isPremium) {
     return (
-      <div className="min-h-screen bg-coffee-50 flex flex-col items-center justify-center p-6 relative overflow-hidden">
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
           <div className="absolute -top-24 -left-24 w-96 h-96 bg-coffee-100 rounded-full blur-3xl opacity-60" />
           <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-coffee-200 rounded-full blur-3xl opacity-40" />

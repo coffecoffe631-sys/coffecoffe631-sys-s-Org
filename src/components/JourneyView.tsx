@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { JourneyStep } from '../data/journey';
 import { Trophy, Check, Lock, Sparkles, Droplets, Waves, Leaf, Coffee, ChevronRight, Zap, X, Maximize2, Edit, Save, Plus, Trash2, Image as ImageIcon, Play, Pause, Volume2, VolumeX, Headphones, BookOpen } from 'lucide-react';
 import { cn } from '../lib/utils';
+import CuteParticles from './CuteParticles';
 
 function AudioPlayer({ src }: { src: string }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -162,6 +163,23 @@ function AudioPlayer({ src }: { src: string }) {
   );
 }
 
+function parseInlineFormatting(text: string): React.ReactNode {
+  if (!text) return "";
+  const regex = /(\*\*.*?\*\*|__.*?__|\*.*?\*|_.*?_)/g;
+  const splitParts = text.split(regex);
+  return splitParts.map((part, i) => {
+    if ((part.startsWith('**') && part.endsWith('**')) || (part.startsWith('__') && part.endsWith('__'))) {
+      const inner = part.startsWith('**') ? part.slice(2, -2) : part.slice(2, -2);
+      return <strong key={i} className="font-extrabold text-coffee-950 font-sans">{inner}</strong>;
+    }
+    if ((part.startsWith('*') && part.endsWith('*')) || (part.startsWith('_') && part.endsWith('_'))) {
+      const inner = part.startsWith('*') ? part.slice(1, -1) : part.slice(1, -1);
+      return <em key={i} className="italic font-sans">{inner}</em>;
+    }
+    return part;
+  });
+}
+
 function renderFormattedContent(text: string) {
   if (!text) return null;
 
@@ -194,14 +212,40 @@ function renderFormattedContent(text: string) {
       elements.push(
         <div key={`divider-${keyIdx++}`} className="h-px bg-coffee-100/60 my-6" />
       );
-    } else if (line.startsWith('###')) {
+    } else if (line.startsWith('#')) {
       flushGroup();
-      const headerText = line.replace(/^###\s*/, '').trim();
-      elements.push(
-        <h4 key={`header-${keyIdx++}`} className="text-base sm:text-lg font-black text-coffee-950 uppercase tracking-[0.15em] mt-6 first:mt-2 mb-3">
-          {headerText}
-        </h4>
-      );
+      const match = line.match(/^(#{1,6})\s*(.*)$/);
+      if (match) {
+        const level = match[1].length;
+        const headerText = match[2].trim();
+        const parsedText = parseInlineFormatting(headerText);
+        
+        if (level === 1) {
+          elements.push(
+            <h2 key={`header-${keyIdx++}`} className="text-2xl sm:text-3xl font-sans font-black text-coffee-950 mt-8 first:mt-2 mb-4 leading-tight">
+              {parsedText}
+            </h2>
+          );
+        } else if (level === 2) {
+          elements.push(
+            <h3 key={`header-${keyIdx++}`} className="text-xl sm:text-2xl font-sans font-extrabold text-coffee-900 mt-6 first:mt-2 mb-3 leading-snug">
+              {parsedText}
+            </h3>
+          );
+        } else {
+          elements.push(
+            <h4 key={`header-${keyIdx++}`} className="text-base sm:text-lg font-black text-coffee-800 uppercase tracking-[0.12em] mt-5 first:mt-2 mb-2 leading-normal">
+              {parsedText}
+            </h4>
+          );
+        }
+      } else {
+        elements.push(
+          <p key={`para-${keyIdx++}`} className="text-coffee-850 text-sm sm:text-base leading-relaxed font-sans font-medium text-justify">
+            {parseInlineFormatting(line)}
+          </p>
+        );
+      }
     } else {
       const isQuoted = (line.startsWith('"') && line.endsWith('"')) || (line.startsWith('“') && line.endsWith('”'));
       const textContent = isQuoted ? line.slice(1, -1) : line;
@@ -209,13 +253,13 @@ function renderFormattedContent(text: string) {
       if (isQuoted) {
         currentGroup.push(
           <p key={`para-${keyIdx++}`} className="text-coffee-600 text-sm sm:text-base leading-relaxed font-sans italic border-l-4 border-amber-500 pl-4 py-1 bg-amber-50/30 rounded-r-2xl my-2">
-            “{textContent}”
+            “{parseInlineFormatting(textContent)}”
           </p>
         );
       } else {
         currentGroup.push(
           <p key={`para-${keyIdx++}`} className="text-coffee-800 text-sm sm:text-base leading-relaxed font-sans font-medium text-justify">
-            {line}
+            {parseInlineFormatting(line)}
           </p>
         );
       }
@@ -242,6 +286,7 @@ export default function JourneyView({ journey, isAdmin, onUpdateStep, onAddStep,
   const [editingStep, setEditingStep] = useState<JourneyStep | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isAddingMode, setIsAddingMode] = useState(false);
+  const [burstTrigger, setBurstTrigger] = useState(0);
 
   // Temp states for editing lists
   const [tempTask, setTempTask] = useState('');
@@ -251,6 +296,13 @@ export default function JourneyView({ journey, isAdmin, onUpdateStep, onAddStep,
     setSelectedStep(null);
     setIsFullScreen(false);
     setIsEditing(false);
+  };
+
+  const handleConcluirDesafio = () => {
+    setBurstTrigger(prev => prev + 1);
+    setTimeout(() => {
+      closeDetails();
+    }, 1200);
   };
 
   const handleEditStart = (step: JourneyStep) => {
@@ -406,6 +458,7 @@ export default function JourneyView({ journey, isAdmin, onUpdateStep, onAddStep,
       <AnimatePresence>
         {selectedStep && (
           <div className="fixed inset-0 z-[300] bg-white flex flex-col overflow-hidden select-text">
+            <CuteParticles burstTrigger={burstTrigger} ambient={true} />
             {/* Header Barra Superior Imersiva */}
             <div className="w-full bg-white border-b border-coffee-100/80 sticky top-0 z-30 shrink-0 select-none">
               <div className="max-w-4xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between">
@@ -590,8 +643,8 @@ export default function JourneyView({ journey, isAdmin, onUpdateStep, onAddStep,
                   {/* Botão de Conclusão e Saída */}
                   <div className="pt-8 flex justify-center selection:bg-transparent">
                     <button 
-                      onClick={closeDetails}
-                      className="w-full max-w-sm bg-coffee-950 text-white py-4 rounded-2xl font-black uppercase tracking-[0.2em] hover:bg-coffee-900 transition-all shadow-lg hover:shadow-coffee-950/10 active:scale-[0.98] text-xs"
+                      onClick={handleConcluirDesafio}
+                      className="w-full max-w-sm bg-coffee-950 text-white py-4 rounded-2xl font-black uppercase tracking-[0.2em] hover:bg-coffee-900 transition-all shadow-lg hover:shadow-coffee-950/10 active:scale-[0.98] text-xs animate-bounce-slow"
                     >
                       Concluir Desafio
                     </button>

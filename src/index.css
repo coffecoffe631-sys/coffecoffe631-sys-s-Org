@@ -5,7 +5,7 @@
   --font-serif: "Cormorant Garamond", serif;
   --font-sans: "Inter", sans-serif;
 
-  --color-coffee-50: #f4eee2;
+  --color-coffee-50: #f6ebe0;
   --color-coffee-100: #eae0cf;
   --color-coffee-200: #decbba;
   --color-coffee-300: #cca78c;
@@ -16,12 +16,16 @@
   --color-coffee-800: #714836;
   --color-coffee-900: #5d3d2f;
   --color-coffee-950: #321f18;
-  --color-coffee-card: #faf6ee;
+  --color-coffee-card: #ffffff;
 }
 
 @layer base {
   body {
-    @apply bg-coffee-50 text-coffee-950 font-sans antialiased overflow-x-hidden;
+    background: radial-gradient(circle at 15% 15%, rgba(247, 217, 193, 0.5) 0%, transparent 35%),
+                radial-gradient(circle at 85% 85%, rgba(247, 217, 193, 0.5) 0%, transparent 35%),
+                linear-gradient(135deg, #fbf8f3 0%, #eae0cf 100%);
+    background-attachment: fixed;
+    @apply text-coffee-950 font-sans antialiased overflow-x-hidden;
   }
 
   h1, h2, h3, h4, h5, h6 {
