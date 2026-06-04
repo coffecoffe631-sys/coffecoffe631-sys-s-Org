@@ -247,10 +247,25 @@ function renderFormattedContent(text: string) {
         );
       }
     } else {
+      const hasDica = line.includes('Dica do Barista') || line.startsWith('💡') || line.toLowerCase().includes('dica:');
       const isQuoted = (line.startsWith('"') && line.endsWith('"')) || (line.startsWith('“') && line.endsWith('”'));
       const textContent = isQuoted ? line.slice(1, -1) : line;
 
-      if (isQuoted) {
+      if (hasDica) {
+        flushGroup();
+        const cleanLine = line.replace(/^(💡\s*)?(Dica do Barista:?|Dica:?)\s*/i, '').trim();
+        elements.push(
+          <div key={`dica-${keyIdx++}`} className="p-6 sm:p-8 bg-amber-50/80 border border-amber-200/50 rounded-[2rem] text-left shadow-sm w-full mx-auto my-4">
+            <span className="font-sans font-black text-amber-900 text-xs sm:text-sm uppercase tracking-widest block mb-1.5 flex items-center gap-2 select-none">
+              <Sparkles size={16} className="text-amber-500 animate-pulse" />
+              Dica do Barista
+            </span>
+            <p className="text-sm sm:text-base md:text-lg font-sans font-semibold text-amber-950 leading-relaxed">
+              {parseInlineFormatting(cleanLine)}
+            </p>
+          </div>
+        );
+      } else if (isQuoted) {
         currentGroup.push(
           <p key={`para-${keyIdx++}`} className="text-coffee-600 text-sm sm:text-base leading-relaxed font-sans italic border-l-4 border-amber-500 pl-4 py-1 bg-amber-50/30 rounded-r-2xl my-2">
             “{parseInlineFormatting(textContent)}”
