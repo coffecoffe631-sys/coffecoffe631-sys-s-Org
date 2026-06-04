@@ -552,26 +552,19 @@ export default function JourneyView({ journey, isAdmin, onUpdateStep, onAddStep,
                 {/* Unified Scrollable Container wrapping both Banner and Content */}
                 <div className="flex-1 overflow-y-auto min-h-0 bg-white/50 no-scrollbar relative z-10 selection:bg-amber-100 selection:text-amber-950 pb-24">
                   
-                  {/* Banner ocupando 100% do topo do scrollable view sem bordas ou padding */}
-                  <div className="w-full aspect-[21/9] sm:aspect-[21/8] min-h-[250px] max-h-[460px] relative bg-coffee-950 select-none flex items-center justify-center overflow-hidden shrink-0 shadow-lg">
-                    {/* Blurred backdrop to fill sides gracefully without ugly crops */}
-                    <img 
-                      src={selectedStep.image || 'https://images.unsplash.com/photo-1507133750040-4a8f57021571?q=80&w=1000'} 
-                      alt="" 
-                      className="absolute inset-0 w-full h-full object-cover blur-3xl scale-125 opacity-40 select-none pointer-events-none" 
-                      referrerPolicy="no-referrer"
-                    />
-                    {/* Core image filling the container fully */}
+                  {/* Banner ocupando 100% do topo do scrollable view com proporção natural, evitando cortes e barras de fundo */}
+                  <div className="w-full relative select-none overflow-hidden shrink-0 shadow-md bg-white">
+                    {/* Core image filling the container fully with auto height */}
                     <img 
                       src={selectedStep.image || 'https://images.unsplash.com/photo-1507133750040-4a8f57021571?q=80&w=1000'} 
                       alt={selectedStep.title} 
-                      className="w-full h-full object-contain relative z-10"
+                      className="w-full h-auto block"
                       referrerPolicy="no-referrer"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30 z-15 pointer-events-none" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent z-15 pointer-events-none" />
                     
                     {/* Bottom Image Subtitle status tag */}
-                    <div className="absolute bottom-6 left-6 sm:left-12 z-20">
+                    <div className="absolute bottom-6 left-6 sm:left-12 z-20 font-sans">
                       <span className={cn(
                         "px-3.5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.15em] text-white shadow-md backdrop-blur-md border",
                         selectedStep.status === 'completed' ? "bg-emerald-500/80 border-emerald-400/20" : 
