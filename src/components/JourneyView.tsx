@@ -313,11 +313,28 @@ export default function JourneyView({ journey, isAdmin, onUpdateStep, onAddStep,
     setIsEditing(false);
   };
 
-  const handleConcluirDesafio = () => {
+  const handleConcluirDesafio = async () => {
+    if (!selectedStep) return;
+    
     setBurstTrigger(prev => prev + 1);
+    
+    const updatedStep: JourneyStep = {
+      ...selectedStep,
+      status: 'completed'
+    };
+    
+    // Smoothly update the selectedStep state as well so they immediately see 'Concluída' in the UI
+    setSelectedStep(updatedStep);
+    
+    try {
+      await onUpdateStep(updatedStep);
+    } catch (err) {
+      console.error('Failed to complete challenge:', err);
+    }
+    
     setTimeout(() => {
       closeDetails();
-    }, 1200);
+    }, 1500);
   };
 
   const handleEditStart = (step: JourneyStep) => {
@@ -572,9 +589,9 @@ export default function JourneyView({ journey, isAdmin, onUpdateStep, onAddStep,
                         "px-3.5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.15em] text-white shadow-md backdrop-blur-md border",
                         selectedStep.status === 'completed' ? "bg-emerald-500/80 border-emerald-400/20" : 
                         selectedStep.status === 'current' ? "bg-amber-500/80 border-amber-400/20" : 
-                        "bg-coffee-950/85 border-white/20"
+                        "bg-amber-600/80 border-amber-500/20"
                       )}>
-                        {selectedStep.status === 'completed' ? 'Concluída' : selectedStep.status === 'current' ? 'Em Progresso' : 'Bloqueada'}
+                        {selectedStep.status === 'completed' ? 'Concluída' : selectedStep.status === 'current' ? 'Em Progresso' : 'Disponível'}
                       </span>
                     </div>
                   </div>
@@ -726,7 +743,7 @@ export default function JourneyView({ journey, isAdmin, onUpdateStep, onAddStep,
                       onChange={(e) => setEditingStep({ ...editingStep, status: e.target.value as any })}
                       className="w-full bg-coffee-50 border border-coffee-100 rounded-2xl p-4 focus:ring-2 focus:ring-coffee-200 outline-none"
                     >
-                      <option value="locked">Bloqueado</option>
+                      <option value="locked">Disponível (Não Iniciado)</option>
                       <option value="current">Em Progresso</option>
                       <option value="completed">Concluído</option>
                     </select>
@@ -965,7 +982,7 @@ export default function JourneyView({ journey, isAdmin, onUpdateStep, onAddStep,
 function JourneyStepCard({ step, isEven, onClick }: { step: JourneyStep, isEven: boolean, onClick: () => void }) {
   const isCompleted = step.status === 'completed';
   const isCurrent = step.status === 'current';
-  const isLocked = step.status === 'locked';
+  const isLocked = false;
 
   return (
     <motion.div 
@@ -983,12 +1000,18 @@ function JourneyStepCard({ step, isEven, onClick }: { step: JourneyStep, isEven:
       <div className="relative shrink-0 flex items-center justify-center">
         <div className={cn(
           "w-16 h-16 rounded-3xl flex items-center justify-center border-4 shadow-xl transition-all z-10 group-hover:rotate-6 overflow-hidden",
-          isCompleted ? "bg-emerald-500 border-white text-white" : 
+          isCompleted ? "bg-[#FE9A00] border-white text-white shadow-[#FE9A00]/20" : 
           isCurrent ? "bg-amber-500 border-white text-white ring-4 ring-amber-100" : 
-          "bg-white border-coffee-100 text-coffee-300"
+          "bg-white border-coffee-200 text-coffee-800"
         )}>
-          {isLocked ? <Lock size={20} /> : isCompleted ? <Check size={24} strokeWidth={3} /> : <GetStepIcon name={step.icon} size={24} />}
+          <GetStepIcon name={step.icon} size={24} />
         </div>
+        
+        {isCompleted && (
+          <div className="absolute -top-1 -right-1 bg-emerald-500 border-2 border-white text-white rounded-full p-1.5 z-20 shadow-md">
+            <Check size={12} strokeWidth={4} />
+          </div>
+        )}
         
         {isCurrent && (
           <motion.div 
@@ -1002,11 +1025,11 @@ function JourneyStepCard({ step, isEven, onClick }: { step: JourneyStep, isEven:
       {/* Content */}
       <div className={cn(
         "flex-1 py-4 px-6 rounded-3xl border transition-all shadow-sm group-hover:shadow-lg group-hover:scale-[1.02]",
-        isCompleted ? "border-emerald-100 bg-emerald-50/20" : 
+        isCompleted ? "border-[#FE9A00]/20 bg-[#FE9A00]/5" : 
         isCurrent ? "border-amber-200 bg-white ring-4 ring-amber-50/50" : 
-        "border-coffee-50 bg-white/50 grayscale-[0.5] opacity-80"
+        "border-coffee-100 bg-white group-hover:border-coffee-300"
       )}>
-        <h4 className="text-lg font-black text-coffee-900 group-hover:text-coffee-950 truncate">
+        <h4 className="text-lg font-black text-coffee-950 group-hover:text-amber-800 truncate">
           {step.title}
         </h4>
       </div>
