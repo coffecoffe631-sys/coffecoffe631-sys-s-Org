@@ -565,7 +565,7 @@ export default function JourneyView({ journey, isAdmin, onUpdateStep, onAddStep,
                     <img 
                       src={selectedStep.image || 'https://images.unsplash.com/photo-1507133750040-4a8f57021571?q=80&w=1000'} 
                       alt={selectedStep.title} 
-                      className="w-full h-full object-cover relative z-10"
+                      className="w-full h-full object-contain relative z-10"
                       referrerPolicy="no-referrer"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30 z-15 pointer-events-none" />
