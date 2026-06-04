@@ -241,7 +241,7 @@ function renderFormattedContent(text: string) {
         }
       } else {
         elements.push(
-          <p key={`para-${keyIdx++}`} className="text-coffee-850 text-sm sm:text-base leading-relaxed font-sans font-medium text-justify">
+          <p key={`para-${keyIdx++}`} className="text-coffee-850 text-sm sm:text-base leading-relaxed font-sans font-medium text-left md:text-justify break-words">
             {parseInlineFormatting(line)}
           </p>
         );
@@ -273,7 +273,7 @@ function renderFormattedContent(text: string) {
         );
       } else {
         currentGroup.push(
-          <p key={`para-${keyIdx++}`} className="text-coffee-800 text-sm sm:text-base leading-relaxed font-sans font-medium text-justify">
+          <p key={`para-${keyIdx++}`} className="text-coffee-800 text-sm sm:text-base leading-relaxed font-sans font-medium text-left md:text-justify break-words">
             {parseInlineFormatting(line)}
           </p>
         );
@@ -552,39 +552,26 @@ export default function JourneyView({ journey, isAdmin, onUpdateStep, onAddStep,
                 {/* Unified Scrollable Container wrapping both Banner and Content */}
                 <div className="flex-1 overflow-y-auto min-h-0 bg-white/50 no-scrollbar relative z-10 selection:bg-amber-100 selection:text-amber-950 pb-24">
                   
-                  {/* Image Section */}
-                  <div className="max-w-3xl mx-auto px-6 py-8 sm:py-12 space-y-10 w-full">
-                    {/* Banner com alta resolução responsivo */}
-                    <div className="w-full aspect-[16/9] sm:aspect-[21/9] relative rounded-[2rem] overflow-hidden bg-coffee-50 border-4 sm:border-8 border-white shadow-xl mx-auto shrink-0 select-none">
+                  {/* Banner ocupando 100% do topo do scrollable view sem bordas ou padding */}
+                  <div className="w-full aspect-[21/9] sm:aspect-[21/8] min-h-[250px] max-h-[460px] relative bg-coffee-950 select-none flex items-center justify-center overflow-hidden shrink-0 shadow-lg">
+                    {/* Blurred backdrop to fill sides gracefully without ugly crops */}
+                    <img 
+                      src={selectedStep.image || 'https://images.unsplash.com/photo-1507133750040-4a8f57021571?q=80&w=1000'} 
+                      alt="" 
+                      className="absolute inset-0 w-full h-full object-cover blur-3xl scale-125 opacity-40 select-none pointer-events-none" 
+                      referrerPolicy="no-referrer"
+                    />
+                    {/* Core image filling the container fully */}
                     <img 
                       src={selectedStep.image || 'https://images.unsplash.com/photo-1507133750040-4a8f57021571?q=80&w=1000'} 
                       alt={selectedStep.title} 
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover relative z-10"
                       referrerPolicy="no-referrer"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/35" />
-                    
-                    {/* Floating Action Buttons */}
-                    <div className="hidden">
-                      {isAdmin && (
-                        <button 
-                          onClick={() => handleEditStart(selectedStep)}
-                          className="p-2.5 rounded-full bg-white/20 hover:bg-white/35 backdrop-blur-md text-white transition-all shadow-sm"
-                          title="Editar Etapa"
-                        >
-                          <Edit size={16} />
-                        </button>
-                      )}
-                      <button 
-                        onClick={closeDetails}
-                        className="p-2.5 rounded-full bg-white/20 hover:bg-white/35 backdrop-blur-md text-white transition-all shadow-sm"
-                      >
-                        <X size={16} />
-                      </button>
-                    </div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30 z-15 pointer-events-none" />
                     
                     {/* Bottom Image Subtitle status tag */}
-                    <div className="absolute bottom-6 left-6">
+                    <div className="absolute bottom-6 left-6 sm:left-12 z-20">
                       <span className={cn(
                         "px-3.5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.15em] text-white shadow-md backdrop-blur-md border",
                         selectedStep.status === 'completed' ? "bg-emerald-500/80 border-emerald-400/20" : 
@@ -597,7 +584,8 @@ export default function JourneyView({ journey, isAdmin, onUpdateStep, onAddStep,
                   </div>
   
                   {/* Modal Content - Text, Title, Subtitle & Description */}
-                  <div className="space-y-8">
+                  <div className="max-w-3xl mx-auto px-6 py-10 sm:py-12 space-y-10 w-full">
+                    <div className="space-y-8">
                     <div className="space-y-3">
                       <h3 className="text-3xl sm:text-4xl md:text-5xl font-sans font-black text-coffee-950 tracking-tight leading-tight">
                         {selectedStep.title}
@@ -646,7 +634,7 @@ export default function JourneyView({ journey, isAdmin, onUpdateStep, onAddStep,
                               <div className="mt-0.5 w-5 h-5 rounded-md bg-coffee-50 border border-coffee-150 flex items-center justify-center shrink-0">
                                 <span className="text-xs font-bold text-coffee-400 font-mono">{idx + 1}</span>
                               </div>
-                              <span className="text-sm font-semibold text-coffee-800 leading-snug">{task}</span>
+                              <span className="text-sm font-semibold text-coffee-800 leading-snug flex-1 min-w-0 break-words">{task}</span>
                             </div>
                           ))}
                         </div>
@@ -662,9 +650,9 @@ export default function JourneyView({ journey, isAdmin, onUpdateStep, onAddStep,
                         </h4>
                         <ul className="space-y-3">
                           {selectedStep.content.tips.map((tip, idx) => (
-                            <li key={idx} className="text-sm font-semibold text-amber-950 list-none flex items-start gap-2.5">
-                              <span className="text-amber-500 mt-1 select-none">•</span>
-                              <span>{tip}</span>
+                            <li key={idx} className="text-sm font-semibold text-amber-950 list-none flex items-start gap-2.5 min-w-0 w-full">
+                              <span className="text-amber-500 mt-1 select-none shrink-0">•</span>
+                              <span className="flex-1 min-w-0 break-words">{tip}</span>
                             </li>
                           ))}
                         </ul>
@@ -991,7 +979,7 @@ function JourneyStepCard({ step, isEven, onClick }: { step: JourneyStep, isEven:
       viewport={{ once: true }}
       whileHover={{ y: -5 }}
       className={cn(
-        "flex items-center gap-5 cursor-pointer group",
+        "flex items-center gap-4 sm:gap-5 cursor-pointer group w-full min-w-0",
         isEven ? "flex-row" : "flex-row-reverse text-right"
       )}
       onClick={onClick}
@@ -1024,12 +1012,12 @@ function JourneyStepCard({ step, isEven, onClick }: { step: JourneyStep, isEven:
 
       {/* Content */}
       <div className={cn(
-        "flex-1 py-4 px-6 rounded-3xl border transition-all shadow-sm group-hover:shadow-lg group-hover:scale-[1.02]",
+        "flex-1 min-w-0 py-3.5 sm:py-4 px-5 sm:px-6 rounded-3xl border transition-all shadow-sm group-hover:shadow-lg group-hover:scale-[1.02]",
         isCompleted ? "border-[#FE9A00]/20 bg-[#FE9A00]/5" : 
         isCurrent ? "border-amber-200 bg-white ring-4 ring-amber-50/50" : 
         "border-coffee-100 bg-white group-hover:border-coffee-300"
       )}>
-        <h4 className="text-lg font-black text-coffee-950 group-hover:text-amber-800 truncate">
+        <h4 className="text-sm sm:text-base md:text-lg font-black text-coffee-950 group-hover:text-amber-800 break-words whitespace-normal leading-snug">
           {step.title}
         </h4>
       </div>
