@@ -228,6 +228,20 @@ app.post("/api/create-checkout-session", async (req, res) => {
 
   const { email, priceId } = req.body;
 
+  // Validate email
+  if (!email || typeof email !== "string" || email.trim() === "") {
+    return res.status(400).json({ error: "E-mail é obrigatório." });
+  }
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  if (email.length > 100 || !emailRegex.test(email)) {
+    return res.status(400).json({ error: "Formato de e-mail inválido ou e-mail muito longo." });
+  }
+
+  // Validate priceId if provided
+  if (priceId && (typeof priceId !== "string" || priceId.length > 100 || !/^[a-zA-Z0-9_:-]+$/.test(priceId))) {
+    return res.status(400).json({ error: "Identificador de preço (Price ID) inválido." });
+  }
+
   try {
     console.log('>>> [SERVER] Recebida requisição para create-checkout-session');
     console.log('>>> [SERVER] Body:', req.body);
@@ -290,7 +304,14 @@ app.post("/api/create-checkout-session", async (req, res) => {
 
 app.get("/api/check-subscription", async (req, res) => {
   const email = req.query.email as string;
-  if (!email) return res.status(400).json({ error: "Email é obrigatório" });
+  if (!email || typeof email !== "string" || email.trim() === "") {
+    return res.status(400).json({ error: "Email é obrigatório" });
+  }
+
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  if (email.length > 100 || !emailRegex.test(email)) {
+    return res.status(400).json({ error: "Formato de e-mail inválido ou e-mail muito longo." });
+  }
 
   // Developer Bypass
   if (email === "coffecoffe631@gmail.com") {
@@ -333,7 +354,14 @@ app.get("/api/check-subscription", async (req, res) => {
 
 app.post("/api/create-portal-session", async (req, res) => {
   const { email } = req.body;
-  if (!email) return res.status(400).json({ error: "Email é obrigatório" });
+  if (!email || typeof email !== "string" || email.trim() === "") {
+    return res.status(400).json({ error: "Email é obrigatório" });
+  }
+
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  if (email.length > 100 || !emailRegex.test(email)) {
+    return res.status(400).json({ error: "Formato de e-mail inválido ou e-mail muito longo." });
+  }
 
   const stripe = getStripe();
   if (!stripe) return res.status(500).json({ error: "Stripe não configurado" });

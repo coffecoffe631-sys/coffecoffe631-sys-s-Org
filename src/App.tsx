@@ -425,6 +425,11 @@ export default function App() {
       } catch (err: any) {
         console.error("Failed to load data from Supabase:", err);
         setSupabaseError(err.message || "Erro de conexão");
+        
+        // Fallback to local default recipes and journey steps to ensure a robust and working user experience
+        const finalRecipes = [...recipes, ...defaultAccompaniments];
+        setAllRecipes(finalRecipes);
+        setCurrentJourney(coffeeJourney);
       } finally {
         setIsLoadingSupabase(false);
       }
@@ -642,11 +647,24 @@ export default function App() {
   };
 
   const handleUpdateName = async () => {
-    if (!newName.trim()) return;
+    const trimmedName = newName.trim();
+    if (!trimmedName) return;
+
+    // Validate length and sanitize HTML tags to prevent XSS
+    if (trimmedName.length > 50) {
+      alert('O nome deve ter no máximo 50 caracteres.');
+      return;
+    }
+    const sanitizedName = trimmedName.replace(/<[^>]*>/g, '');
+    if (!sanitizedName) {
+      alert('Por favor, insira um nome válido.');
+      return;
+    }
+
     setAuthLoading(true);
     try {
       const { error } = await supabase.auth.updateUser({
-        data: { full_name: newName.trim() }
+        data: { full_name: sanitizedName }
       });
       if (error) throw error;
       setIsEditingName(false);
@@ -664,17 +682,45 @@ export default function App() {
     setAuthLoading(true);
     setAuthError(null);
 
+    const emailTrimmed = authEmail.trim();
+    const passwordTrimmed = authPassword;
+
+    // Validate email format
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailTrimmed) {
+      setAuthError('O e-mail é obrigatório.');
+      setAuthLoading(false);
+      return;
+    }
+    if (emailTrimmed.length > 100 || !emailRegex.test(emailTrimmed)) {
+      setAuthError('Por favor, insira um e-mail válido (máximo 100 caracteres).');
+      setAuthLoading(false);
+      return;
+    }
+
+    // Validate password format
+    if (!passwordTrimmed || passwordTrimmed.length < 6) {
+      setAuthError('A senha deve ter pelo menos 6 caracteres.');
+      setAuthLoading(false);
+      return;
+    }
+    if (passwordTrimmed.length > 100) {
+      setAuthError('A senha deve ter no máximo 100 caracteres.');
+      setAuthLoading(false);
+      return;
+    }
+
     try {
       if (authMode === 'login') {
         const { error } = await supabase.auth.signInWithPassword({
-          email: authEmail,
-          password: authPassword,
+          email: emailTrimmed,
+          password: passwordTrimmed,
         });
         if (error) throw error;
       } else {
         const { data, error } = await supabase.auth.signUp({
-          email: authEmail,
-          password: authPassword,
+          email: emailTrimmed,
+          password: passwordTrimmed,
         });
         if (error) throw error;
         
@@ -683,8 +729,8 @@ export default function App() {
         // Para garantir, tentamos o login logo após o cadastro.
         if (data.user) {
           await supabase.auth.signInWithPassword({
-            email: authEmail,
-            password: authPassword,
+            email: emailTrimmed,
+            password: passwordTrimmed,
           });
         }
       }
@@ -798,13 +844,45 @@ export default function App() {
   const handleAddRecipe = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!isAdminAuthenticated) {
+      alert('Acesso negado. Apenas administradores autenticados podem adicionar ou editar receitas.');
+      return;
+    }
+    
+    // Validate inputs
+    if (!newRecipe.name || !newRecipe.name.trim()) {
+      alert('O nome da receita é obrigatório.');
+      return;
+    }
+
+    // Sanitization function to strip HTML/JS tags and prevent XSS
+    const sanitize = (text: string) => text.replace(/<[^>]*>/g, '').trim();
+
+    newRecipe.name = sanitize(newRecipe.name).substring(0, 100);
+    newRecipe.country = sanitize(newRecipe.country || 'Brasil').substring(0, 50);
+    newRecipe.prepTime = sanitize(newRecipe.prepTime || '').substring(0, 30);
+    newRecipe.description = sanitize(newRecipe.description || '').substring(0, 1000);
+    newRecipe.image = sanitize(newRecipe.image || '');
+
     // Auto-add pending step if it has content
     if (tempStep.title && tempStep.description) {
+      const sanitizedStepTitle = sanitize(tempStep.title).substring(0, 100);
+      const sanitizedStepDesc = sanitize(tempStep.description).substring(0, 1000);
+      const sanitizedStepImg = sanitize(tempStep.image || '');
+
       const steps = [...(newRecipe.steps || [])];
       if (editingStepIndex !== null) {
-        steps[editingStepIndex] = { ...tempStep };
+        steps[editingStepIndex] = { 
+          title: sanitizedStepTitle, 
+          description: sanitizedStepDesc, 
+          image: sanitizedStepImg 
+        };
       } else {
-        steps.push({ ...tempStep });
+        steps.push({ 
+          title: sanitizedStepTitle, 
+          description: sanitizedStepDesc, 
+          image: sanitizedStepImg 
+        });
       }
       newRecipe.steps = steps;
       setTempStep({ title: '', description: '', image: '' });
@@ -883,6 +961,10 @@ export default function App() {
   };
 
   const handleSeedRecipes = async () => {
+    if (!isAdminAuthenticated) {
+      alert('Acesso negado. Apenas administradores autenticados podem inicializar dados (seed).');
+      return;
+    }
     if (!confirm('Deseja carregar as receitas iniciais no banco de dados?')) return;
     setIsSubmitting(true);
     try {
@@ -966,6 +1048,10 @@ export default function App() {
   };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!isAdminAuthenticated) {
+      alert('Acesso negado. Apenas administradores autenticados podem alterar o logo.');
+      return;
+    }
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 1024 * 1024) {
@@ -988,6 +1074,10 @@ export default function App() {
   };
 
   const resetLogo = async () => {
+    if (!isAdminAuthenticated) {
+      alert('Acesso negado. Apenas administradores autenticados podem resetar o logo.');
+      return;
+    }
     setAppLogo(null);
     localStorage.removeItem('coffee_app_logo');
     try {
@@ -1086,6 +1176,10 @@ export default function App() {
   };
 
   const handleDeleteRecipe = async (id: string) => {
+    if (!isAdminAuthenticated) {
+      alert('Acesso negado. Apenas administradores autenticados podem excluir receitas.');
+      return;
+    }
     if (!confirm('Tem certeza que deseja excluir esta receita?')) return;
     try {
       await deleteRecipeFromSupabase(id);
@@ -1579,10 +1673,18 @@ export default function App() {
             journey={currentJourney} 
             isAdmin={isAdminAuthenticated} 
             onUpdateStep={async (updatedStep) => {
+              if (!isAdminAuthenticated) {
+                alert("Acesso negado. Apenas administradores autenticados podem atualizar etapas da jornada.");
+                return;
+              }
               await updateJourneyStepInSupabase(updatedStep);
               setCurrentJourney(prev => prev.map(s => s.id === updatedStep.id ? updatedStep : s));
             }}
             onAddStep={async (newStep) => {
+              if (!isAdminAuthenticated) {
+                alert("Acesso negado. Apenas administradores autenticados podem adicionar etapas da jornada.");
+                return;
+              }
               const res = await insertJourneyStepToSupabase(newStep);
               if (res && res[0]) {
                 const added = {
@@ -1597,6 +1699,10 @@ export default function App() {
               }
             }}
             onDeleteStep={async (id) => {
+              if (!isAdminAuthenticated) {
+                alert("Acesso negado. Apenas administradores autenticados podem remover etapas da jornada.");
+                return;
+              }
               await deleteJourneyStepFromSupabase(id);
               setCurrentJourney(prev => prev.filter(s => s.id !== id));
             }}
@@ -2347,10 +2453,20 @@ export default function App() {
                 )}
                 <button 
                   onClick={() => {
+                    // Robust validation & sanitization
+                    const sanitizedLocation = editLocation.replace(/<[^>]*>/g, '').trim().substring(0, 50);
+                    if (!sanitizedLocation) {
+                      alert('Por favor, informe uma cidade ou região válida.');
+                      return;
+                    }
+                    const validConditions = ['Ensolarado', 'Parcialmente Nublado', 'Nublado', 'Chuvoso', 'Nevando', 'Tempestade'];
+                    const validatedCondition = validConditions.includes(editCondition) ? editCondition : 'Ensolarado';
+                    const validatedTemp = Math.max(-50, Math.min(60, editTemp));
+
                     weather.saveWeatherOverride({
-                      temp: editTemp,
-                      location: editLocation,
-                      condition: editCondition
+                      temp: validatedTemp,
+                      location: sanitizedLocation,
+                      condition: validatedCondition
                     });
                     setShowWeatherModal(false);
                   }}
