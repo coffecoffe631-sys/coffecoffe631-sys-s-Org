@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Search, Filter, MapPin, Cloud, CloudRain, Sun, Clock, ChevronRight, ChevronUp, ChevronDown, X, Heart, Share2, Coffee, Droplets, Zap, Loader2, Settings, Plus, Trash2, Lock, Sparkles, Edit, RotateCcw, Upload, Image as ImageIcon, User as UserIcon, LogOut, Mail, Maximize2, Check, Menu, MessageCircle, Eye, EyeOff, Trophy, Map, Compass, Cookie, BookOpen } from 'lucide-react';
+import { Search, Filter, MapPin, Cloud, CloudRain, Sun, Clock, ChevronRight, ChevronUp, ChevronDown, X, Heart, Share2, Coffee, Droplets, Zap, Loader2, Settings, Plus, Trash2, Lock, Sparkles, Edit, RotateCcw, Upload, Image as ImageIcon, User as UserIcon, LogOut, Mail, Maximize2, Check, Menu, MessageCircle, Eye, EyeOff, Trophy, Map, Compass, Cookie, BookOpen, Milk, Bean, GlassWater, Flame, ChefHat, Utensils, Scale, Blend, Citrus, IceCream, Candy, Timer, Soup, Thermometer, CupSoda } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Recipe, Ingredient, Step, WeatherCondition, recipes, defaultAccompaniments } from './data/recipes';
 import { coffeeJourney, JourneyStep } from './data/journey';
@@ -229,6 +229,143 @@ function renderStepContent(text: string) {
   return <div className="space-y-6 w-full select-text">{elements}</div>;
 }
 
+const INGREDIENT_ICONS = {
+  Bean: { component: Bean, label: 'Grão/Café' },
+  Milk: { component: Milk, label: 'Leite/Creme' },
+  IceCream: { component: IceCream, label: 'Sorvete/Creme' },
+  Citrus: { component: Citrus, label: 'Fruta/Cítrico' },
+  Candy: { component: Candy, label: 'Doce/Açúcar/Mel' },
+  Cookie: { component: Cookie, label: 'Chocolate/Biscoito' },
+  Droplets: { component: Droplets, label: 'Água/Gelo' },
+  Flame: { component: Flame, label: 'Quente/Fogo' },
+  Sparkles: { component: Sparkles, label: 'Especiaria/Brilho' },
+  Utensils: { component: Utensils, label: 'Geral' }
+};
+
+const EQUIPMENT_ICONS = {
+  Filter: { component: Filter, label: 'Filtro/Coador' },
+  Coffee: { component: Coffee, label: 'Máquina/Moka' },
+  GlassWater: { component: GlassWater, label: 'Chaleira/Pitcher' },
+  CupSoda: { component: CupSoda, label: 'Copo/Xícara' },
+  Timer: { component: Timer, label: 'Timer/Tempo' },
+  Scale: { component: Scale, label: 'Balança/Medidor' },
+  Blend: { component: Blend, label: 'Moedor/Mixer' },
+  Soup: { component: Soup, label: 'Panela/Pote' },
+  Thermometer: { component: Thermometer, label: 'Termômetro' },
+  Flame: { component: Flame, label: 'Aquecedor/Fogo' },
+  ChefHat: { component: ChefHat, label: 'Chef/Outros' }
+};
+
+const getIngredientIcon = (name: string, customIcon?: string) => {
+  if (customIcon) {
+    if (customIcon.startsWith('http') || customIcon.startsWith('data:image')) {
+      return <img src={customIcon} alt="" className="w-5 h-5 object-contain rounded-full" referrerPolicy="no-referrer" />;
+    }
+    if (INGREDIENT_ICONS[customIcon as keyof typeof INGREDIENT_ICONS]) {
+      const IconComponent = INGREDIENT_ICONS[customIcon as keyof typeof INGREDIENT_ICONS].component;
+      return <IconComponent size={20} className="text-neutral-900" />;
+    }
+  }
+
+  const lower = name.toLowerCase();
+  
+  if (lower.includes('chantilly') || lower.includes('sorvete') || lower.includes('cream') || lower.includes('gelato') || lower.includes('espuma de')) {
+    return <IceCream size={20} className="text-neutral-900" />;
+  }
+  if (lower.includes('leite') || lower.includes('creme') || lower.includes('milk') || lower.includes('aveia') || lower.includes('iogurte')) {
+    return <Milk size={20} className="text-neutral-900" />;
+  }
+  if (lower.includes('café') || lower.includes('coffee') || lower.includes('espresso') || lower.includes('grão') || lower.includes('pó') || lower.includes('blend')) {
+    return <Bean size={20} className="text-neutral-900" />;
+  }
+  if (lower.includes('limão') || lower.includes('laranja') || lower.includes('siciliano') || lower.includes('cítrico') || lower.includes('casca') || lower.includes('fruta') || lower.includes('maracujá')) {
+    return <Citrus size={20} className="text-neutral-900" />;
+  }
+  if (lower.includes('caramelo') || lower.includes('rapadura') || lower.includes('melaço') || lower.includes('mel') || lower.includes('xarope') || lower.includes('syrup') || lower.includes('açúcar') || lower.includes('adoçante') || lower.includes('calda')) {
+    return <Candy size={20} className="text-neutral-900" />;
+  }
+  if (lower.includes('chocolate') || lower.includes('cacau') || lower.includes('cookie') || lower.includes('biscoito') || lower.includes('avelã') || lower.includes('amendoim') || lower.includes('nozes') || lower.includes('doce')) {
+    return <Cookie size={20} className="text-neutral-900" />;
+  }
+  if (lower.includes('água') || lower.includes('water') || lower.includes('gelo') || lower.includes('ice') || lower.includes('líquido') || lower.includes('infusão')) {
+    return <Droplets size={20} className="text-neutral-900" />;
+  }
+  if (lower.includes('fogo') || lower.includes('quente') || lower.includes('vapor') || lower.includes('fervente')) {
+    return <Flame size={20} className="text-neutral-900" />;
+  }
+  if (lower.includes('sal') || lower.includes('flor de sal') || lower.includes('noz-moscada') || lower.includes('canela') || lower.includes('cravo') || lower.includes('especiaria') || lower.includes('hortelã') || lower.includes('alecrim') || lower.includes('baunilha') || lower.includes('pitada')) {
+    return <Sparkles size={20} className="text-neutral-900" />;
+  }
+  return <Utensils size={20} className="text-neutral-900" />;
+};
+
+const getEquipmentIcon = (name: string) => {
+  let cleanName = name;
+  let customIcon: string | undefined = undefined;
+  
+  if (name.includes('::')) {
+    const parts = name.split('::');
+    cleanName = parts[0];
+    customIcon = parts.slice(1).join('::');
+  }
+
+  if (customIcon) {
+    if (customIcon.startsWith('http') || customIcon.startsWith('data:image')) {
+      return <img src={customIcon} alt="" className="w-6 h-6 object-contain" referrerPolicy="no-referrer" />;
+    }
+    if (EQUIPMENT_ICONS[customIcon as keyof typeof EQUIPMENT_ICONS]) {
+      const IconComponent = EQUIPMENT_ICONS[customIcon as keyof typeof EQUIPMENT_ICONS].component;
+      return <IconComponent size={24} className="text-neutral-900" />;
+    }
+  }
+
+  const lower = cleanName.toLowerCase();
+  
+  if (lower.includes('v60') || lower.includes('coador') || lower.includes('filtro') || lower.includes('passador') || lower.includes('papel') || lower.includes('pano')) {
+    return <Filter size={24} className="text-neutral-900" />;
+  }
+  if (lower.includes('moka') || lower.includes('italiana') || lower.includes('cafeteira') || lower.includes('máquina') || lower.includes('espresso') || lower.includes('porta-filtro')) {
+    return <Coffee size={24} className="text-neutral-900" />;
+  }
+  if (lower.includes('chaleira') || lower.includes('bule') || lower.includes('pitcher') || lower.includes('leiteira') || lower.includes('jarra')) {
+    return <GlassWater size={24} className="text-neutral-900" />;
+  }
+  if (lower.includes('copo') || lower.includes('xícara') || lower.includes('caneca') || lower.includes('taça') || lower.includes('copinho') || lower.includes('vidro')) {
+    return <CupSoda size={24} className="text-neutral-900" />;
+  }
+  if (lower.includes('timer') || lower.includes('cronômetro') || lower.includes('tempo') || lower.includes('relógio')) {
+    return <Timer size={24} className="text-neutral-900" />;
+  }
+  if (lower.includes('balança') || lower.includes('peso') || lower.includes('medidor') || lower.includes('escala') || lower.includes('colher')) {
+    return <Scale size={24} className="text-neutral-900" />;
+  }
+  if (lower.includes('mixer') || lower.includes('moedor') || lower.includes('espumador') || lower.includes('batedor') || lower.includes('liquidificador') || lower.includes('blend')) {
+    return <Blend size={24} className="text-neutral-900" />;
+  }
+  if (lower.includes('panela') || lower.includes('forma') || lower.includes('assadeira') || lower.includes('recipiente') || lower.includes('pote') || lower.includes('bacia')) {
+    return <Soup size={24} className="text-neutral-900" />;
+  }
+  if (lower.includes('ralo') || lower.includes('faca') || lower.includes('corte') || lower.includes('descascador') || lower.includes('microplane') || lower.includes('peneira')) {
+    return <Utensils size={24} className="text-neutral-900" />;
+  }
+  if (lower.includes('termômetro') || lower.includes('temperatura')) {
+    return <Thermometer size={24} className="text-neutral-900" />;
+  }
+  if (lower.includes('fogo') || lower.includes('aquecedor') || lower.includes('fogão') || lower.includes('microondas') || lower.includes('vapor') || lower.includes('forno')) {
+    return <Flame size={24} className="text-neutral-900" />;
+  }
+  return <ChefHat size={24} className="text-neutral-900" />;
+};
+
+const formatIngredientText = (name: string, amount?: string) => {
+  if (!amount) return name;
+  const lowerName = name.toLowerCase();
+  if (lowerName.startsWith('de ') || lowerName.startsWith('do ') || lowerName.startsWith('da ')) {
+    return `${amount} ${name}`;
+  }
+  return `${amount} de ${name}`;
+};
+
 export default function App() {
   const weather = useWeather();
   const [allRecipes, setAllRecipes] = useState<Recipe[]>([]);
@@ -255,6 +392,8 @@ export default function App() {
   // Temp states for dynamic fields
   const [tempIngredient, setTempIngredient] = useState({ name: '', amount: '' });
   const [tempEquipment, setTempEquipment] = useState('');
+  const [selectedTempIngredientIcon, setSelectedTempIngredientIcon] = useState<string>('');
+  const [selectedTempEquipmentIcon, setSelectedTempEquipmentIcon] = useState<string>('');
   const [tempStep, setTempStep] = useState({ title: '', description: '', image: '' });
   const [editingStepIndex, setEditingStepIndex] = useState<number | null>(null);
   
@@ -279,6 +418,7 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
+  const [activeModalTab, setActiveModalTab] = useState<'sobre' | 'ingredientes' | 'preparo'>('sobre');
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [isFullScreenSteps, setIsFullScreenSteps] = useState(false);
   const [isExplainingRecommendation, setIsExplainingRecommendation] = useState(false);
@@ -328,6 +468,13 @@ export default function App() {
       setPendingEquipment(activeEquipment);
     }
   }, [showFilters, activeIngredients, activeEquipment]);
+
+  useEffect(() => {
+    if (selectedRecipe) {
+      setActiveModalTab('sobre');
+      setCurrentStepIndex(0);
+    }
+  }, [selectedRecipe]);
 
   useEffect(() => {
     const loadLogo = async () => {
@@ -467,6 +614,10 @@ export default function App() {
     setIsPremium(true);
     setSubscriptionChecked(true);
   }, [user]);
+
+  useEffect(() => {
+    localStorage.setItem('coffee_favorites', JSON.stringify(favorites));
+  }, [favorites]);
 
   const [configError, setConfigError] = useState<string | null>(null);
 
@@ -915,12 +1066,17 @@ export default function App() {
 
   const addIngredient = () => {
     if (!tempIngredient.name || !tempIngredient.amount) return;
+    const ingredientWithIcon = {
+      ...tempIngredient,
+      icon: selectedTempIngredientIcon || undefined
+    };
     setNewRecipe(prev => ({
       ...prev,
-      detailedIngredients: [...(prev.detailedIngredients || []), { ...tempIngredient }],
+      detailedIngredients: [...(prev.detailedIngredients || []), ingredientWithIcon],
       ingredients: [...(prev.ingredients || []), tempIngredient.name]
     }));
     setTempIngredient({ name: '', amount: '' });
+    setSelectedTempIngredientIcon('');
   };
 
   const removeIngredient = (index: number) => {
@@ -933,11 +1089,15 @@ export default function App() {
 
   const addEquipment = () => {
     if (!tempEquipment) return;
+    const finalEquipment = selectedTempEquipmentIcon 
+      ? `${tempEquipment}::${selectedTempEquipmentIcon}` 
+      : tempEquipment;
     setNewRecipe(prev => ({
       ...prev,
-      equipment: [...(prev.equipment || []), tempEquipment]
+      equipment: [...(prev.equipment || []), finalEquipment]
     }));
     setTempEquipment('');
+    setSelectedTempEquipmentIcon('');
   };
 
   const removeEquipment = (index: number) => {
@@ -2445,6 +2605,44 @@ export default function App() {
                           <Plus size={20} />
                         </button>
                       </div>
+
+                      {/* Icon selector for current temp ingredient */}
+                      <div className="bg-coffee-card border border-coffee-100/50 rounded-xl p-2.5 flex flex-col gap-1.5">
+                        <span className="text-[10px] font-bold text-coffee-400 uppercase tracking-widest">Escolha um Ícone para o ingrediente (Opcional):</span>
+                        <div className="flex flex-wrap gap-2">
+                          {Object.entries(INGREDIENT_ICONS).map(([key, val]) => {
+                            const Icon = val.component;
+                            const isSelected = selectedTempIngredientIcon === key;
+                            return (
+                              <button
+                                key={key}
+                                type="button"
+                                title={val.label}
+                                onClick={() => setSelectedTempIngredientIcon(key === selectedTempIngredientIcon ? '' : key)}
+                                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[11px] transition-all font-semibold ${
+                                  isSelected
+                                    ? 'bg-neutral-100 border-neutral-400 text-neutral-900 scale-105 shadow-sm'
+                                    : 'bg-white border-coffee-100 text-coffee-600 hover:bg-coffee-50'
+                                }`}
+                              >
+                                <Icon size={14} className="text-neutral-900" />
+                                <span>{val.label}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <div className="mt-1.5 flex items-center gap-2">
+                          <span className="text-[10px] font-bold text-coffee-400 uppercase shrink-0">Ou cole a URL de um ícone:</span>
+                          <input
+                            type="text"
+                            placeholder="https://exemplo.com/icone.png"
+                            value={selectedTempIngredientIcon && !INGREDIENT_ICONS[selectedTempIngredientIcon as keyof typeof INGREDIENT_ICONS] ? selectedTempIngredientIcon : ''}
+                            onChange={(e) => setSelectedTempIngredientIcon(e.target.value)}
+                            className="flex-1 bg-white border border-coffee-100 rounded-lg py-1 px-2.5 text-xs text-coffee-800"
+                          />
+                        </div>
+                      </div>
+
                       <div className="flex flex-wrap gap-2">
                         {allIngredients.slice(0, 8).map(ing => (
                           <button
@@ -2459,8 +2657,18 @@ export default function App() {
                       </div>
                       <div className="flex flex-wrap gap-2">
                         {newRecipe.detailedIngredients?.map((ing, i) => (
-                          <div key={i} className="bg-white border border-coffee-100 px-3 py-1 rounded-full text-xs flex items-center gap-2">
-                            <span>{ing.name} ({ing.amount})</span>
+                          <div key={i} className="bg-white border border-coffee-100 px-3 py-1 rounded-full text-xs flex items-center gap-2 shadow-sm">
+                            {ing.icon && (
+                              ing.icon.startsWith('http') || ing.icon.startsWith('data:image') ? (
+                                <img src={ing.icon} alt="" className="w-4 h-4 object-contain rounded-full bg-amber-50" referrerPolicy="no-referrer" />
+                              ) : INGREDIENT_ICONS[ing.icon as keyof typeof INGREDIENT_ICONS] ? (
+                                (() => {
+                                  const Icon = INGREDIENT_ICONS[ing.icon as keyof typeof INGREDIENT_ICONS].component;
+                                  return <Icon size={12} className="text-neutral-900 shrink-0" />;
+                                })()
+                              ) : null
+                            )}
+                            <span className="font-medium text-coffee-800">{ing.name} ({ing.amount})</span>
                             <button type="button" onClick={() => removeIngredient(i)} className="text-red-400 hover:text-red-600">
                               <X size={14} />
                             </button>
@@ -2483,6 +2691,44 @@ export default function App() {
                           <Plus size={20} />
                         </button>
                       </div>
+
+                      {/* Icon selector for current temp equipment */}
+                      <div className="bg-coffee-card border border-coffee-100/50 rounded-xl p-2.5 flex flex-col gap-1.5">
+                        <span className="text-[10px] font-bold text-coffee-400 uppercase tracking-widest">Escolha um Ícone para o equipamento (Opcional):</span>
+                        <div className="flex flex-wrap gap-2">
+                          {Object.entries(EQUIPMENT_ICONS).map(([key, val]) => {
+                            const Icon = val.component;
+                            const isSelected = selectedTempEquipmentIcon === key;
+                            return (
+                              <button
+                                key={key}
+                                type="button"
+                                title={val.label}
+                                onClick={() => setSelectedTempEquipmentIcon(key === selectedTempEquipmentIcon ? '' : key)}
+                                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[11px] transition-all font-semibold ${
+                                  isSelected
+                                    ? 'bg-neutral-100 border-neutral-400 text-neutral-900 scale-105 shadow-sm'
+                                    : 'bg-white border-coffee-100 text-coffee-600 hover:bg-coffee-50'
+                                }`}
+                              >
+                                <Icon size={14} className="text-neutral-900" />
+                                <span>{val.label}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <div className="mt-1.5 flex items-center gap-2">
+                          <span className="text-[10px] font-bold text-coffee-400 uppercase shrink-0">Ou cole a URL de um ícone:</span>
+                          <input
+                            type="text"
+                            placeholder="https://exemplo.com/equipamento.png"
+                            value={selectedTempEquipmentIcon && !EQUIPMENT_ICONS[selectedTempEquipmentIcon as keyof typeof EQUIPMENT_ICONS] ? selectedTempEquipmentIcon : ''}
+                            onChange={(e) => setSelectedTempEquipmentIcon(e.target.value)}
+                            className="flex-1 bg-white border border-coffee-100 rounded-lg py-1 px-2.5 text-xs text-coffee-800"
+                          />
+                        </div>
+                      </div>
+
                       <div className="flex flex-wrap gap-2">
                         {allEquipment.slice(0, 8).map(eq => (
                           <button
@@ -2496,14 +2742,29 @@ export default function App() {
                         ))}
                       </div>
                       <div className="flex flex-wrap gap-2">
-                        {newRecipe.equipment?.map((eq, i) => (
-                          <div key={i} className="bg-white border border-coffee-100 px-3 py-1 rounded-full text-xs flex items-center gap-2">
-                            <span>{eq}</span>
-                            <button type="button" onClick={() => removeEquipment(i)} className="text-red-400 hover:text-red-600">
-                              <X size={14} />
-                            </button>
-                          </div>
-                        ))}
+                        {newRecipe.equipment?.map((eq, i) => {
+                          const isCustom = eq.includes('::');
+                          const name = isCustom ? eq.split('::')[0] : eq;
+                          const iconKey = isCustom ? eq.split('::')[1] : undefined;
+                          return (
+                            <div key={i} className="bg-white border border-coffee-100 px-3 py-1 rounded-full text-xs flex items-center gap-2 shadow-sm">
+                              {iconKey && (
+                                iconKey.startsWith('http') || iconKey.startsWith('data:image') ? (
+                                  <img src={iconKey} alt="" className="w-4 h-4 object-contain rounded-full bg-neutral-100" referrerPolicy="no-referrer" />
+                                ) : EQUIPMENT_ICONS[iconKey as keyof typeof EQUIPMENT_ICONS] ? (
+                                  (() => {
+                                    const Icon = EQUIPMENT_ICONS[iconKey as keyof typeof EQUIPMENT_ICONS].component;
+                                    return <Icon size={12} className="text-neutral-900 shrink-0" />;
+                                  })()
+                                ) : null
+                              )}
+                              <span className="font-medium text-coffee-800">{name}</span>
+                              <button type="button" onClick={() => removeEquipment(i)} className="text-red-400 hover:text-red-600">
+                                <X size={14} />
+                              </button>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
 
@@ -2891,160 +3152,236 @@ export default function App() {
                         <span>{selectedRecipe.difficulty}</span>
                       </div>
                       <h2 className="text-3xl sm:text-4xl font-sans font-black text-coffee-950 break-words leading-tight">{selectedRecipe.name}</h2>
-                      
-                      {/* Formatted description with markdown compatibility */}
-                      <div className="text-coffee-600 leading-relaxed font-sans mt-2">
-                        {renderFormattedContent(selectedRecipe.description)}
-                      </div>
                     </div>
 
-                    <div className="flex gap-8 py-4 border-y border-coffee-200">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-coffee-100 flex items-center justify-center text-coffee-800">
-                          <Clock size={20} />
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-bold text-coffee-400 uppercase tracking-widest">Tempo</p>
-                          <p className="text-sm font-bold text-coffee-900">{selectedRecipe.prepTime}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-coffee-100 flex items-center justify-center text-coffee-800">
-                          <Droplets size={20} />
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-bold text-coffee-400 uppercase tracking-widest">Dificuldade</p>
-                          <p className="text-sm font-bold text-coffee-900">{selectedRecipe.difficulty}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-4">
-                      <h3 className="text-xl font-sans font-bold text-coffee-950">Ingredientes</h3>
-                      <div className="grid grid-cols-1 gap-3">
-                        {(selectedRecipe.detailedIngredients && selectedRecipe.detailedIngredients.length > 0) ? (
-                          selectedRecipe.detailedIngredients.map((ing, i) => (
-                            <div key={i} className="flex items-center justify-between p-4 bg-coffee-card rounded-2xl border border-coffee-100/70 shadow-sm">
-                              <span className="text-sm font-medium text-coffee-800">{ing.name}</span>
-                              {ing.amount && (
-                                <span className="text-xs font-bold text-coffee-400 bg-coffee-50 px-3 py-1 rounded-lg uppercase tracking-wider">{ing.amount}</span>
-                              )}
-                            </div>
-                          ))
-                        ) : (selectedRecipe.ingredients && selectedRecipe.ingredients.length > 0) ? (
-                          selectedRecipe.ingredients.map((ing, i) => (
-                            <div key={i} className="flex items-center justify-between p-4 bg-coffee-card rounded-2xl border border-coffee-100/70 shadow-sm">
-                              <span className="text-sm font-medium text-coffee-800">{ing}</span>
-                            </div>
-                          ))
-                        ) : (
-                          <p className="text-coffee-400 italic text-sm px-2">Nenhum ingrediente listado.</p>
+                    {/* Navigation Sub-Tabs to avoid long scrolling on mobile */}
+                    <div className="flex border-b border-coffee-200/60 gap-1.5 p-1 bg-coffee-100/60 rounded-2xl sticky top-0 backdrop-blur-md z-20">
+                      <button
+                        type="button"
+                        onClick={() => setActiveModalTab('sobre')}
+                        className={cn(
+                          "flex-1 py-2.5 text-[10px] sm:text-xs font-black uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1.5",
+                          activeModalTab === 'sobre'
+                            ? "bg-white text-coffee-950 shadow-sm border border-coffee-200/20"
+                            : "text-coffee-500 hover:text-coffee-800"
                         )}
-                      </div>
+                      >
+                        <BookOpen size={14} className="shrink-0" />
+                        <span>Sobre</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveModalTab('ingredientes')}
+                        className={cn(
+                          "flex-1 py-2.5 text-[10px] sm:text-xs font-black uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1.5",
+                          activeModalTab === 'ingredientes'
+                            ? "bg-white text-coffee-950 shadow-sm border border-coffee-200/20"
+                            : "text-coffee-500 hover:text-coffee-800"
+                        )}
+                      >
+                        <Utensils size={14} className="shrink-0" />
+                        <span>Itens</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveModalTab('preparo')}
+                        className={cn(
+                          "flex-1 py-2.5 text-[10px] sm:text-xs font-black uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1.5",
+                          activeModalTab === 'preparo'
+                            ? "bg-white text-coffee-950 shadow-sm border border-coffee-200/20"
+                            : "text-coffee-500 hover:text-coffee-800"
+                        )}
+                      >
+                        <Clock size={14} className="shrink-0" />
+                        <span>Preparo</span>
+                      </button>
                     </div>
 
-                    {selectedRecipe.equipment && selectedRecipe.equipment.length > 0 && (
-                      <div className="space-y-4">
-                        <h3 className="text-xl font-sans font-bold text-coffee-950">Equipamentos</h3>
-                        <div className="flex flex-wrap gap-2">
-                          {selectedRecipe.equipment.map((eq, i) => (
-                            <div key={i} className="bg-coffee-card border border-coffee-100/70 px-4 py-2 rounded-xl text-xs font-bold text-coffee-600 shadow-sm">
-                              {eq}
+                    <AnimatePresence mode="wait">
+                      <motion.div
+                        key={activeModalTab}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.2 }}
+                        className="space-y-6"
+                      >
+                        {activeModalTab === 'sobre' && (
+                          <div className="space-y-6">
+                            {/* Formatted description with markdown compatibility */}
+                            <div className="text-coffee-600 leading-relaxed font-sans text-sm sm:text-base">
+                              {renderFormattedContent(selectedRecipe.description)}
                             </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
 
-                    <div className="space-y-8 pt-4">
-                      <div className="flex items-center justify-between relative">
-                        <h3 className="text-xl font-sans font-bold text-coffee-950">Modo de Preparo</h3>
-                        <div className="flex items-center gap-2">
-                          {selectedRecipe.steps && selectedRecipe.steps.length > 0 && (
-                            <>
-                              <button 
-                                onClick={() => setIsFullScreenSteps(true)}
-                                className="p-2 rounded-full bg-coffee-card border border-coffee-100/70 text-coffee-600 hover:bg-coffee-900 hover:text-white transition-all shadow-sm"
-                                title="Tela Cheia"
-                              >
-                                <Maximize2 size={16} />
-                              </button>
-                              <div className="flex items-center gap-2 bg-coffee-card px-3 py-1.5 rounded-full border border-coffee-100/70 shadow-sm">
-                                <span className="text-coffee-900 font-bold text-sm">{currentStepIndex + 1}</span>
-                                <span className="text-coffee-300 text-[10px]">/</span>
-                                <span className="text-coffee-400 text-[10px]">{selectedRecipe.steps.length}</span>
+                            <div className="flex gap-8 py-4 border-y border-coffee-200">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-coffee-100 flex items-center justify-center text-coffee-800">
+                                  <Clock size={20} />
+                                </div>
+                                <div>
+                                  <p className="text-[10px] font-bold text-coffee-400 uppercase tracking-widest">Tempo</p>
+                                  <p className="text-sm font-bold text-coffee-900">{selectedRecipe.prepTime}</p>
+                                </div>
                               </div>
-                            </>
-                          )}
-                        </div>
-                      </div>
-
-                      {selectedRecipe.steps && selectedRecipe.steps.length > 0 ? (
-                        <div className="bg-white rounded-[3rem] p-8 border border-coffee-100 shadow-sm space-y-10 text-center relative overflow-hidden">
-                          {/* Background decoration */}
-                          <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-coffee-50/30 to-transparent pointer-events-none" />
-                          
-                          <AnimatePresence mode="wait">
-                            {selectedRecipe.steps[currentStepIndex] && (
-                              <motion.div 
-                                key={currentStepIndex}
-                                initial={{ opacity: 0, scale: 0.95 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                exit={{ opacity: 0, scale: 1.05 }}
-                                transition={{ duration: 0.3 }}
-                                className="space-y-8"
-                              >
-                                <div className="w-full max-w-[224px] aspect-[2/3] mx-auto relative rounded-[2rem] overflow-hidden bg-coffee-50 border-4 border-white shadow-xl rotate-1">
-                                  <img 
-                                    src={selectedRecipe.steps[currentStepIndex].image || `https://picsum.photos/seed/${selectedRecipe.steps[currentStepIndex].title + currentStepIndex}/1024/1536`} 
-                                    alt={selectedRecipe.steps[currentStepIndex].title}
-                                    referrerPolicy="no-referrer"
-                                    className="w-full h-full object-cover opacity-95 filter sepia-[0.1] contrast-[1.05]"
-                                  />
-                                  {/* Subtle paper texture overlay */}
-                                  <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/paper.png')]" />
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-coffee-100 flex items-center justify-center text-coffee-800">
+                                  <Droplets size={20} />
                                 </div>
-
-                                <div className="text-left max-w-md mx-auto space-y-4">
-                                  {renderFormattedContent(selectedRecipe.steps[currentStepIndex].description)}
+                                <div>
+                                  <p className="text-[10px] font-bold text-coffee-400 uppercase tracking-widest">Dificuldade</p>
+                                  <p className="text-sm font-bold text-coffee-900">{selectedRecipe.difficulty}</p>
                                 </div>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
+                              </div>
+                            </div>
+                          </div>
+                        )}
 
-                          <div className="flex flex-col items-center gap-4 pt-4">
-                            <button 
-                              onClick={() => {
-                                if (currentStepIndex < selectedRecipe.steps.length - 1) {
-                                  setCurrentStepIndex(prev => prev + 1);
-                                } else {
-                                  setCurrentStepIndex(0);
-                                }
-                              }}
-                              className="bg-white border border-coffee-100 px-10 py-4 rounded-full shadow-sm flex items-center gap-3 group hover:bg-coffee-900 hover:text-white transition-all active:scale-95"
-                            >
-                              <span className="text-xs font-bold uppercase tracking-[0.2em] text-coffee-800 group-hover:text-white">
-                                {currentStepIndex < selectedRecipe.steps.length - 1 ? 'Continuar' : 'Reiniciar'}
-                              </span>
-                              <ChevronRight size={16} className="text-coffee-400 group-hover:text-white transition-colors" />
-                            </button>
+                        {activeModalTab === 'ingredientes' && (
+                          <div className="space-y-6">
+                            <div className="space-y-4">
+                              <h3 className="text-xl font-sans font-bold text-coffee-950">Ingredientes</h3>
+                              <div className="grid grid-cols-1 gap-3">
+                                {(selectedRecipe.detailedIngredients && selectedRecipe.detailedIngredients.length > 0) ? (
+                                  selectedRecipe.detailedIngredients.map((ing, i) => (
+                                    <div key={i} className="flex items-center justify-between p-4 bg-coffee-card rounded-2xl border border-coffee-100/70 shadow-sm">
+                                      <div className="flex items-center gap-4 flex-1 min-w-0">
+                                        <div className="w-10 h-10 rounded-full bg-neutral-100 flex items-center justify-center shrink-0">
+                                          {getIngredientIcon(ing.name, ing.icon)}
+                                        </div>
+                                        <span className="text-sm font-semibold text-coffee-800 leading-snug">
+                                          {formatIngredientText(ing.name, ing.amount)}
+                                        </span>
+                                      </div>
+                                      <span className="text-sm font-bold text-coffee-300/80 ml-3 shrink-0">{i + 1}</span>
+                                    </div>
+                                  ))
+                                ) : (selectedRecipe.ingredients && selectedRecipe.ingredients.length > 0) ? (
+                                  selectedRecipe.ingredients.map((ing, i) => (
+                                    <div key={i} className="flex items-center justify-between p-4 bg-coffee-card rounded-2xl border border-coffee-100/70 shadow-sm">
+                                      <div className="flex items-center gap-4 flex-1 min-w-0">
+                                        <div className="w-10 h-10 rounded-full bg-neutral-100 flex items-center justify-center shrink-0">
+                                          {getIngredientIcon(ing)}
+                                        </div>
+                                        <span className="text-sm font-semibold text-coffee-800 leading-snug">{ing}</span>
+                                      </div>
+                                      <span className="text-sm font-bold text-coffee-300/80 ml-3 shrink-0">{i + 1}</span>
+                                    </div>
+                                  ))
+                                ) : (
+                                  <p className="text-coffee-400 italic text-sm px-2">Nenhum ingrediente listado.</p>
+                                )}
+                              </div>
+                            </div>
 
-                            {currentStepIndex > 0 && (
-                              <button 
-                                onClick={() => setCurrentStepIndex(prev => prev - 1)}
-                                className="text-[10px] font-bold text-coffee-300 uppercase tracking-widest hover:text-coffee-500 transition-colors"
-                              >
-                                Voltar passo anterior
-                              </button>
+                            {selectedRecipe.equipment && selectedRecipe.equipment.length > 0 && (
+                              <div className="space-y-4 pt-2">
+                                <h3 className="text-xl font-sans font-bold text-coffee-950">Equipamentos</h3>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                  {selectedRecipe.equipment.map((eq, i) => (
+                                    <div key={i} className="flex items-center gap-4 p-4 bg-coffee-card rounded-2xl border border-coffee-100/70 shadow-sm">
+                                      <div className="w-10 h-10 rounded-full bg-neutral-100 flex items-center justify-center shrink-0">
+                                        {getEquipmentIcon(eq)}
+                                      </div>
+                                      <span className="text-xs font-semibold text-coffee-800 leading-snug">{eq.includes('::') ? eq.split('::')[0] : eq}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
                             )}
                           </div>
-                        </div>
-                      ) : (
-                        <div className="bg-white rounded-[3rem] p-12 border border-coffee-100 shadow-sm text-center">
-                          <p className="text-coffee-400 italic">Modo de preparo não disponível para esta receita.</p>
-                        </div>
-                      )}
-                    </div>
+                        )}
+
+                        {activeModalTab === 'preparo' && (
+                          <div className="space-y-6">
+                            <div className="flex items-center justify-between relative">
+                              <h3 className="text-xl font-sans font-bold text-coffee-950">Modo de Preparo</h3>
+                              <div className="flex items-center gap-2">
+                                {selectedRecipe.steps && selectedRecipe.steps.length > 0 && (
+                                  <>
+                                    <button 
+                                      onClick={() => setIsFullScreenSteps(true)}
+                                      className="p-2 rounded-full bg-coffee-card border border-coffee-100/70 text-coffee-600 hover:bg-coffee-900 hover:text-white transition-all shadow-sm"
+                                      title="Tela Cheia"
+                                    >
+                                      <Maximize2 size={16} />
+                                    </button>
+                                    <div className="flex items-center gap-2 bg-coffee-card px-3 py-1.5 rounded-full border border-coffee-100/70 shadow-sm">
+                                      <span className="text-coffee-900 font-bold text-sm">{currentStepIndex + 1}</span>
+                                      <span className="text-coffee-300 text-[10px]">/</span>
+                                      <span className="text-coffee-400 text-[10px]">{selectedRecipe.steps.length}</span>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+
+                            {selectedRecipe.steps && selectedRecipe.steps.length > 0 ? (
+                              <div className="bg-white rounded-[3rem] p-6 sm:p-8 border border-coffee-100 shadow-sm space-y-8 text-center relative overflow-hidden">
+                                <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-coffee-50/30 to-transparent pointer-events-none" />
+                                
+                                <AnimatePresence mode="wait">
+                                  {selectedRecipe.steps[currentStepIndex] && (
+                                    <motion.div 
+                                      key={currentStepIndex}
+                                      initial={{ opacity: 0, scale: 0.95 }}
+                                      animate={{ opacity: 1, scale: 1 }}
+                                      exit={{ opacity: 0, scale: 1.05 }}
+                                      transition={{ duration: 0.3 }}
+                                      className="space-y-6"
+                                    >
+                                      <div className="w-full max-w-[200px] aspect-[2/3] mx-auto relative rounded-[2rem] overflow-hidden bg-coffee-50 border-4 border-white shadow-xl rotate-1">
+                                        <img 
+                                          src={selectedRecipe.steps[currentStepIndex].image || `https://picsum.photos/seed/${selectedRecipe.steps[currentStepIndex].title + currentStepIndex}/1024/1536`} 
+                                          alt={selectedRecipe.steps[currentStepIndex].title}
+                                          referrerPolicy="no-referrer"
+                                          className="w-full h-full object-cover opacity-95 filter sepia-[0.1] contrast-[1.05]"
+                                        />
+                                        <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/paper.png')]" />
+                                      </div>
+
+                                      <div className="text-left max-w-md mx-auto space-y-4">
+                                        {renderFormattedContent(selectedRecipe.steps[currentStepIndex].description)}
+                                      </div>
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
+
+                                <div className="flex flex-col items-center gap-4 pt-2">
+                                  <button 
+                                    onClick={() => {
+                                      if (currentStepIndex < selectedRecipe.steps.length - 1) {
+                                        setCurrentStepIndex(prev => prev + 1);
+                                      } else {
+                                        setCurrentStepIndex(0);
+                                      }
+                                    }}
+                                    className="bg-white border border-coffee-100 px-8 py-3.5 rounded-full shadow-sm flex items-center gap-3 group hover:bg-coffee-900 hover:text-white transition-all active:scale-95"
+                                  >
+                                    <span className="text-xs font-bold uppercase tracking-[0.2em] text-coffee-800 group-hover:text-white">
+                                      {currentStepIndex < selectedRecipe.steps.length - 1 ? 'Continuar' : 'Reiniciar'}
+                                    </span>
+                                    <ChevronRight size={16} className="text-coffee-400 group-hover:text-white transition-colors" />
+                                  </button>
+
+                                  {currentStepIndex > 0 && (
+                                    <button 
+                                      onClick={() => setCurrentStepIndex(prev => prev - 1)}
+                                      className="text-[10px] font-bold text-coffee-300 uppercase tracking-widest hover:text-coffee-500 transition-colors"
+                                    >
+                                      Voltar passo anterior
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="bg-white rounded-[3rem] p-12 border border-coffee-100 shadow-sm text-center">
+                                <p className="text-coffee-400 italic">Modo de preparo não disponível para esta receita.</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </motion.div>
+                    </AnimatePresence>
                   </div>
                 </div>
               </div>

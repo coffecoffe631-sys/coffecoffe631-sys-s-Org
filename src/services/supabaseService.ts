@@ -91,7 +91,8 @@ export const fetchRecipesFromSupabase = async (): Promise<Recipe[]> => {
     equipment: Array.isArray(item.equipamentos) ? item.equipamentos.filter(Boolean) : [],
     detailedIngredients: Array.isArray(item.ingredientes) ? item.ingredientes.map((i: any) => ({
       name: typeof i === 'string' ? i : i.name,
-      amount: typeof i === 'string' ? '' : i.amount
+      amount: typeof i === 'string' ? '' : i.amount,
+      icon: typeof i === 'string' ? undefined : i.icon
     })) : [],
     steps: Array.isArray(item.modo_preparo) ? item.modo_preparo.map((s: any) => ({
       title: s.title || s.titulo || '',
