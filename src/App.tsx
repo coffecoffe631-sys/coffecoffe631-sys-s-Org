@@ -1490,7 +1490,7 @@ export default function App() {
   return (
     <div className="min-h-screen pb-24">
       {/* Header */}
-      <header className="sticky top-0 bg-coffee-50/80 backdrop-blur-md z-30 border-b border-coffee-100/50">
+      <header className="sticky top-0 bg-coffee-50 z-30 border-b border-coffee-100/50 shadow-sm shadow-coffee-950/[0.01]">
         <div className="max-w-5xl mx-auto px-6 pt-8 pb-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
           <div 
@@ -1886,17 +1886,17 @@ export default function App() {
                         <button 
                           onClick={(e) => toggleFavorite(e, recipe.id)}
                           className={cn(
-                            "p-2.5 backdrop-blur-md rounded-full shadow-sm transition-all",
+                            "p-2.5 rounded-full shadow-sm transition-all border border-coffee-100/30",
                             favorites.includes(recipe.id) 
                               ? "bg-coffee-500 text-white" 
-                              : "bg-white/80 text-coffee-900 hover:bg-white"
+                              : "bg-white text-coffee-900 hover:bg-coffee-50"
                           )}
                         >
                           <Heart size={18} fill={favorites.includes(recipe.id) ? "currentColor" : "none"} />
                         </button>
                       </div>
                       <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">
-                        <div className="bg-coffee-950/80 backdrop-blur-md px-3 py-1.5 rounded-xl text-white text-[10px] font-bold uppercase tracking-widest border border-white/10">
+                        <div className="bg-coffee-950 px-3 py-1.5 rounded-xl text-white text-[10px] font-bold uppercase tracking-widest border border-white/5">
                           {recipe.category}
                         </div>
                       </div>
@@ -1967,7 +1967,7 @@ export default function App() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsEditingName(false)}
-              className="absolute inset-0 bg-coffee-900/60 backdrop-blur-sm"
+              className="absolute inset-0 bg-coffee-950/75"
             />
             <motion.div 
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
@@ -2123,7 +2123,7 @@ export default function App() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-coffee-950/95 backdrop-blur-xl"
+              className="absolute inset-0 bg-coffee-950/98"
             >
               <div className="absolute inset-0 opacity-30">
                 <img src={recommendedRecipe.image} referrerPolicy="no-referrer" className="w-full h-full object-cover blur-3xl scale-150" alt="" />
@@ -2134,7 +2134,7 @@ export default function App() {
               initial={{ scale: 0.9, opacity: 0, y: 40 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 40 }}
-              className="relative w-full max-w-md bg-white/5 border border-white/10 rounded-[3rem] overflow-hidden shadow-2xl backdrop-blur-md"
+              className="relative w-full max-w-md bg-coffee-900 border border-coffee-800 rounded-[3rem] overflow-hidden shadow-2xl"
             >
               <div className="p-10 flex flex-col items-center text-center">
                 <motion.div 
@@ -2228,7 +2228,7 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[120] flex items-center justify-center p-6 bg-coffee-950/80 backdrop-blur-md"
+            className="fixed inset-0 z-[120] flex items-center justify-center p-6 bg-coffee-950/90"
           >
             <motion.div 
               initial={{ scale: 0.95, y: 25, opacity: 0 }}
@@ -2350,7 +2350,7 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-coffee-950/80 backdrop-blur-sm"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-coffee-950/90"
           >
             <motion.div 
               initial={{ scale: 0.9, opacity: 0 }}
@@ -2406,7 +2406,7 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-coffee-950/80 backdrop-blur-sm"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-coffee-950/90"
           >
             <motion.div 
               initial={{ y: 50, opacity: 0 }}
@@ -3050,18 +3050,18 @@ export default function App() {
               </AnimatePresence>
             </div>
 
-            {/* Frosted Glass Navigation Panel */}
-            <div className="fixed bottom-0 left-0 right-0 border-t border-white/40 bg-white/10 backdrop-blur-[40px] z-30 shadow-[0_-10px_40px_rgba(0,0,0,0.03)]">
+            {/* Solid Coffee Navigation Panel */}
+            <div className="fixed bottom-0 left-0 right-0 border-t border-coffee-200 bg-coffee-50 z-30 shadow-[0_-10px_40px_rgba(0,0,0,0.02)]">
               <div className="p-6 sm:p-10 flex items-center justify-between w-full max-w-4xl mx-auto">
                 <button 
                   onClick={() => currentStepIndex > 0 && setCurrentStepIndex(prev => prev - 1)}
                   disabled={currentStepIndex === 0}
-                  className="w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center rounded-full bg-white/15 text-coffee-900 disabled:opacity-10 hover:bg-white/30 transition-all border border-white/30 shadow-sm"
+                  className="w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center rounded-full bg-coffee-100 text-coffee-900 disabled:opacity-30 hover:bg-coffee-200 transition-all border border-coffee-200/40 shadow-sm"
                 >
                   <ChevronRight size={24} className="rotate-180" />
                 </button>
 
-                <div className="flex gap-2 sm:gap-3 px-5 py-2.5 sm:px-6 sm:py-3 rounded-full bg-white/20 backdrop-blur-md border border-white/40 shadow-inner">
+                <div className="flex gap-2 sm:gap-3 px-5 py-2.5 sm:px-6 sm:py-3 rounded-full bg-coffee-100 border border-coffee-200/50 shadow-inner">
                   {selectedRecipe.steps.map((_, i) => (
                     <div 
                       key={i}
@@ -3102,7 +3102,7 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-stretch sm:items-center justify-center bg-coffee-950/40 backdrop-blur-sm p-0 sm:p-6"
+            className="fixed inset-0 z-50 flex items-stretch sm:items-center justify-center bg-coffee-950/60 p-0 sm:p-6"
           >
             <motion.div 
               initial={{ y: '100%' }}
@@ -3118,17 +3118,17 @@ export default function App() {
                     <button 
                       onClick={(e) => toggleFavorite(e, selectedRecipe.id)}
                       className={cn(
-                        "w-10 h-10 backdrop-blur-md rounded-full flex items-center justify-center shadow-lg transition-all",
+                        "w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition-all border border-coffee-200/20",
                         favorites.includes(selectedRecipe.id) 
                           ? "bg-coffee-500 text-white" 
-                          : "bg-white/80 text-coffee-950"
+                          : "bg-white text-coffee-950"
                       )}
                     >
                       <Heart size={20} fill={favorites.includes(selectedRecipe.id) ? "currentColor" : "none"} />
                     </button>
                     <button 
                       onClick={() => setSelectedRecipe(null)}
-                      className="w-10 h-10 bg-white/80 backdrop-blur-md rounded-full flex items-center justify-center text-coffee-950 shadow-lg"
+                      className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-coffee-950 shadow-lg border border-coffee-200/20"
                     >
                       <X size={20} />
                     </button>
@@ -3153,7 +3153,7 @@ export default function App() {
                     </div>
 
                     {/* Navigation Sub-Tabs to avoid long scrolling on mobile */}
-                    <div className="flex border-b border-coffee-200/60 gap-1.5 p-1 bg-coffee-100/60 rounded-2xl sticky top-0 backdrop-blur-md z-20">
+                    <div className="flex border-b border-coffee-200/60 gap-1.5 p-1.5 bg-coffee-100 rounded-2xl sticky top-0 border border-coffee-200/30 z-20">
                       <button
                         type="button"
                         onClick={() => setActiveModalTab('sobre')}

@@ -566,10 +566,10 @@ export default function JourneyView({ journey, isAdmin, onUpdateStep, onAddStep,
                     {/* Bottom Image Subtitle status tag */}
                     <div className="absolute bottom-6 left-6 sm:left-12 z-20 font-sans">
                       <span className={cn(
-                        "px-3.5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.15em] text-white shadow-md backdrop-blur-md border",
-                        selectedStep.status === 'completed' ? "bg-emerald-500/80 border-emerald-400/20" : 
-                        selectedStep.status === 'current' ? "bg-amber-500/80 border-amber-400/20" : 
-                        "bg-amber-600/80 border-amber-500/20"
+                        "px-3.5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.15em] text-white shadow-md border",
+                        selectedStep.status === 'completed' ? "bg-emerald-600 border-emerald-500/30" : 
+                        selectedStep.status === 'current' ? "bg-amber-600 border-amber-500/30" : 
+                        "bg-amber-700 border-amber-600/30"
                       )}>
                         {selectedStep.status === 'completed' ? 'Concluída' : selectedStep.status === 'current' ? 'Em Progresso' : 'Disponível'}
                       </span>
@@ -679,7 +679,7 @@ export default function JourneyView({ journey, isAdmin, onUpdateStep, onAddStep,
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsEditing(false)}
-              className="absolute inset-0 bg-coffee-950/90 backdrop-blur-xl"
+              className="absolute inset-0 bg-coffee-950/95"
             />
             <motion.div 
               initial={{ scale: 0.95, opacity: 0, y: 20 }}
