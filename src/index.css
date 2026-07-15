@@ -24,7 +24,7 @@
     background: radial-gradient(circle at 15% 15%, rgba(247, 217, 193, 0.5) 0%, transparent 35%),
                 radial-gradient(circle at 85% 85%, rgba(247, 217, 193, 0.5) 0%, transparent 35%),
                 linear-gradient(135deg, #fbf8f3 0%, #eae0cf 100%);
-    background-attachment: fixed;
+    background-attachment: scroll;
     @apply text-coffee-950 font-sans antialiased overflow-x-hidden;
   }
 

@@ -3036,8 +3036,6 @@ export default function App() {
                       referrerPolicy="no-referrer"
                       className="w-full h-full object-cover filter contrast-[1.05]"
                     />
-                    {/* Subtle paper texture overlay */}
-                    <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/paper.png')]" />
                   </div>
 
                   <div className="w-full space-y-4 text-center">
@@ -3336,7 +3334,6 @@ export default function App() {
                                           referrerPolicy="no-referrer"
                                           className="w-full h-full object-cover opacity-95 filter sepia-[0.1] contrast-[1.05]"
                                         />
-                                        <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/paper.png')]" />
                                       </div>
 
                                       <div className="text-left max-w-md mx-auto space-y-4">
