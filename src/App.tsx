@@ -1866,9 +1866,9 @@ export default function App() {
                 {filteredRecipes.map((recipe, idx) => (
                   <motion.div 
                     key={recipe.id}
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={{ opacity: 0, y: 15 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: idx * 0.1 }}
+                    transition={{ duration: 0.25, delay: Math.min(idx * 0.03, 0.15) }}
                     onClick={() => {
                       setSelectedRecipe(recipe);
                       setCurrentStepIndex(0);
