@@ -27,7 +27,184 @@ export interface Recipe {
   prepTime: string;
 }
 
-export const recipes: Recipe[] = [];
+export const recipes: Recipe[] = [
+  {
+    id: "core-1",
+    name: "Espresso Mineiro",
+    country: "Brasil",
+    description: "Um espresso duplo clássico extraído sobre uma camada de doce de leite artesanal viçoso e finalizado com raspas frescas de queijo canastra curado. O verdadeiro abraço mineiro em formato de xícara.",
+    image: "https://images.unsplash.com/photo-1510972527921-ce04158916a2?q=80&w=1000&auto=format&fit=crop",
+    ingredients: ["Café especial moído fino", "Doce de leite artesanal", "Queijo canastra curado ralado bem fino"],
+    equipment: ["Máquina de espresso", "Xícara de cerâmica", "Ralo fino (microplane)"],
+    detailedIngredients: [
+      { name: "Café especial (torra média)", amount: "18g" },
+      { name: "Doce de leite artesanal", amount: "30g" },
+      { name: "Queijo canastra curado", amount: "5g" }
+    ],
+    steps: [
+      {
+        title: "Preparar a Base",
+        description: "No fundo de uma xícara de espresso pré-aquecida, adicione uma colher de sopa generosa (30g) de doce de leite artesanal mineiro de boa qualidade."
+      },
+      {
+        title: "Extrair o Espresso",
+        description: "Moa 18g de café especial na granulometria para espresso. Faça a distribuição e compactação no porta-filtro duplo. Extraia um espresso duplo (aproximadamente 40g a 50g de bebida líquido) diretamente sobre a camada de doce de leite."
+      },
+      {
+        title: "Finalizar com Queijo",
+        description: "Rale raspas finíssimas de queijo canastra curado por cima do espresso quente. O calor do café vai derreter levemente o queijo, criando um aroma incrível. Sirva imediatamente e oriente a misturar bem antes de beber."
+      }
+    ],
+    weatherSuitability: ["cold", "neutral", "rainy"],
+    category: "Espresso",
+    difficulty: "Medium",
+    prepTime: "5 min"
+  },
+  {
+    id: "core-2",
+    name: "Cold Brew de Rapadura",
+    country: "Brasil",
+    description: "Café especial extraído a frio lentamente por 18 horas, adocicado com calda de rapadura artesanal e finalizado com um toque cítrico de fatias de limão siciliano. Uma bebida extremamente refrescante, complexa e revigorante.",
+    image: "https://images.unsplash.com/photo-1517701604599-bb29b565090c?q=80&w=1000&auto=format&fit=crop",
+    ingredients: ["Café especial moagem grossa", "Água filtrada fria", "Rapadura artesanal", "Limão siciliano", "Gelo cristalino"],
+    equipment: ["Pote de infusão fria ou Toddy", "Filtro de papel ou pano", "Faca ou descascador"],
+    detailedIngredients: [
+      { name: "Café especial (moagem bem grossa)", amount: "80g" },
+      { name: "Água fria", amount: "800ml" },
+      { name: "Rapadura ralada", amount: "50g" },
+      { name: "Limão siciliano", amount: "2 fatias" },
+      { name: "Gelo", amount: "A gosto" }
+    ],
+    steps: [
+      {
+        title: "Infusão a Frio",
+        description: "Em um pote de vidro hermético, misture o café moído grosso com a água fria. Mexa delicadamente para umedecer todo o pó. Tampe e deixe infusionar na geladeira por 16 a 18 horas."
+      },
+      {
+        title: "Filtragem",
+        description: "Após o tempo de infusão, filtre o café passando primeiro por uma peneira fina e depois por um filtro de papel ou coador de pano limpo para obter uma bebida límpida e brilhante."
+      },
+      {
+        title: "Calda de Rapadura",
+        description: "Ferva a rapadura ralada com 50ml de água até dissolver completamente e criar um xarope leve. Deixe esfriar."
+      },
+      {
+        title: "Montagem do Copo",
+        description: "Em um copo alto, coloque bastante gelo, adicione 15ml da calda de rapadura fria, despeje 150ml do cold brew filtrado e finalize com fatias de limão siciliano ligeiramente espremidas."
+      }
+    ],
+    weatherSuitability: ["hot", "neutral"],
+    category: "Cold Brew",
+    difficulty: "Easy",
+    prepTime: "18h"
+  },
+  {
+    id: "core-3",
+    name: "Cappuccino de Avelã e Cacau",
+    country: "Itália",
+    description: "Espresso encorpado combinado com leite integral vaporizado em textura de microespuma sedosa, calda artesanal de avelã cremosa e uma generosa polvilhada de cacau 100% puro brasileiro.",
+    image: "https://images.unsplash.com/photo-1534778101976-62847782c213?q=80&w=1000&auto=format&fit=crop",
+    ingredients: ["Café especial moído fino", "Leite integral bem gelado", "Pasta artesanal ou calda de avelã", "Cacau em pó 100%"],
+    equipment: ["Máquina de espresso com bico vaporizador", "Leiteira de inox (pitcher)", "Polvilhador de cacau"],
+    detailedIngredients: [
+      { name: "Café especial", amount: "18g" },
+      { name: "Leite integral gelado", amount: "150ml" },
+      { name: "Calda de avelã premium", amount: "20g" },
+      { name: "Cacau em pó", amount: "A gosto" }
+    ],
+    steps: [
+      {
+        title: "Saborizar a xícara",
+        description: "Espalhe a calda de avelã nas laterais internas e no fundo de uma xícara de cappuccino de 180ml pré-aquecida."
+      },
+      {
+        title: "Extrair o café",
+        description: "Extraia um shot de espresso duplo (35g-40g de café líquido concentrado) diretamente na xícara saborizada com avelã."
+      },
+      {
+        title: "Vaporizar o leite",
+        description: "Coloque o leite integral bem gelado na pitcher de inox. Introduza o bico de vapor da máquina logo abaixo da superfície do leite, criando um turbilhão suave por cerca de 10-15 segundos, até que o leite chegue a 60°C-65°C e tenha uma microespuma brilhante e sem bolhas visíveis."
+      },
+      {
+        title: "Montar e Decorar",
+        description: "Despeje o leite vaporizado delicadamente sobre o espresso com avelã, integrando os líquidos e criando um contraste de cores. Finalize polvilhando cacau 100% por cima do creme sedoso."
+      }
+    ],
+    weatherSuitability: ["cold", "neutral", "rainy"],
+    category: "Cappuccino",
+    difficulty: "Medium",
+    prepTime: "5 min"
+  },
+  {
+    id: "core-4",
+    name: "Pão de Queijo Latte",
+    country: "Brasil",
+    description: "Uma bebida conceitual surpreendente e rica. Trata-se de um Latte de textura sedosa, levemente adoçado com melaço de cana e com um toque sutil salgadinho de queijo curado na vaporização, harmonizando perfeitamente o café com o pão de queijo.",
+    image: "https://images.unsplash.com/photo-1570968915860-54d5c301fc9f?q=80&w=1000&auto=format&fit=crop",
+    ingredients: ["Café especial", "Leite integral gelado", "Melaço de cana", "Queijo parmesão fino ralado"],
+    equipment: ["Máquina de espresso", "Leiteira pitcher", "Xícara média"],
+    detailedIngredients: [
+      { name: "Café especial (torra escura aromática)", amount: "18g" },
+      { name: "Leite integral gelado", amount: "140ml" },
+      { name: "Melaço de cana", amount: "10ml" },
+      { name: "Queijo parmesão ralado", amount: "1 pitada" }
+    ],
+    steps: [
+      {
+        title: "Adoçar",
+        description: "Adicione o melaço de cana no fundo do copo de servir."
+      },
+      {
+        title: "Extrair o Espresso",
+        description: "Extraia um espresso duplo rico diretamente no copo sobre o melaço de cana."
+      },
+      {
+        title: "Vaporizar com Queijo",
+        description: "Adicione uma micro pitada de queijo parmesão ralado fino diretamente no leite gelado dentro da pitcher de inox antes de vaporizar. Vaporize o leite até formar uma textura sedosa. O queijo dará uma nota salgada umami sutilíssima que realça os açúcares naturais do leite e do melaço."
+      },
+      {
+        title: "Despejar",
+        description: "Despeje o leite vaporizado delicadamente sobre o café. Sirva com um pão de queijo quentinho acompanhando!"
+      }
+    ],
+    weatherSuitability: ["cold", "neutral", "rainy"],
+    category: "Latte",
+    difficulty: "Medium",
+    prepTime: "6 min"
+  },
+  {
+    id: "core-5",
+    name: "Affogato de Milho Verde",
+    country: "Brasil / Itália",
+    description: "A perfeita fusão da sobremesa italiana clássica com o sabor caipira brasileiro. Uma bola de sorvete cremoso de milho verde de alta qualidade afogada em um shot duplo de espresso bem quente e encorpado.",
+    image: "https://images.unsplash.com/photo-1594911774802-8822a7079af1?q=80&w=1000&auto=format&fit=crop",
+    ingredients: ["Sorvete artesanal de milho verde", "Café especial para espresso", "Canela em pó (opcional)"],
+    equipment: ["Taça de servir", "Pegador de sorvete", "Porta-filtro de espresso"],
+    detailedIngredients: [
+      { name: "Sorvete de milho verde cremoso", amount: "1 bola grande" },
+      { name: "Café especial", amount: "18g" },
+      { name: "Canela em pó", amount: "Apenas uma pitada" }
+    ],
+    steps: [
+      {
+        title: "Gelar a Taça",
+        description: "Coloque uma taça de vidro ou cerâmica pequena no congelador por 5 minutos para que fique gelada e ajude a desacelerar o derretimento do sorvete."
+      },
+      {
+        title: "Adicionar o Sorvete",
+        description: "Retire a taça do congelador e coloque uma bola bem firme e redonda de sorvete de milho verde no centro."
+      },
+      {
+        title: "Extrair e Afogar",
+        description: "Extraia um espresso duplo curto e encorpado (cerca de 35ml). Despeje o café quente imediatamente por cima da bola de sorvete de milho verde na frente de quem for consumir. Polvilhe uma pitada sutilíssima de canela se desejar."
+      }
+    ],
+    weatherSuitability: ["hot", "neutral"],
+    category: "Specialty",
+    difficulty: "Easy",
+    prepTime: "3 min"
+  }
+];
 
 export const defaultAccompaniments: Recipe[] = [
   {

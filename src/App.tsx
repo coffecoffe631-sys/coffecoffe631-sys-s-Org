@@ -6,7 +6,7 @@ import { coffeeJourney, JourneyStep } from './data/journey';
 import { useWeather } from './hooks/useWeather';
 import JourneyView from './components/JourneyView';
 import { getLocalCoffeeRecommendation } from './services/recommendationService';
-import { fetchRecipesFromSupabase, insertRecipeToSupabase, deleteRecipeFromSupabase, updateRecipeInSupabase, seedRecipes, fetchAppLogo, updateAppLogo, fetchJourneyFromSupabase, updateJourneyStepInSupabase, seedJourney, insertJourneyStepToSupabase, deleteJourneyStepFromSupabase } from './services/supabaseService';
+import { fetchRecipesFromSupabase, insertRecipeToSupabase, deleteRecipeFromSupabase, updateRecipeInSupabase, seedRecipes, fetchAppLogo, updateAppLogo, fetchJourneyFromSupabase, updateJourneyStepInSupabase, seedJourney, insertJourneyStepToSupabase, deleteJourneyStepFromSupabase, getRecipesTableName } from './services/supabaseService';
 import { cn } from './lib/utils';
 import { supabase } from './lib/supabase';
 import { User } from '@supabase/supabase-js';
@@ -309,6 +309,12 @@ export default function App() {
   const [subscriptionChecked, setSubscriptionChecked] = useState(true);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [view, setView] = useState<'landing' | 'auth'>('landing');
+  const [isGuestAccess, setIsGuestAccess] = useState<boolean>(() => {
+    return localStorage.getItem('coffee_guest_access') === 'true';
+  });
+  const [guestName, setGuestName] = useState<string>(() => {
+    return localStorage.getItem('coffee_guest_name') || '';
+  });
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [activeIngredients, setActiveIngredients] = useState<string[]>([]);
   const [activeEquipment, setActiveEquipment] = useState<string[]>([]);
@@ -359,7 +365,7 @@ export default function App() {
     return "Boa noite";
   };
 
-  const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Barista';
+  const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || guestName || 'Barista';
   const capitalizedName = userName.charAt(0).toUpperCase() + userName.slice(1);
   
   const coffeeCategories = useMemo(() => ['Espresso', 'Latte', 'Cappuccino', 'Cold Brew', 'Specialty'], []);
@@ -393,19 +399,6 @@ export default function App() {
         ]);
 
         let finalRecipes = dbRecipes || [];
-
-        // 1. Delete all core default recipes from Supabase and local list if they exist
-        const coreNames = ["Pão de Queijo Latte", "Cold Brew de Rapadura", "Espresso Mineiro", "Cappuccino de Avelã e Cacau", "Affogato de Milho Verde"];
-        const hasCoreRecipes = finalRecipes.some(r => coreNames.includes(r.name));
-
-        if (hasCoreRecipes) {
-          try {
-            await supabase.from('receitas_cafe').delete().in('nome', coreNames);
-            finalRecipes = finalRecipes.filter(r => !coreNames.includes(r.name));
-          } catch (e) {
-            console.error("Erro deletando receitas padrão do banco de dados:", e);
-          }
-        }
 
         // Automatically inject default accompaniment recipes to ensure the section is richly populated!
         const missingAccomps = defaultAccompaniments.filter(da => !finalRecipes.some(r => r.name === da.name));
@@ -471,180 +464,11 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const checkUserSubscription = async () => {
-      if (!user?.email) {
-        setIsPremium(false);
-        setSubscriptionChecked(false);
-        return;
-      }
-
-      setIsCheckingSubscription(true);
-      try {
-        const res = await fetch(`/api/check-subscription?email=${encodeURIComponent(user.email)}`);
-        if (res.ok) {
-          const data = await res.json();
-          setIsPremium(data.isPremium);
-          setSubscriptionDetails({
-            status: data.status,
-            currentPeriodEnd: data.currentPeriodEnd,
-            cancelAtPeriodEnd: data.cancelAtPeriodEnd
-          });
-        }
-      } catch (err) {
-        console.error("Erro ao verificar assinatura:", err);
-      } finally {
-        setIsCheckingSubscription(false);
-        setSubscriptionChecked(true);
-      }
-    };
-
-    checkUserSubscription();
-  }, [user]);
-
-  useEffect(() => {
-    // Check for Stripe success/cancel in URL
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('success')) {
-      const sessionId = params.get('session_id');
-      console.log('>>> [FRONTEND] Checkout concluído. Session:', sessionId);
-      setSuccessMessage('Pagamento confirmado! Agora crie sua conta usando o MESMO e-mail que você usou na compra para liberar seu acesso.');
-      setView('auth');
-      setAuthMode('signup');
-      setIsPremium(true);
-      window.history.replaceState({}, '', window.location.pathname);
-    }
-    if (params.get('canceled')) {
-      alert('A assinatura foi cancelada.');
-      window.history.replaceState({}, '', window.location.pathname);
-    }
-
-    // Check for action=checkout
-    if (params.get('action') === 'checkout') {
-      window.history.replaceState({}, '', window.location.pathname);
-      if (user) {
-        handleSubscribe();
-      } else {
-        setView('auth');
-      }
-    }
+    setIsPremium(true);
+    setSubscriptionChecked(true);
   }, [user]);
 
   const [configError, setConfigError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const checkConfig = async () => {
-      try {
-        const res = await fetch(`/api/config-status`);
-        if (res.ok) {
-          const data = await res.json();
-          console.log('>>> [FRONTEND] Config Status:', data);
-          if (!data.stripe.hasSecretKey || !data.stripe.hasPriceId) {
-            setConfigError('Configuração do Stripe ausente! Defina STRIPE_SECRET_KEY e STRIPE_PRICE_ID nas variáveis de ambiente.');
-          }
-        }
-      } catch (err) {
-        console.warn('Erro ao verificar configuração do servidor:', err);
-      }
-    };
-    checkConfig();
-  }, []);
-
-  const handleSubscribe = async () => {
-    if (!user) return;
-    setAuthLoading(true);
-    try {
-      const apiUrl = `/api/create-checkout-session`;
-      console.log('>>> [FRONTEND] Iniciando checkout via:', apiUrl);
-      console.log('>>> [FRONTEND] Origin:', window.location.origin);
-      console.log('>>> [FRONTEND] Email do usuário:', user.email);
-      
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({ email: user.email }),
-      });
-      
-      console.log('>>> [FRONTEND] Resposta recebida. Status:', response.status);
-      const contentType = response.headers.get('content-type');
-      console.log('>>> [FRONTEND] Content-Type:', contentType);
-
-      if (!response.ok) {
-        const text = await response.text();
-        console.error('>>> [FRONTEND] Erro do servidor (texto):', text);
-        
-        let errorMessage = `Erro do servidor (${response.status})`;
-        try {
-          const errorData = JSON.parse(text);
-          errorMessage = errorData.error || errorData.message || JSON.stringify(errorData);
-        } catch (e) {
-          errorMessage = text || errorMessage;
-        }
-        throw new Error(errorMessage);
-      }
-
-      if (!contentType || !contentType.includes('application/json')) {
-        const text = await response.text();
-        throw new Error(`Resposta inválida do servidor: ${text.slice(0, 100)}`);
-      }
-
-      const data = await response.json();
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        const errorDetail = data.error || data.message || JSON.stringify(data);
-        throw new Error(errorDetail);
-      }
-    } catch (err: any) {
-      console.error('Erro na assinatura:', err);
-      let displayError = 'Erro desconhecido';
-      
-      if (typeof err === 'string') {
-        displayError = err;
-      } else if (err.message) {
-        displayError = err.message;
-      } else {
-        try {
-          displayError = JSON.stringify(err);
-        } catch (e) {
-          displayError = String(err);
-        }
-      }
-      
-      alert('Erro ao processar pagamento: ' + displayError);
-    } finally {
-      setAuthLoading(false);
-    }
-  };
-
-  const handleManageSubscription = async () => {
-    if (!user) return;
-    setAuthLoading(true);
-    try {
-      const response = await fetch('/api/create-portal-session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: user.email }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Erro ao abrir portal de gerenciamento');
-      }
-
-      const data = await response.json();
-      if (data.url) {
-        window.location.href = data.url;
-      }
-    } catch (err: any) {
-      console.error('Erro ao gerenciar assinatura:', err);
-      alert('Erro ao abrir portal: ' + err.message);
-    } finally {
-      setAuthLoading(false);
-    }
-  };
 
   const handleUpdateName = async () => {
     const trimmedName = newName.trim();
@@ -755,7 +579,9 @@ export default function App() {
     setShowUserMenu(false);
     await supabase.auth.signOut();
     setUser(null);
-    setIsPremium(false);
+    setIsPremium(true);
+    setIsGuestAccess(false);
+    localStorage.removeItem('coffee_guest_access');
     setView('landing');
   };
 
@@ -1207,8 +1033,8 @@ export default function App() {
     );
   }
 
-  // Se não tem usuário, mostra Landing ou Auth
-  if (!user) {
+  // Se não tem usuário e não possui acesso de convidado, mostra Landing ou Auth
+  if (!user && !isGuestAccess) {
     if (view === 'landing') {
       return (
         <div className="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden">
@@ -1235,25 +1061,34 @@ export default function App() {
               }}
               className="absolute -top-3 right-6 sm:right-10 bg-amber-500 text-white px-4 sm:px-6 py-1.5 sm:py-2 rounded-full text-[10px] sm:text-xs font-black uppercase tracking-widest shadow-lg shadow-amber-500/30"
             >
-              Oferta Especial
+              Acesso Liberado
             </motion.div>
 
-            <div className="flex flex-col items-center mb-6 sm:mb-10">
+            <div className="flex flex-col items-center mb-6 sm:mb-8">
               <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-2xl sm:rounded-[2rem] bg-coffee-900 flex items-center justify-center mb-4 sm:mb-6 shadow-xl shadow-coffee-900/20 rotate-3 overflow-hidden p-3 sm:p-4">
                 <img src={appLogo || DEFAULT_LOGO} alt="Logo" className="w-full h-full object-contain brightness-0 invert" referrerPolicy="no-referrer" />
               </div>
-              <h1 className="text-2xl sm:text-4xl font-sans font-bold text-coffee-900 mb-2 sm:mb-4 px-2">Seu acesso está quase liberado ☕</h1>
-              <p className="text-sm sm:text-lg text-coffee-600 max-w-md mx-auto leading-relaxed px-4">
-                Em menos de 1 minuto você já pode começar a preparar cafés incríveis em casa
-              </p>
+              <span className="text-amber-700 text-xs sm:text-sm font-sans font-black uppercase tracking-widest block mb-2">
+                ☕ Bem-vindo ao Cheirinho Mineiro
+              </span>
+              <h1 className="text-2xl sm:text-4xl font-sans font-bold text-coffee-900 mb-2 sm:mb-4 px-2">
+                Seu acesso foi liberado com sucesso!
+              </h1>
+              <div className="space-y-3 text-sm sm:text-base text-coffee-600 max-w-lg mx-auto leading-relaxed px-4">
+                <p>
+                  Parabéns! Seu pagamento foi confirmado e agora você tem acesso completo à nossa biblioteca de receitas de café.
+                </p>
+                <p>
+                  Explore mais de 300 receitas, descubra novos métodos de preparo e transforme cada xícara em uma experiência especial.
+                </p>
+              </div>
             </div>
 
-            {/* Floating Square Benefits - Now visible on all screens with responsive positioning */}
+            {/* Floating Square Benefits */}
             <div className="block">
               {[
                 { icon: Check, title: "Passo a passo", color: "text-emerald-500", pos: "-left-8 sm:-left-20 top-[5%] sm:top-[20%] -rotate-6" },
-                { icon: Zap, title: "Personalizado", color: "text-amber-500", pos: "-right-8 sm:-right-20 top-[25%] sm:top-[35%] rotate-12" },
-                { icon: Plus, title: "Novidades", color: "text-coffee-500", pos: "-left-10 sm:-left-16 top-[50%] sm:bottom-[25%] rotate-3" }
+                { icon: Zap, title: "Personalizado", color: "text-amber-500", pos: "-right-8 sm:-right-20 top-[25%] sm:top-[35%] rotate-12" }
               ].map((card, i) => (
                 <motion.div
                   key={i}
@@ -1282,41 +1117,77 @@ export default function App() {
               ))}
             </div>
 
-            <div className="space-y-6 sm:space-y-8">
-              <div className="flex flex-col items-center gap-1 sm:gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-coffee-900 text-3xl sm:text-5xl font-sans font-black tracking-tighter">Apenas R$37/mês</span>
+            {/* Benefits List */}
+            <div className="bg-coffee-50/50 rounded-3xl p-6 mb-8 text-left max-w-lg mx-auto border border-coffee-100/60">
+              <h3 className="text-coffee-900 font-sans font-extrabold text-sm sm:text-base uppercase tracking-wider mb-4 text-center sm:text-left">
+                O que você encontra agora:
+              </h3>
+              <ul className="space-y-3">
+                {[
+                  "Mais de 300 receitas de cafés do mundo todo",
+                  "Filtros por equipamentos e ingredientes",
+                  "Sugestões de receitas para cada momento",
+                  "Novas receitas adicionadas regularmente",
+                  "Acesso imediato à plataforma"
+                ].map((benefit, i) => (
+                  <motion.li 
+                    key={i}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.1 }}
+                    className="flex items-start gap-3 text-coffee-800 text-xs sm:text-sm font-semibold"
+                  >
+                    <span className="shrink-0 text-emerald-500">✅</span>
+                    <span>{benefit}</span>
+                  </motion.li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="space-y-6">
+              <div className="space-y-4 max-w-md mx-auto">
+                <div className="text-left">
+                  <label htmlFor="guest-name-input" className="block text-[10px] sm:text-xs font-bold text-coffee-500 uppercase tracking-widest mb-1.5 px-1">
+                    Como deseja ser chamado? (Opcional)
+                  </label>
+                  <input
+                    id="guest-name-input"
+                    type="text"
+                    value={guestName}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setGuestName(value);
+                      localStorage.setItem('coffee_guest_name', value);
+                    }}
+                    placeholder="Ex: Barista Amador, Café Lover, João..."
+                    className="w-full px-4 py-3 bg-white border border-coffee-200/80 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-semibold text-coffee-900 placeholder:text-coffee-300 focus:outline-none focus:border-coffee-500 focus:ring-1 focus:ring-coffee-500/30 transition-all shadow-sm"
+                  />
                 </div>
-                <span className="text-coffee-400 text-[10px] sm:text-xs font-bold uppercase tracking-widest">Cancele quando quiser</span>
-                <span className="text-amber-600 text-[10px] sm:text-xs font-black uppercase tracking-widest mt-1">Teste por 15 dias. Sem risco.</span>
               </div>
 
-              <div className="space-y-3 sm:space-y-4">
-                <p className="text-xs sm:text-base font-bold text-coffee-800 italic">Você está a um passo de transformar seu café</p>
+              <div className="space-y-3">
                 <div className="max-w-md mx-auto">
-                  <a 
-                    href="/api/checkout"
-                    className="block w-full bg-coffee-900 text-white py-5 sm:py-7 rounded-xl sm:rounded-2xl font-bold hover:bg-coffee-800 transition-all shadow-xl shadow-coffee-900/30 text-lg sm:text-2xl group relative overflow-hidden"
+                  <button 
+                    onClick={() => {
+                      setIsGuestAccess(true);
+                      localStorage.setItem('coffee_guest_access', 'true');
+                    }}
+                    className="block w-full bg-coffee-900 text-white py-5 sm:py-6 rounded-xl sm:rounded-2xl font-bold hover:bg-coffee-800 transition-all shadow-xl shadow-coffee-900/30 text-base sm:text-xl group relative overflow-hidden"
                   >
                     <span className="relative z-10 flex items-center justify-center gap-2">
-                      LIBERAR MEU ACESSO <ChevronRight size={24} className="group-hover:translate-x-1 transition-transform" />
+                      ☕ ACESSAR MINHA BIBLIOTECA DE RECEITAS <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
                     </span>
                     <motion.div 
                       className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent"
                       animate={{ x: ['-100%', '200%'] }}
                       transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
                     />
-                  </a>
+                  </button>
                 </div>
-                <p className="text-[10px] sm:text-xs font-bold text-coffee-400 uppercase tracking-widest">Acesso imediato após confirmação</p>
+                <p className="text-[10px] sm:text-xs font-bold text-coffee-400 uppercase tracking-widest">
+                  Acesso liberado imediatamente.
+                </p>
               </div>
-              
-              <button 
-                onClick={() => setView('auth')}
-                className="text-xs sm:text-sm font-bold text-coffee-400 hover:text-coffee-900 transition-colors uppercase tracking-widest pt-2 sm:pt-4"
-              >
-                Já sou assinante? Fazer Login
-              </button>
             </div>
           </motion.div>
         </div>
@@ -1342,6 +1213,14 @@ export default function App() {
               className="absolute top-8 left-8 text-coffee-400 hover:text-coffee-900 transition-colors"
             >
               <RotateCcw size={20} />
+            </button>
+            <button 
+              onClick={() => setView('landing')}
+              className="absolute top-8 right-8 text-coffee-400 hover:text-coffee-900 transition-colors"
+              title="Fechar login"
+              id="close-login-btn"
+            >
+              <X size={20} />
             </button>
             <div className="w-20 h-20 rounded-[2rem] bg-coffee-900 flex items-center justify-center mb-6 shadow-xl shadow-coffee-900/20 rotate-3 overflow-hidden p-4">
               <img src={appLogo || DEFAULT_LOGO} alt="Logo" className="w-full h-full object-contain brightness-0 invert" referrerPolicy="no-referrer" />
@@ -1448,105 +1327,8 @@ export default function App() {
     );
   }
 
-  // Se tem usuário mas não é premium, mostra Acesso Restrito
-  if (!isPremium) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-          <div className="absolute -top-24 -left-24 w-96 h-96 bg-coffee-100 rounded-full blur-3xl opacity-60" />
-          <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-coffee-200 rounded-full blur-3xl opacity-40" />
-        </div>
-
-        <motion.div 
-          initial={{ scale: 0.9, opacity: 0, y: 20 }}
-          animate={{ scale: 1, opacity: 1, y: 0 }}
-          className="bg-white rounded-[3rem] p-10 w-full max-w-md shadow-2xl border border-coffee-100 relative z-10 text-center"
-        >
-          <div className="flex flex-col items-center mb-8">
-            <div className="w-20 h-20 rounded-[2rem] bg-amber-100 flex items-center justify-center mb-6 shadow-xl shadow-amber-900/10">
-              <Lock size={40} className="text-amber-600" />
-            </div>
-            <h1 className="text-2xl font-sans font-bold text-coffee-900 mb-4">Acesso Restrito</h1>
-            <p className="text-sm text-coffee-600 mb-6">
-              Olá, <span className="font-bold text-coffee-900">{user?.email || 'Barista'}</span>! 
-              Identificamos que você ainda não possui uma assinatura ativa.
-            </p>
-            
-            <div className="bg-coffee-50 p-6 rounded-3xl border border-coffee-100 mb-8 text-left relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-2 opacity-10">
-                <Sparkles size={48} />
-              </div>
-              <p className="text-xs text-coffee-600 leading-relaxed font-medium">
-                Para acessar nossas receitas exclusivas e dicas de especialistas, você precisa ter uma assinatura ativa.
-              </p>
-              <div className="mt-4 pt-4 border-t border-coffee-100 flex items-center justify-between">
-                <span className="text-[10px] font-bold text-coffee-400 uppercase tracking-widest">Preço Especial</span>
-                <div className="flex items-center gap-1">
-                  <span className="text-2xl font-sans font-black text-coffee-900 tracking-tighter">37 R$</span>
-                  <span className="text-[10px] font-bold text-coffee-400 uppercase">/mês</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <a 
-              href="/api/checkout"
-              className="block w-full bg-coffee-900 text-white py-5 rounded-2xl font-bold hover:bg-coffee-800 transition-all shadow-xl shadow-coffee-900/30 group"
-            >
-              <span className="flex items-center justify-center gap-2">
-                Assinar Agora <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
-              </span>
-            </a>
-            
-            <button 
-              onClick={handleSignOut}
-              className="text-sm font-bold text-coffee-400 hover:text-coffee-600 transition-colors uppercase tracking-widest"
-            >
-              Sair da conta
-            </button>
-          </div>
-        </motion.div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen pb-24">
-      {/* Subscription Banner */}
-      {user && subscriptionDetails && isPremium && (
-        <div className={cn(
-          "px-4 py-2 text-center text-[10px] font-bold uppercase tracking-widest transition-colors",
-          subscriptionDetails.status === 'past_due' ? "bg-red-500 text-white animate-pulse" : "bg-coffee-900/5 text-coffee-400"
-        )}>
-          {subscriptionDetails.status === 'past_due' ? (
-            <div className="flex items-center justify-center gap-2">
-              <Zap size={12} className="fill-current" />
-              <span>Pagamento Pendente! Regularize para não perder o acesso.</span>
-              <button 
-                onClick={handleManageSubscription}
-                className="underline ml-2 hover:text-white/80"
-              >
-                Pagar Agora
-              </button>
-            </div>
-          ) : subscriptionDetails.currentPeriodEnd ? (
-            <div className="flex items-center justify-center gap-2">
-              <Coffee size={12} />
-              <span>
-                Próximo faturamento: {new Date(subscriptionDetails.currentPeriodEnd * 1000).toLocaleDateString('pt-BR')}
-                {subscriptionDetails.cancelAtPeriodEnd && " (Assinatura Cancelada)"}
-              </span>
-            </div>
-          ) : null}
-        </div>
-      )}
-
-      {configError && (
-        <div className="bg-red-600 text-white px-4 py-2 text-center text-sm font-bold sticky top-0 z-[100] shadow-lg animate-pulse">
-          ⚠️ {configError}
-        </div>
-      )}
       {/* Header */}
       <header className="sticky top-0 bg-coffee-50/80 backdrop-blur-md z-30 border-b border-coffee-100/50">
         <div className="max-w-5xl mx-auto px-6 pt-8 pb-4 flex items-center justify-between">
@@ -1574,23 +1356,26 @@ export default function App() {
               <span className="text-[10px] font-bold text-coffee-900 uppercase tracking-widest truncate max-w-[120px]">
                 {userName}
               </span>
-              <button 
-                onClick={handleManageSubscription}
-                className="text-[8px] font-bold uppercase tracking-[0.1em] px-1.5 py-0.5 rounded text-amber-600 bg-amber-50 hover:bg-amber-100 transition-colors"
-                title="Gerenciar ou cancelar assinatura"
+              <button
+                onClick={() => {
+                  if (user) {
+                    setNewName(userName);
+                    setIsEditingName(true);
+                  } else {
+                    const newName = prompt("Como deseja ser chamado?", guestName || "Barista");
+                    if (newName !== null) {
+                      const trimmed = newName.trim();
+                      setGuestName(trimmed);
+                      localStorage.setItem('coffee_guest_name', trimmed);
+                    }
+                  }
+                }}
+                className="text-[8px] font-bold uppercase tracking-[0.1em] px-1.5 py-0.5 rounded text-emerald-600 bg-emerald-50 hover:bg-emerald-100 transition-colors cursor-pointer"
+                title="Clique para alterar seu nome"
               >
-                Assinatura Ativa
+                Alterar Nome ☕
               </button>
             </div>
-            {!isPremium && (
-              <button 
-                onClick={() => setShowSubscriptionModal(true)}
-                className="hidden sm:flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-xl text-xs font-bold hover:bg-amber-600 transition-all shadow-lg shadow-amber-500/20"
-              >
-                <Sparkles size={14} />
-                Assinar
-              </button>
-            )}
             
             {/* Hamburger Menu */}
             <div className="relative">
@@ -1710,7 +1495,7 @@ export default function App() {
         ) : (
           <>
             {/* Welcome Message */}
-            {user && (
+            {(user || isGuestAccess) && (
               <div className="flex flex-col items-center gap-2 py-2">
                 <motion.div 
                   initial={{ opacity: 0, y: -10 }}
@@ -2067,88 +1852,6 @@ export default function App() {
                     {authLoading ? <Loader2 className="animate-spin" size={20} /> : 'Salvar Alterações'}
                   </button>
                 </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* Subscription Modal */}
-      <AnimatePresence>
-        {showSubscriptionModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowSubscriptionModal(false)}
-              className="absolute inset-0 bg-coffee-900/60 backdrop-blur-sm"
-            />
-            <motion.div 
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="bg-white rounded-[2.5rem] p-8 w-full max-w-sm relative z-10 shadow-2xl border border-coffee-100"
-            >
-              <button 
-                onClick={() => setShowSubscriptionModal(false)}
-                className="absolute top-6 right-6 p-2 rounded-full hover:bg-coffee-50 text-coffee-400 transition-colors"
-              >
-                <X size={20} />
-              </button>
-
-              <div className="text-center space-y-4">
-                <div className="w-16 h-16 rounded-2xl bg-amber-100 flex items-center justify-center mx-auto mb-6 rotate-3">
-                  <Sparkles size={32} className="text-amber-600" />
-                </div>
-                <h2 className="text-2xl font-sans font-bold text-coffee-900">Assinatura Ativa</h2>
-                <div className="flex flex-col items-center gap-0">
-                  <span className="text-coffee-400 text-[10px] line-through font-bold mb-[-2px]">De R$ 49,90</span>
-                  <div className="flex items-center gap-1">
-                    <span className="text-4xl font-sans font-black text-coffee-900 tracking-tighter">37 R$</span>
-                    <span className="text-[10px] font-bold text-coffee-400 uppercase tracking-widest leading-none">/ mês</span>
-                  </div>
-                </div>
-                <p className="text-sm text-coffee-500">
-                  Aproveite receitas exclusivas, dicas de baristas e suporte prioritário.
-                </p>
-                
-                <div className="py-6 space-y-3">
-                  <div className="flex items-center gap-3 text-left text-xs font-medium text-coffee-600 bg-coffee-50 p-3 rounded-2xl border border-coffee-100">
-                    <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
-                      <Check size={14} />
-                    </div>
-                    Receitas ilimitadas e exclusivas
-                  </div>
-                  <div className="flex items-center gap-3 text-left text-xs font-medium text-coffee-600 bg-coffee-50 p-3 rounded-2xl border border-coffee-100">
-                    <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
-                      <Check size={14} />
-                    </div>
-                    Acesso a vídeos de preparo
-                  </div>
-                  <div className="flex items-center gap-3 text-left text-xs font-medium text-coffee-600 bg-coffee-50 p-3 rounded-2xl border border-coffee-100">
-                    <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
-                      <Check size={14} />
-                    </div>
-                    Suporte VIP via WhatsApp
-                  </div>
-                </div>
-
-                <button 
-                  onClick={handleSubscribe}
-                  disabled={authLoading}
-                  className="w-full bg-coffee-900 text-white py-5 rounded-2xl font-bold hover:bg-coffee-800 transition-all shadow-xl shadow-coffee-900/30 flex items-center justify-center gap-2 disabled:opacity-70 group"
-                >
-                  {authLoading ? <Loader2 size={20} className="animate-spin" /> : (
-                    <>
-                      Assinar Agora 
-                      <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
-                    </>
-                  )}
-                </button>
-                <p className="text-[10px] text-coffee-400 uppercase tracking-widest font-bold">
-                  Cancele quando quiser
-                </p>
               </div>
             </motion.div>
           </div>

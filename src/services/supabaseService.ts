@@ -2,9 +2,76 @@ import { supabase } from '../lib/supabase';
 import { Recipe, Ingredient, Step } from '../data/recipes';
 import { JourneyStep } from '../data/journey';
 
+// Helper to check if an error is due to a missing table/relation
+const isTableMissingError = (error: any): boolean => {
+  if (!error) return false;
+  const message = error.message?.toLowerCase() || '';
+  const code = error.code;
+  return code === '42P01' || code === 'PGRST205' || message.includes('does not exist') || message.includes('not found') || message.includes('relation') || message.includes('could not find');
+};
+
+let resolvedRecipesTable: string | null = null;
+export const getRecipesTableName = async (): Promise<string> => {
+  if (resolvedRecipesTable) return resolvedRecipesTable;
+  try {
+    const { error } = await supabase.from('receitas_café').select('id').limit(1);
+    if (isTableMissingError(error)) {
+      resolvedRecipesTable = 'receitas_cafe';
+    } else {
+      resolvedRecipesTable = 'receitas_café';
+    }
+  } catch {
+    resolvedRecipesTable = 'receitas_cafe';
+  }
+  return resolvedRecipesTable;
+};
+
+let resolvedJourneyTable: string | null = null;
+export const getJourneyTableName = async (): Promise<string> => {
+  if (resolvedJourneyTable) return resolvedJourneyTable;
+  try {
+    const { error } = await supabase.from('jornada_do_café').select('id').limit(1);
+    if (isTableMissingError(error)) {
+      const { error: err2 } = await supabase.from('coffee_journey').select('id').limit(1);
+      if (isTableMissingError(err2)) {
+        resolvedJourneyTable = 'jornada_cafe';
+      } else {
+        resolvedJourneyTable = 'coffee_journey';
+      }
+    } else {
+      resolvedJourneyTable = 'jornada_do_café';
+    }
+  } catch {
+    resolvedJourneyTable = 'coffee_journey';
+  }
+  return resolvedJourneyTable;
+};
+
+let resolvedLogoTable: string | null = null;
+export const getLogoTableName = async (): Promise<string> => {
+  if (resolvedLogoTable) return resolvedLogoTable;
+  try {
+    const { error } = await supabase.from('logotipo_do_café').select('id').limit(1);
+    if (isTableMissingError(error)) {
+      const { error: err2 } = await supabase.from('configurações_do_aplicativo').select('id').limit(1);
+      if (isTableMissingError(err2)) {
+        resolvedLogoTable = 'app_settings';
+      } else {
+        resolvedLogoTable = 'configurações_do_aplicativo';
+      }
+    } else {
+      resolvedLogoTable = 'logotipo_do_café';
+    }
+  } catch {
+    resolvedLogoTable = 'app_settings';
+  }
+  return resolvedLogoTable;
+};
+
 export const fetchRecipesFromSupabase = async (): Promise<Recipe[]> => {
+  const tableName = await getRecipesTableName();
   const { data, error } = await supabase
-    .from('receitas_cafe')
+    .from(tableName)
     .select('*');
 
   if (error) {
@@ -39,8 +106,9 @@ export const fetchRecipesFromSupabase = async (): Promise<Recipe[]> => {
 };
 
 export const insertRecipeToSupabase = async (recipe: Omit<Recipe, 'id'>) => {
+  const tableName = await getRecipesTableName();
   const { data, error } = await supabase
-    .from('receitas_cafe')
+    .from(tableName)
     .insert([{
       nome: recipe.name,
       pais: recipe.country,
@@ -61,8 +129,9 @@ export const insertRecipeToSupabase = async (recipe: Omit<Recipe, 'id'>) => {
 };
 
 export const deleteRecipeFromSupabase = async (id: string) => {
+  const tableName = await getRecipesTableName();
   const { error } = await supabase
-    .from('receitas_cafe')
+    .from(tableName)
     .delete()
     .eq('id', id);
 
@@ -70,6 +139,7 @@ export const deleteRecipeFromSupabase = async (id: string) => {
 };
 
 export const updateRecipeInSupabase = async (id: string, recipe: Partial<Recipe>) => {
+  const tableName = await getRecipesTableName();
   const updateData: any = {};
   
   if (recipe.name !== undefined) updateData.nome = recipe.name;
@@ -85,7 +155,7 @@ export const updateRecipeInSupabase = async (id: string, recipe: Partial<Recipe>
   if (recipe.weatherSuitability !== undefined) updateData.clima_adequado = recipe.weatherSuitability;
 
   const { data, error } = await supabase
-    .from('receitas_cafe')
+    .from(tableName)
     .update(updateData)
     .eq('id', id)
     .select();
@@ -95,6 +165,7 @@ export const updateRecipeInSupabase = async (id: string, recipe: Partial<Recipe>
 };
 
 export const seedRecipes = async (recipes: Recipe[]) => {
+  const tableName = await getRecipesTableName();
   const formattedRecipes = recipes.map(recipe => ({
     nome: recipe.name,
     pais: recipe.country,
@@ -110,7 +181,7 @@ export const seedRecipes = async (recipes: Recipe[]) => {
   }));
 
   const { data, error } = await supabase
-    .from('receitas_cafe')
+    .from(tableName)
     .insert(formattedRecipes)
     .select();
 
@@ -120,14 +191,15 @@ export const seedRecipes = async (recipes: Recipe[]) => {
 
 export const fetchAppLogo = async (): Promise<string | null> => {
   try {
+    const tableName = await getLogoTableName();
     const { data, error } = await supabase
-      .from('app_settings')
+      .from(tableName)
       .select('value')
       .eq('key', 'app_logo')
       .maybeSingle();
 
     if (error) {
-      console.warn('Could not fetch app logo from Supabase (table might not exist):', error.message);
+      console.warn('Could not fetch app logo from Supabase:', error.message);
       return null;
     }
 
@@ -139,21 +211,28 @@ export const fetchAppLogo = async (): Promise<string | null> => {
 };
 
 export const updateAppLogo = async (logoBase64: string) => {
-  const { error } = await supabase
-    .from('app_settings')
-    .upsert({ key: 'app_logo', value: logoBase64 }, { onConflict: 'key' });
+  try {
+    const tableName = await getLogoTableName();
+    const { error } = await supabase
+      .from(tableName)
+      .upsert({ key: 'app_logo', value: logoBase64 }, { onConflict: 'key' });
 
-  if (error) {
-    console.error('Error updating app logo in Supabase:', error.message);
-    throw error;
+    if (error) {
+      console.error('Error updating app logo in Supabase:', error.message);
+      throw error;
+    }
+  } catch (err) {
+    console.error('Error in updateAppLogo:', err);
+    throw err;
   }
 };
 
 // Journey Services
 export const fetchJourneyFromSupabase = async (): Promise<JourneyStep[]> => {
   try {
+    const tableName = await getJourneyTableName();
     const { data, error } = await supabase
-      .from('coffee_journey')
+      .from(tableName)
       .select('*')
       .order('id', { ascending: true });
 
@@ -189,8 +268,9 @@ export const updateJourneyStepInSupabase = async (step: JourneyStep) => {
     audioUrl: step.audioUrl
   };
 
+  const tableName = await getJourneyTableName();
   const { error } = await supabase
-    .from('coffee_journey')
+    .from(tableName)
     .update({
       title: step.title,
       description: step.description,
@@ -215,8 +295,9 @@ export const insertJourneyStepToSupabase = async (step: Omit<JourneyStep, 'id'>)
     audioUrl: step.audioUrl
   };
 
+  const tableName = await getJourneyTableName();
   const { data, error } = await supabase
-    .from('coffee_journey')
+    .from(tableName)
     .insert([{
       title: step.title,
       description: step.description,
@@ -230,10 +311,6 @@ export const insertJourneyStepToSupabase = async (step: Omit<JourneyStep, 'id'>)
     .select();
 
   if (error) {
-    if (error.code === 'PGRST205') {
-      console.error('Tabela "coffee_journey" não encontrada. Por favor, crie-a no SQL Editor do Supabase.');
-      throw new Error('Tabela não encontrada no banco de dados. Execute o script SQL fornecido.');
-    }
     console.error('Error inserting journey step:', error.message);
     throw error;
   }
@@ -241,8 +318,9 @@ export const insertJourneyStepToSupabase = async (step: Omit<JourneyStep, 'id'>)
 };
 
 export const deleteJourneyStepFromSupabase = async (id: string) => {
+  const tableName = await getJourneyTableName();
   const { error } = await supabase
-    .from('coffee_journey')
+    .from(tableName)
     .delete()
     .eq('id', id);
 
@@ -265,8 +343,9 @@ export const seedJourney = async (journey: JourneyStep[]) => {
     content: step.content
   }));
 
+  const tableName = await getJourneyTableName();
   const { error } = await supabase
-    .from('coffee_journey')
+    .from(tableName)
     .upsert(formattedJourney);
 
   if (error) {
