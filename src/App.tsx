@@ -1207,8 +1207,18 @@ export default function App() {
           <motion.div 
             initial={{ scale: 0.9, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
-            className="bg-white rounded-[2.5rem] sm:rounded-[3rem] p-6 sm:p-10 w-full max-w-2xl shadow-2xl border border-coffee-100 relative z-10 text-center"
+            className="bg-white rounded-[2.5rem] sm:rounded-[3rem] p-4 sm:p-6 w-full max-w-2xl shadow-2xl border border-coffee-100 relative z-10 text-center"
           >
+            {/* Banner Image inside the Landing/Gate Card */}
+            <div className="w-full overflow-hidden rounded-3xl border border-coffee-200/30 shadow-sm bg-white p-1 mb-2">
+              <img 
+                src="https://res.cloudinary.com/dvbifkpwd/image/upload/v1784087468/Group_73_1_igeu4v.png" 
+                alt="Cheirinho Mineiro Especial" 
+                className="w-full h-auto object-cover rounded-[1.3rem]"
+                referrerPolicy="no-referrer"
+              />
+            </div>
+
             <motion.div 
               animate={{ 
                 scale: [1, 1.05, 1],
@@ -1219,30 +1229,12 @@ export default function App() {
                 repeat: Infinity, 
                 ease: "easeInOut" 
               }}
-              className="absolute -top-3 right-6 sm:right-10 bg-amber-500 text-white px-4 sm:px-6 py-1.5 sm:py-2 rounded-full text-[10px] sm:text-xs font-black uppercase tracking-widest shadow-lg shadow-amber-500/30"
+              className="absolute -top-3 right-6 sm:right-10 bg-amber-600 text-white px-4 sm:px-6 py-1.5 sm:py-2 rounded-full text-[10px] sm:text-xs font-black uppercase tracking-widest shadow-lg shadow-amber-600/30"
             >
               Acesso Liberado
             </motion.div>
 
-            <div className="flex flex-col items-center mb-6 sm:mb-8">
-              <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-2xl sm:rounded-[2rem] bg-coffee-900 flex items-center justify-center mb-4 sm:mb-6 shadow-xl shadow-coffee-900/20 rotate-3 overflow-hidden p-3 sm:p-4">
-                <img src={appLogo || DEFAULT_LOGO} alt="Logo" className="w-full h-full object-contain brightness-0 invert" referrerPolicy="no-referrer" />
-              </div>
-              <span className="text-amber-700 text-xs sm:text-sm font-sans font-black uppercase tracking-widest block mb-2">
-                ☕ Bem-vindo ao Cheirinho Mineiro
-              </span>
-              <h1 className="text-2xl sm:text-4xl font-sans font-bold text-coffee-900 mb-2 sm:mb-4 px-2">
-                Seu acesso foi liberado com sucesso!
-              </h1>
-              <div className="space-y-3 text-sm sm:text-base text-coffee-600 max-w-lg mx-auto leading-relaxed px-4">
-                <p>
-                  Parabéns! Seu pagamento foi confirmado e agora você tem acesso completo à nossa biblioteca de receitas de café.
-                </p>
-                <p>
-                  Explore mais de 300 receitas, descubra novos métodos de preparo e transforme cada xícara em uma experiência especial.
-                </p>
-              </div>
-            </div>
+            {/* Removed redundant welcome text block in favor of the custom image banner */}
 
             {/* Floating Square Benefits */}
             <div className="block">
@@ -1277,37 +1269,12 @@ export default function App() {
               ))}
             </div>
 
-            {/* Benefits List */}
-            <div className="bg-coffee-50/50 rounded-3xl p-6 mb-8 text-left max-w-lg mx-auto border border-coffee-100/60">
-              <h3 className="text-coffee-900 font-sans font-extrabold text-sm sm:text-base uppercase tracking-wider mb-4 text-center sm:text-left">
-                O que você encontra agora:
-              </h3>
-              <ul className="space-y-3">
-                {[
-                  "Mais de 300 receitas de cafés do mundo todo",
-                  "Filtros por equipamentos e ingredientes",
-                  "Sugestões de receitas para cada momento",
-                  "Novas receitas adicionadas regularmente",
-                  "Acesso imediato à plataforma"
-                ].map((benefit, i) => (
-                  <motion.li 
-                    key={i}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.1 }}
-                    className="flex items-start gap-3 text-coffee-800 text-xs sm:text-sm font-semibold"
-                  >
-                    <span className="shrink-0 text-emerald-500">✅</span>
-                    <span>{benefit}</span>
-                  </motion.li>
-                ))}
-              </ul>
-            </div>
 
-            <div className="space-y-6">
+
+            <div className="space-y-4">
               <div className="space-y-4 max-w-md mx-auto">
                 <div className="text-left">
-                  <label htmlFor="guest-name-input" className="block text-[10px] sm:text-xs font-bold text-coffee-500 uppercase tracking-widest mb-1.5 px-1">
+                  <label htmlFor="guest-name-input" className="block text-[10px] sm:text-xs font-bold text-coffee-500 uppercase tracking-widest mb-1 px-1">
                     Como deseja ser chamado? (Opcional)
                   </label>
                   <input
@@ -1325,17 +1292,17 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <div className="max-w-md mx-auto">
                   <button 
                     onClick={() => {
                       setIsGuestAccess(true);
                       localStorage.setItem('coffee_guest_access', 'true');
                     }}
-                    className="block w-full bg-coffee-900 text-white py-5 sm:py-6 rounded-xl sm:rounded-2xl font-bold hover:bg-coffee-800 transition-all shadow-xl shadow-coffee-900/30 text-base sm:text-xl group relative overflow-hidden"
+                    className="block w-full bg-[#b88c42] text-white py-4 sm:py-5 rounded-xl sm:rounded-2xl font-bold hover:bg-[#a07430] border border-[#d4a359]/30 transition-all shadow-xl shadow-coffee-900/10 text-base sm:text-lg group relative overflow-hidden"
                   >
                     <span className="relative z-10 flex items-center justify-center gap-2">
-                      ☕ ACESSAR MINHA BIBLIOTECA DE RECEITAS <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                      ☕ LIBERAR MEU ACESSO <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
                     </span>
                     <motion.div 
                       className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent"
@@ -1654,6 +1621,23 @@ export default function App() {
           />
         ) : (
           <>
+            {/* Main Page Image Banner */}
+            <motion.div 
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="w-full flex justify-center mb-4"
+            >
+              <div className="w-full max-w-2xl overflow-hidden rounded-3xl border border-coffee-200/40 shadow-sm bg-white p-1">
+                <img 
+                  src="https://res.cloudinary.com/dvbifkpwd/image/upload/v1784087468/Group_73_1_igeu4v.png" 
+                  alt="Cheirinho Mineiro Especial" 
+                  className="w-full h-auto object-cover rounded-[1.3rem]"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+            </motion.div>
+
             {/* Welcome Message */}
             {(user || isGuestAccess) && (
               <div className="flex flex-col items-center gap-2 py-2">
