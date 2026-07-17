@@ -1621,23 +1621,6 @@ export default function App() {
           />
         ) : (
           <>
-            {/* Main Page Image Banner */}
-            <motion.div 
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              className="w-full flex justify-center mb-4"
-            >
-              <div className="w-full max-w-2xl overflow-hidden rounded-3xl border border-coffee-200/40 shadow-sm bg-white p-1">
-                <img 
-                  src="https://res.cloudinary.com/dvbifkpwd/image/upload/v1784087468/Group_73_1_igeu4v.png" 
-                  alt="Cheirinho Mineiro Especial" 
-                  className="w-full h-auto object-cover rounded-[1.3rem]"
-                  referrerPolicy="no-referrer"
-                />
-              </div>
-            </motion.div>
-
             {/* Welcome Message */}
             {(user || isGuestAccess) && (
               <div className="flex flex-col items-center gap-2 py-2">
