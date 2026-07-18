@@ -256,6 +256,113 @@ const EQUIPMENT_ICONS = {
   ChefHat: { component: ChefHat, label: 'Chef/Outros' }
 };
 
+const ILLUSTRATED_EQUIPMENT_PRESETS = [
+  {
+    name: 'Moedor Elétrico',
+    image: 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784337734/WhatsApp_Image_2026-07-17_at_22.19.52_ebrqcp.jpg'
+  },
+  {
+    name: 'Chaleira Pescoço de Ganso',
+    image: 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784337813/WhatsApp_Image_2026-07-17_at_22.20.42_xtg5iz.jpg'
+  },
+  {
+    name: 'Filtro de Papel V60',
+    image: 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784337863/WhatsApp_Image_2026-07-17_at_22.22.02_jjd8zt.jpg'
+  },
+  {
+    name: 'Balança de Precisão',
+    image: 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784337913/WhatsApp_Image_2026-07-17_at_22.24.29_rknubl.jpg'
+  },
+  {
+    name: 'Prensa Francesa',
+    image: 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784337972/WhatsApp_Image_2026-07-17_at_22.25.23_nvigmz.jpg'
+  },
+  {
+    name: 'Porta-Filtro Pró',
+    image: 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784338023/WhatsApp_Image_2026-07-17_at_22.26.15_efxzjt.jpg'
+  },
+  {
+    name: 'Aeropress',
+    image: 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784338081/WhatsApp_Image_2026-07-17_at_22.27.01_f4vu7s.jpg'
+  },
+  {
+    name: 'Moka Italiana',
+    image: 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784338134/WhatsApp_Image_2026-07-17_at_22.27.53_gyzt5d.jpg'
+  },
+  {
+    name: 'Globinho / Sifão',
+    image: 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784338181/WhatsApp_Image_2026-07-17_at_22.28.32_ip6rq2.jpg'
+  },
+  {
+    name: 'Moedor de Café Manual',
+    image: 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784338369/WhatsApp_Image_2026-07-17_at_22.30.08_duur9u.jpg'
+  },
+  {
+    name: 'Coador Hario V60',
+    image: 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784338430/WhatsApp_Image_2026-07-17_at_22.32.01_pcfgtb.jpg'
+  },
+  {
+    name: 'Passador Chemex',
+    image: 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784338606/WhatsApp_Image_2026-07-17_at_22.36.03_ofng6d.jpg'
+  },
+  {
+    name: 'Pitcher de Inox',
+    image: 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784338655/WhatsApp_Image_2026-07-17_at_22.36.50_dwmrkr.jpg'
+  },
+  {
+    name: 'Termômetro Espeto',
+    image: 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784338699/WhatsApp_Image_2026-07-17_at_22.37.29_wy2oa3.jpg'
+  },
+  {
+    name: 'Copo de Vidro Duplo',
+    image: 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784338770/WhatsApp_Image_2026-07-17_at_22.38.08_jvvstk.jpg'
+  },
+  {
+    name: 'Tamper Compactador',
+    image: 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784338831/WhatsApp_Image_2026-07-17_at_22.38.49_cmlbld.jpg'
+  },
+  {
+    name: 'Espumador Manual',
+    image: 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784338962/WhatsApp_Image_2026-07-17_at_22.39.44_ga7l2o.jpg'
+  },
+  {
+    name: 'Xícara de Cerâmica',
+    image: 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784339083/WhatsApp_Image_2026-07-17_at_22.41.31_mbkdsx.jpg'
+  },
+  {
+    name: 'Filtro de Pano Clássico',
+    image: 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784339119/WhatsApp_Image_2026-07-17_at_22.42.27_jyoam9.jpg'
+  },
+  {
+    name: 'Server de Vidro (Decantador)',
+    image: 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784339246/WhatsApp_Image_2026-07-17_at_22.45.28_zwn9f1.jpg'
+  },
+  {
+    name: 'Coador Clever',
+    image: 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784339297/WhatsApp_Image_2026-07-17_at_22.47.20_rnslrs.jpg'
+  },
+  {
+    name: 'Máquina de Espresso',
+    image: 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784339382/WhatsApp_Image_2026-07-17_at_22.47.57_m9zwow.jpg'
+  },
+  {
+    name: 'Moedor de Café Industrial',
+    image: 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784339432/WhatsApp_Image_2026-07-17_at_22.48.58_eq9fdf.jpg'
+  },
+  {
+    name: 'Chaleira Elétrica Clássica',
+    image: 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784340722/WhatsApp_Image_2026-07-17_at_22.52.10_1_rf6hk9.jpg'
+  },
+  {
+    name: 'Copo de Dose (Shot)',
+    image: 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784340765/WhatsApp_Image_2026-07-17_at_22.52.16_thongk.jpg'
+  },
+  {
+    name: 'Porta-Filtro Naked',
+    image: 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784340839/WhatsApp_Image_2026-07-17_at_22.58.18_byal5u.jpg'
+  }
+];
+
 const getIngredientIcon = (name: string, customIcon?: string) => {
   if (customIcon) {
     if (customIcon.startsWith('http') || customIcon.startsWith('data:image')) {
@@ -311,7 +418,7 @@ const getEquipmentIcon = (name: string) => {
 
   if (customIcon) {
     if (customIcon.startsWith('http') || customIcon.startsWith('data:image')) {
-      return <img src={customIcon} alt="" className="w-6 h-6 object-contain" referrerPolicy="no-referrer" />;
+      return <img src={customIcon} alt="" className="w-full h-full object-contain p-0.5 bg-white" referrerPolicy="no-referrer" />;
     }
     if (EQUIPMENT_ICONS[customIcon as keyof typeof EQUIPMENT_ICONS]) {
       const IconComponent = EQUIPMENT_ICONS[customIcon as keyof typeof EQUIPMENT_ICONS].component;
@@ -354,7 +461,118 @@ const getEquipmentIcon = (name: string) => {
   if (lower.includes('fogo') || lower.includes('aquecedor') || lower.includes('fogão') || lower.includes('microondas') || lower.includes('vapor') || lower.includes('forno')) {
     return <Flame size={24} className="text-neutral-900" />;
   }
-  return <ChefHat size={24} className="text-neutral-900" />;
+  return <ChefHat size={24} className="text-neutral-900disabled:" />;
+};
+
+const getEquipmentImage = (eqString: string): string => {
+  let cleanName = eqString;
+  let customIcon: string | undefined = undefined;
+  
+  if (eqString.includes('::')) {
+    const parts = eqString.split('::');
+    cleanName = parts[0];
+    customIcon = parts.slice(1).join('::');
+  }
+
+  if (customIcon && (customIcon.startsWith('http') || customIcon.startsWith('data:image'))) {
+    return customIcon;
+  }
+
+  const lower = cleanName.toLowerCase();
+
+  // Let's do exact or sub-phrase match first
+  for (const preset of ILLUSTRATED_EQUIPMENT_PRESETS) {
+    const presetLower = preset.name.toLowerCase();
+    if (lower.includes(presetLower) || presetLower.includes(lower)) {
+      return preset.image;
+    }
+  }
+
+  // Fallbacks for specific words to maximize illustration matching
+  if (lower.includes('moedor')) {
+    if (lower.includes('manual') || lower.includes('mão')) {
+      return 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784338369/WhatsApp_Image_2026-07-17_at_22.30.08_duur9u.jpg';
+    }
+    if (lower.includes('industrial') || lower.includes('comercial')) {
+      return 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784339432/WhatsApp_Image_2026-07-17_at_22.48.58_eq9fdf.jpg';
+    }
+    return 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784337734/WhatsApp_Image_2026-07-17_at_22.19.52_ebrqcp.jpg';
+  }
+  if (lower.includes('chaleira') || lower.includes('bule')) {
+    if (lower.includes('elétrica') || lower.includes('eletrica')) {
+      return 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784340722/WhatsApp_Image_2026-07-17_at_22.52.10_1_rf6hk9.jpg';
+    }
+    return 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784337813/WhatsApp_Image_2026-07-17_at_22.20.42_xtg5iz.jpg';
+  }
+  if (lower.includes('filtro') || lower.includes('papel')) {
+    if (lower.includes('pano')) {
+      return 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784339119/WhatsApp_Image_2026-07-17_at_22.42.27_jyoam9.jpg';
+    }
+    return 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784337863/WhatsApp_Image_2026-07-17_at_22.22.02_jjd8zt.jpg';
+  }
+  if (lower.includes('balança') || lower.includes('escala') || lower.includes('peso')) {
+    return 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784337913/WhatsApp_Image_2026-07-17_at_22.24.29_rknubl.jpg';
+  }
+  if (lower.includes('prensa') || lower.includes('francesa') || lower.includes('french')) {
+    return 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784337972/WhatsApp_Image_2026-07-17_at_22.25.23_nvigmz.jpg';
+  }
+  if (lower.includes('porta-filtro') || lower.includes('portafiltro')) {
+    if (lower.includes('naked') || lower.includes('sem fundo')) {
+      return 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784340839/WhatsApp_Image_2026-07-17_at_22.58.18_byal5u.jpg';
+    }
+    return 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784338023/WhatsApp_Image_2026-07-17_at_22.26.15_efxzjt.jpg';
+  }
+  if (lower.includes('aeropress')) {
+    return 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784338081/WhatsApp_Image_2026-07-17_at_22.27.01_f4vu7s.jpg';
+  }
+  if (lower.includes('moka') || lower.includes('italiana')) {
+    return 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784338134/WhatsApp_Image_2026-07-17_at_22.27.53_gyzt5d.jpg';
+  }
+  if (lower.includes('sifão') || lower.includes('sifao') || lower.includes('globinho')) {
+    return 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784338181/WhatsApp_Image_2026-07-17_at_22.28.32_ip6rq2.jpg';
+  }
+  if (lower.includes('hario') || lower.includes('v60') || lower.includes('coador')) {
+    if (lower.includes('clever')) {
+      return 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784339297/WhatsApp_Image_2026-07-17_at_22.47.20_rnslrs.jpg';
+    }
+    return 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784338430/WhatsApp_Image_2026-07-17_at_22.32.01_pcfgtb.jpg';
+  }
+  if (lower.includes('chemex')) {
+    return 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784338606/WhatsApp_Image_2026-07-17_at_22.36.03_ofng6d.jpg';
+  }
+  if (lower.includes('pitcher') || lower.includes('leiteira') || lower.includes('inox')) {
+    return 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784338655/WhatsApp_Image_2026-07-17_at_22.36.50_dwmrkr.jpg';
+  }
+  if (lower.includes('termômetro') || lower.includes('termometro')) {
+    return 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784338699/WhatsApp_Image_2026-07-17_at_22.37.29_wy2oa3.jpg';
+  }
+  if (lower.includes('copo') || lower.includes('vidro')) {
+    if (lower.includes('dose') || lower.includes('shot')) {
+      return 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784340765/WhatsApp_Image_2026-07-17_at_22.52.16_thongk.jpg';
+    }
+    return 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784338770/WhatsApp_Image_2026-07-17_at_22.38.08_jvvstk.jpg';
+  }
+  if (lower.includes('tamper') || lower.includes('compactador')) {
+    return 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784338831/WhatsApp_Image_2026-07-17_at_22.38.49_cmlbld.jpg';
+  }
+  if (lower.includes('espumador') || lower.includes('batedor')) {
+    return 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784338962/WhatsApp_Image_2026-07-17_at_22.39.44_ga7l2o.jpg';
+  }
+  if (lower.includes('xícara') || lower.includes('xicara') || lower.includes('caneca')) {
+    return 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784339083/WhatsApp_Image_2026-07-17_at_22.41.31_mbkdsx.jpg';
+  }
+  if (lower.includes('server') || lower.includes('decantador') || lower.includes('jarra')) {
+    return 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784339246/WhatsApp_Image_2026-07-17_at_22.45.28_zwn9f1.jpg';
+  }
+  if (lower.includes('clever')) {
+    return 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784339297/WhatsApp_Image_2026-07-17_at_22.47.20_rnslrs.jpg';
+  }
+  if (lower.includes('máquina') || lower.includes('maquina') || lower.includes('espresso') || lower.includes('expresso')) {
+    return 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784339382/WhatsApp_Image_2026-07-17_at_22.47.57_m9zwow.jpg';
+  }
+
+  // Generic fallback if we can't find anything
+  return 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784338023/WhatsApp_Image_2026-07-17_at_22.26.15_efxzjt.jpg';
 };
 
 const formatIngredientText = (name: string, amount?: string) => {
@@ -2659,40 +2877,73 @@ export default function App() {
                         </button>
                       </div>
 
-                      {/* Icon selector for current temp equipment */}
-                      <div className="bg-coffee-card border border-coffee-100/50 rounded-xl p-2.5 flex flex-col gap-1.5">
-                        <span className="text-[10px] font-bold text-coffee-400 uppercase tracking-widest">Escolha um Ícone para o equipamento (Opcional):</span>
-                        <div className="flex flex-wrap gap-2">
-                          {Object.entries(EQUIPMENT_ICONS).map(([key, val]) => {
-                            const Icon = val.component;
-                            const isSelected = selectedTempEquipmentIcon === key;
+                      {/* Illustrated Equipment Catalog Selection */}
+                      <div className="bg-coffee-card border border-coffee-100/50 rounded-2xl p-4 flex flex-col gap-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-[10px] font-bold text-coffee-400 uppercase tracking-widest">Catálogo de Equipamentos Ilustrados:</span>
+                          {selectedTempEquipmentIcon && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedTempEquipmentIcon('');
+                                setTempEquipment('');
+                              }}
+                              className="text-[9px] font-bold text-red-500 hover:text-red-700 uppercase tracking-widest"
+                            >
+                              Limpar Seleção
+                            </button>
+                          )}
+                        </div>
+                        
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-72 overflow-y-auto pr-1">
+                          {ILLUSTRATED_EQUIPMENT_PRESETS.map((preset) => {
+                            const isSelected = selectedTempEquipmentIcon === preset.image;
                             return (
                               <button
-                                key={key}
+                                key={preset.name}
                                 type="button"
-                                title={val.label}
-                                onClick={() => setSelectedTempEquipmentIcon(key === selectedTempEquipmentIcon ? '' : key)}
-                                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[11px] transition-all font-semibold ${
+                                onClick={() => {
+                                  setTempEquipment(preset.name);
+                                  setSelectedTempEquipmentIcon(preset.image);
+                                }}
+                                className={`group relative flex flex-col items-center p-2.5 rounded-xl border text-left transition-all ${
                                   isSelected
-                                    ? 'bg-neutral-100 border-neutral-400 text-neutral-900 scale-105 shadow-sm'
-                                    : 'bg-white border-coffee-100 text-coffee-600 hover:bg-coffee-50'
+                                    ? 'bg-amber-50/50 border-amber-500 ring-2 ring-amber-500/20 scale-[1.02] shadow-sm'
+                                    : 'bg-white border-coffee-100 hover:border-coffee-300 hover:bg-coffee-50/50'
                                 }`}
                               >
-                                <Icon size={14} className="text-neutral-900" />
-                                <span>{val.label}</span>
+                                <div className="w-full aspect-square rounded-lg overflow-hidden bg-white mb-2 relative p-1 border border-coffee-50/50">
+                                  <img 
+                                    src={preset.image} 
+                                    alt={preset.name} 
+                                    referrerPolicy="no-referrer"
+                                    className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                                  />
+                                  {isSelected && (
+                                    <div className="absolute top-1 right-1 bg-amber-500 text-white rounded-full p-0.5 shadow">
+                                      <Check size={10} strokeWidth={3} />
+                                    </div>
+                                  )}
+                                </div>
+                                <span className="text-[10px] font-bold text-coffee-800 tracking-tight leading-tight text-center line-clamp-2 w-full px-0.5">
+                                  {preset.name}
+                                </span>
                               </button>
                             );
                           })}
                         </div>
-                        <div className="mt-1.5 flex items-center gap-2">
-                          <span className="text-[10px] font-bold text-coffee-400 uppercase shrink-0">Ou cole a URL de um ícone:</span>
-                          <input
-                            type="text"
-                            placeholder="https://exemplo.com/equipamento.png"
-                            value={selectedTempEquipmentIcon && !EQUIPMENT_ICONS[selectedTempEquipmentIcon as keyof typeof EQUIPMENT_ICONS] ? selectedTempEquipmentIcon : ''}
-                            onChange={(e) => setSelectedTempEquipmentIcon(e.target.value)}
-                            className="flex-1 bg-white border border-coffee-100 rounded-lg py-1 px-2.5 text-xs text-coffee-800"
-                          />
+
+                        <div className="border-t border-coffee-100/60 pt-3 mt-1 space-y-2">
+                          <span className="text-[10px] font-bold text-coffee-400 uppercase tracking-widest block">Ou personalize manualmente:</span>
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              placeholder="URL da Imagem ou Ícone"
+                              value={selectedTempEquipmentIcon && !ILLUSTRATED_EQUIPMENT_PRESETS.some(p => p.image === selectedTempEquipmentIcon) ? selectedTempEquipmentIcon : ''}
+                              onChange={(e) => setSelectedTempEquipmentIcon(e.target.value)}
+                              className="flex-1 bg-white border border-coffee-100 rounded-xl py-2 px-3 text-xs text-coffee-800"
+                            />
+                          </div>
                         </div>
                       </div>
 
@@ -3241,15 +3492,31 @@ export default function App() {
                             {selectedRecipe.equipment && selectedRecipe.equipment.length > 0 && (
                               <div className="space-y-4 pt-2">
                                 <h3 className="text-xl font-sans font-bold text-coffee-950">Equipamentos</h3>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                  {selectedRecipe.equipment.map((eq, i) => (
-                                    <div key={i} className="flex items-center gap-4 p-4 bg-coffee-card rounded-2xl border border-coffee-100/70 shadow-sm">
-                                      <div className="w-10 h-10 rounded-full bg-neutral-100 flex items-center justify-center shrink-0">
-                                        {getEquipmentIcon(eq)}
+                                <div className="flex gap-4 overflow-x-auto pb-2 snap-x no-scrollbar">
+                                  {selectedRecipe.equipment.map((eq, i) => {
+                                    const cleanName = eq.includes('::') ? eq.split('::')[0] : eq;
+                                    const imageUrl = getEquipmentImage(eq);
+                                    return (
+                                      <div 
+                                        key={i} 
+                                        title={cleanName}
+                                        className="group relative w-28 h-28 shrink-0 snap-start rounded-2xl border border-coffee-100/70 overflow-hidden bg-white shadow-sm hover:shadow-md hover:border-amber-500 transition-all duration-300"
+                                      >
+                                        <img 
+                                          src={imageUrl} 
+                                          alt={cleanName} 
+                                          referrerPolicy="no-referrer"
+                                          className="w-full h-full object-contain p-2.5 group-hover:scale-105 transition-transform duration-500"
+                                        />
+                                        {/* Elegant minimal hover overlay */}
+                                        <div className="absolute inset-0 bg-gradient-to-t from-coffee-950/80 via-coffee-950/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-2.5">
+                                          <span className="text-[10px] font-bold text-white tracking-wide truncate w-full">
+                                            {cleanName}
+                                          </span>
+                                        </div>
                                       </div>
-                                      <span className="text-xs font-semibold text-coffee-800 leading-snug">{eq.includes('::') ? eq.split('::')[0] : eq}</span>
-                                    </div>
-                                  ))}
+                                    );
+                                  })}
                                 </div>
                               </div>
                             )}
