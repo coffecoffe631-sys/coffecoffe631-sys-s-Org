@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Search, Filter, MapPin, Cloud, CloudRain, Sun, Clock, ChevronRight, ChevronUp, ChevronDown, X, Heart, Share2, Coffee, Droplets, Zap, Loader2, Settings, Plus, Trash2, Lock, Sparkles, Edit, RotateCcw, Upload, Image as ImageIcon, User as UserIcon, LogOut, Mail, Maximize2, Check, Menu, MessageCircle, Eye, EyeOff, Trophy, Map, Compass, Cookie, BookOpen, Milk, Bean, GlassWater, Flame, ChefHat, Utensils, Scale, Blend, Citrus, IceCream, Candy, Timer, Soup, Thermometer, CupSoda } from 'lucide-react';
+import { Search, Filter, MapPin, Cloud, CloudRain, Sun, Clock, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, X, Heart, Share2, Coffee, Droplets, Zap, Loader2, Settings, Plus, Trash2, Lock, Sparkles, Edit, RotateCcw, Upload, Image as ImageIcon, User as UserIcon, LogOut, Mail, Maximize2, Check, Menu, MessageCircle, Eye, EyeOff, Trophy, Map, Compass, Cookie, BookOpen, Milk, Bean, GlassWater, Flame, ChefHat, Utensils, Scale, Blend, Citrus, IceCream, Candy, Timer, Soup, Thermometer, CupSoda } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Recipe, Ingredient, Step, WeatherCondition, recipes, defaultAccompaniments } from './data/recipes';
 import { coffeeJourney, JourneyStep } from './data/journey';
@@ -3492,31 +3492,77 @@ export default function App() {
                             {selectedRecipe.equipment && selectedRecipe.equipment.length > 0 && (
                               <div className="space-y-4 pt-2">
                                 <h3 className="text-xl font-sans font-bold text-coffee-950">Equipamentos</h3>
-                                <div className="flex gap-4 overflow-x-auto pb-2 snap-x no-scrollbar">
-                                  {selectedRecipe.equipment.map((eq, i) => {
-                                    const cleanName = eq.includes('::') ? eq.split('::')[0] : eq;
-                                    const imageUrl = getEquipmentImage(eq);
-                                    return (
-                                      <div 
-                                        key={i} 
-                                        title={cleanName}
-                                        className="group relative w-28 h-28 shrink-0 snap-start rounded-2xl border border-coffee-100/70 overflow-hidden bg-white shadow-sm hover:shadow-md hover:border-amber-500 transition-all duration-300"
-                                      >
-                                        <img 
-                                          src={imageUrl} 
-                                          alt={cleanName} 
-                                          referrerPolicy="no-referrer"
-                                          className="w-full h-full object-contain p-2.5 group-hover:scale-105 transition-transform duration-500"
-                                        />
-                                        {/* Elegant minimal hover overlay */}
-                                        <div className="absolute inset-0 bg-gradient-to-t from-coffee-950/80 via-coffee-950/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-2.5">
-                                          <span className="text-[10px] font-bold text-white tracking-wide truncate w-full">
-                                            {cleanName}
-                                          </span>
+                                <div className="relative group/scroll-container">
+                                  {/* Left Scroll Button (appears on desktop hover) */}
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      const container = e.currentTarget.nextElementSibling;
+                                      if (container) {
+                                        container.scrollBy({ left: -240, behavior: 'smooth' });
+                                      }
+                                    }}
+                                    className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-white/95 border border-coffee-200/50 hover:bg-amber-500 hover:text-white text-coffee-950 w-8 h-8 rounded-full flex items-center justify-center shadow-md opacity-0 group-hover/scroll-container:opacity-100 transition-opacity duration-200"
+                                    aria-label="Rolar para esquerda"
+                                  >
+                                    <ChevronLeft size={16} />
+                                  </button>
+
+                                  <div 
+                                    ref={(el) => {
+                                      if (el) {
+                                        if ((el as any)._hasWheelHandler) return;
+                                        (el as any)._hasWheelHandler = true;
+                                        el.addEventListener('wheel', (e) => {
+                                          if (e.deltaY !== 0) {
+                                            e.preventDefault();
+                                            el.scrollBy({ left: e.deltaY * 1.5, behavior: 'auto' });
+                                          }
+                                        }, { passive: false });
+                                      }
+                                    }}
+                                    className="flex gap-4 overflow-x-auto pb-2 snap-x no-scrollbar scroll-smooth"
+                                  >
+                                    {selectedRecipe.equipment.map((eq, i) => {
+                                      const cleanName = eq.includes('::') ? eq.split('::')[0] : eq;
+                                      const imageUrl = getEquipmentImage(eq);
+                                      return (
+                                        <div 
+                                          key={i} 
+                                          title={cleanName}
+                                          className="group/item relative w-28 h-28 shrink-0 snap-start rounded-2xl border border-coffee-100/70 overflow-hidden bg-white shadow-sm hover:shadow-md hover:border-amber-500 transition-all duration-300"
+                                        >
+                                          <img 
+                                            src={imageUrl} 
+                                            alt={cleanName} 
+                                            referrerPolicy="no-referrer"
+                                            className="w-full h-full object-contain p-2.5 group-hover/item:scale-105 transition-transform duration-500"
+                                          />
+                                          {/* Elegant minimal hover overlay */}
+                                          <div className="absolute inset-0 bg-gradient-to-t from-coffee-950/80 via-coffee-950/20 to-transparent opacity-0 group-hover/item:opacity-100 transition-opacity duration-300 flex items-end p-2.5">
+                                            <span className="text-[10px] font-bold text-white tracking-wide truncate w-full">
+                                              {cleanName}
+                                            </span>
+                                          </div>
                                         </div>
-                                      </div>
-                                    );
-                                  })}
+                                      );
+                                    })}
+                                  </div>
+
+                                  {/* Right Scroll Button (appears on desktop hover) */}
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      const container = e.currentTarget.previousElementSibling;
+                                      if (container) {
+                                        container.scrollBy({ left: 240, behavior: 'smooth' });
+                                      }
+                                    }}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-white/95 border border-coffee-200/50 hover:bg-amber-500 hover:text-white text-coffee-950 w-8 h-8 rounded-full flex items-center justify-center shadow-md opacity-0 group-hover/scroll-container:opacity-100 transition-opacity duration-200"
+                                    aria-label="Rolar para direita"
+                                  >
+                                    <ChevronRight size={16} />
+                                  </button>
                                 </div>
                               </div>
                             )}
