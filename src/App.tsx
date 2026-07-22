@@ -6,7 +6,7 @@ import { coffeeJourney, JourneyStep } from './data/journey';
 import { useWeather } from './hooks/useWeather';
 import JourneyView from './components/JourneyView';
 import { getLocalCoffeeRecommendation } from './services/recommendationService';
-import { fetchRecipesFromSupabase, insertRecipeToSupabase, deleteRecipeFromSupabase, updateRecipeInSupabase, seedRecipes, fetchAppLogo, updateAppLogo, fetchJourneyFromSupabase, updateJourneyStepInSupabase, seedJourney, insertJourneyStepToSupabase, deleteJourneyStepFromSupabase, getRecipesTableName } from './services/supabaseService';
+import { fetchRecipesFromSupabase, insertRecipeToSupabase, deleteRecipeFromSupabase, updateRecipeInSupabase, seedRecipes, fetchAppLogo, updateAppLogo, fetchSettingsKey, updateSettingsKey, fetchJourneyFromSupabase, updateJourneyStepInSupabase, seedJourney, insertJourneyStepToSupabase, deleteJourneyStepFromSupabase, getRecipesTableName } from './services/supabaseService';
 import { cn } from './lib/utils';
 import { supabase } from './lib/supabase';
 import { User } from '@supabase/supabase-js';
@@ -655,6 +655,7 @@ export default function App() {
       if (exists) return prev;
       const updated = [{ name: cleanName, image: cleanImage }, ...prev];
       localStorage.setItem('coffee_custom_equipment_presets', JSON.stringify(updated));
+      updateSettingsKey('custom_equipment_presets', JSON.stringify(updated)).catch(console.error);
       return updated;
     });
   };
@@ -663,6 +664,7 @@ export default function App() {
     setCustomEquipmentHistory(prev => {
       const updated = prev.filter((_, i) => i !== index);
       localStorage.setItem('coffee_custom_equipment_presets', JSON.stringify(updated));
+      updateSettingsKey('custom_equipment_presets', JSON.stringify(updated)).catch(console.error);
       return updated;
     });
   };
@@ -676,6 +678,7 @@ export default function App() {
       if (exists) return prev;
       const updated = [{ label: cleanLabel, iconUrl: cleanUrl }, ...prev];
       localStorage.setItem('coffee_custom_ingredient_icons', JSON.stringify(updated));
+      updateSettingsKey('custom_ingredient_icons', JSON.stringify(updated)).catch(console.error);
       return updated;
     });
   };
@@ -684,6 +687,7 @@ export default function App() {
     setCustomIngredientIconHistory(prev => {
       const updated = prev.filter((_, i) => i !== index);
       localStorage.setItem('coffee_custom_ingredient_icons', JSON.stringify(updated));
+      updateSettingsKey('custom_ingredient_icons', JSON.stringify(updated)).catch(console.error);
       return updated;
     });
   };
@@ -883,6 +887,81 @@ export default function App() {
         }
 
         setAllRecipes(finalRecipes);
+
+        // Synchronize custom equipment history & ingredient icons with Supabase settings & recipe extraction
+        let remoteEquipment: { name: string; image: string }[] = [];
+        let remoteIngredientIcons: { label: string; iconUrl: string }[] = [];
+        try {
+          const [eqJson, ingJson] = await Promise.all([
+            fetchSettingsKey('custom_equipment_presets'),
+            fetchSettingsKey('custom_ingredient_icons')
+          ]);
+          if (eqJson) remoteEquipment = JSON.parse(eqJson);
+          if (ingJson) remoteIngredientIcons = JSON.parse(ingJson);
+        } catch (e) {
+          console.warn('Could not fetch custom presets from Supabase:', e);
+        }
+
+        // Extract equipment & custom ingredient icons from all recipes in database
+        const recipeEquipment: { name: string; image: string }[] = [];
+        const recipeIngredientIcons: { label: string; iconUrl: string }[] = [];
+
+        finalRecipes.forEach(r => {
+          (r.equipment || []).forEach(eq => {
+            if (typeof eq === 'string' && eq.includes('::')) {
+              const parts = eq.split('::');
+              const eqName = parts[0].trim();
+              const eqImg = parts.slice(1).join('::').trim();
+              if (eqName && (eqImg.startsWith('http') || eqImg.startsWith('data:image'))) {
+                recipeEquipment.push({ name: eqName, image: eqImg });
+              }
+            }
+          });
+
+          (r.detailedIngredients || []).forEach(ing => {
+            if (ing && ing.icon && (ing.icon.startsWith('http') || ing.icon.startsWith('data:image'))) {
+              recipeIngredientIcons.push({ label: ing.name || 'Ícone', iconUrl: ing.icon });
+            }
+          });
+        });
+
+        // Merge local, remote, and recipe extracted custom equipment
+        setCustomEquipmentHistory(prev => {
+          const merged: { name: string; image: string }[] = [];
+          const seen = new Set<string>();
+
+          [...prev, ...remoteEquipment, ...recipeEquipment].forEach(item => {
+            if (!item || !item.name) return;
+            const key = `${item.name.toLowerCase()}||${item.image || ''}`;
+            if (!seen.has(key)) {
+              seen.add(key);
+              merged.push(item);
+            }
+          });
+
+          localStorage.setItem('coffee_custom_equipment_presets', JSON.stringify(merged));
+          updateSettingsKey('custom_equipment_presets', JSON.stringify(merged)).catch(console.error);
+          return merged;
+        });
+
+        // Merge local, remote, and recipe extracted custom ingredient icons
+        setCustomIngredientIconHistory(prev => {
+          const merged: { label: string; iconUrl: string }[] = [];
+          const seen = new Set<string>();
+
+          [...prev, ...remoteIngredientIcons, ...recipeIngredientIcons].forEach(item => {
+            if (!item || !item.iconUrl) return;
+            const key = item.iconUrl;
+            if (!seen.has(key)) {
+              seen.add(key);
+              merged.push(item);
+            }
+          });
+
+          localStorage.setItem('coffee_custom_ingredient_icons', JSON.stringify(merged));
+          updateSettingsKey('custom_ingredient_icons', JSON.stringify(merged)).catch(console.error);
+          return merged;
+        });
 
         if (dbJourney && dbJourney.length > 0) {
           setCurrentJourney(dbJourney);

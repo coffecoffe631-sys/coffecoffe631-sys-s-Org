@@ -191,40 +191,46 @@ export const seedRecipes = async (recipes: Recipe[]) => {
 };
 
 export const fetchAppLogo = async (): Promise<string | null> => {
+  return fetchSettingsKey('app_logo');
+};
+
+export const updateAppLogo = async (logoBase64: string) => {
+  return updateSettingsKey('app_logo', logoBase64);
+};
+
+export const fetchSettingsKey = async (key: string): Promise<string | null> => {
   try {
     const tableName = await getLogoTableName();
     const { data, error } = await supabase
       .from(tableName)
       .select('value')
-      .eq('key', 'app_logo')
+      .eq('key', key)
       .maybeSingle();
 
     if (error) {
-      console.warn('Could not fetch app logo from Supabase:', error.message);
+      console.warn(`Could not fetch ${key} from Supabase:`, error.message);
       return null;
     }
 
     return data?.value || null;
   } catch (err) {
-    console.error('Error in fetchAppLogo:', err);
+    console.error(`Error in fetchSettingsKey (${key}):`, err);
     return null;
   }
 };
 
-export const updateAppLogo = async (logoBase64: string) => {
+export const updateSettingsKey = async (key: string, value: string) => {
   try {
     const tableName = await getLogoTableName();
     const { error } = await supabase
       .from(tableName)
-      .upsert({ key: 'app_logo', value: logoBase64 }, { onConflict: 'key' });
+      .upsert({ key, value }, { onConflict: 'key' });
 
     if (error) {
-      console.error('Error updating app logo in Supabase:', error.message);
-      throw error;
+      console.error(`Error updating ${key} in Supabase:`, error.message);
     }
   } catch (err) {
-    console.error('Error in updateAppLogo:', err);
-    throw err;
+    console.error(`Error in updateSettingsKey (${key}):`, err);
   }
 };
 
