@@ -464,7 +464,7 @@ const getEquipmentIcon = (name: string) => {
   return <ChefHat size={24} className="text-neutral-900disabled:" />;
 };
 
-const getEquipmentImage = (eqString: string): string => {
+const getEquipmentImage = (eqString: string, customPresets: { name: string; image: string }[] = []): string => {
   let cleanName = eqString;
   let customIcon: string | undefined = undefined;
   
@@ -480,7 +480,15 @@ const getEquipmentImage = (eqString: string): string => {
 
   const lower = cleanName.toLowerCase();
 
-  // Let's do exact or sub-phrase match first
+  // First check custom history presets
+  for (const preset of customPresets) {
+    const presetLower = preset.name.toLowerCase();
+    if (lower === presetLower || lower.includes(presetLower) || presetLower.includes(lower)) {
+      if (preset.image) return preset.image;
+    }
+  }
+
+  // Then check built-in presets
   for (const preset of ILLUSTRATED_EQUIPMENT_PRESETS) {
     const presetLower = preset.name.toLowerCase();
     if (lower.includes(presetLower) || presetLower.includes(lower)) {
@@ -606,6 +614,10 @@ export default function App() {
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingRecipeId, setEditingRecipeId] = useState<string | null>(null);
+  const [editingEquipmentIndex, setEditingEquipmentIndex] = useState<number | null>(null);
+  const [editingEquipmentValue, setEditingEquipmentValue] = useState<string>('');
+  const [editingRecipeNameId, setEditingRecipeNameId] = useState<string | null>(null);
+  const [editingRecipeNameValue, setEditingRecipeNameValue] = useState<string>('');
   
   // Temp states for dynamic fields
   const [tempIngredient, setTempIngredient] = useState({ name: '', amount: '' });
@@ -614,6 +626,86 @@ export default function App() {
   const [selectedTempEquipmentIcon, setSelectedTempEquipmentIcon] = useState<string>('');
   const [tempStep, setTempStep] = useState({ title: '', description: '', image: '' });
   const [editingStepIndex, setEditingStepIndex] = useState<number | null>(null);
+
+  // Custom Equipment & Ingredient Icon History saved in localStorage
+  const [customEquipmentHistory, setCustomEquipmentHistory] = useState<{ name: string; image: string }[]>(() => {
+    try {
+      const saved = localStorage.getItem('coffee_custom_equipment_presets');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [customIngredientIconHistory, setCustomIngredientIconHistory] = useState<{ label: string; iconUrl: string }[]>(() => {
+    try {
+      const saved = localStorage.getItem('coffee_custom_ingredient_icons');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const saveEquipmentToHistory = (name: string, image: string) => {
+    const cleanName = name.trim();
+    if (!cleanName) return;
+    const cleanImage = image.trim();
+    setCustomEquipmentHistory(prev => {
+      const exists = prev.some(item => item.name.toLowerCase() === cleanName.toLowerCase() && item.image === cleanImage);
+      if (exists) return prev;
+      const updated = [{ name: cleanName, image: cleanImage }, ...prev];
+      localStorage.setItem('coffee_custom_equipment_presets', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const removeEquipmentFromHistory = (index: number) => {
+    setCustomEquipmentHistory(prev => {
+      const updated = prev.filter((_, i) => i !== index);
+      localStorage.setItem('coffee_custom_equipment_presets', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const saveIngredientIconToHistory = (label: string, iconUrl: string) => {
+    const cleanUrl = iconUrl.trim();
+    if (!cleanUrl) return;
+    const cleanLabel = label.trim() || 'Ícone';
+    setCustomIngredientIconHistory(prev => {
+      const exists = prev.some(item => item.iconUrl === cleanUrl);
+      if (exists) return prev;
+      const updated = [{ label: cleanLabel, iconUrl: cleanUrl }, ...prev];
+      localStorage.setItem('coffee_custom_ingredient_icons', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const removeIngredientIconFromHistory = (index: number) => {
+    setCustomIngredientIconHistory(prev => {
+      const updated = prev.filter((_, i) => i !== index);
+      localStorage.setItem('coffee_custom_ingredient_icons', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const combinedEquipmentCatalog = useMemo(() => {
+    const list: { name: string; image: string; isCustom?: boolean; customIndex?: number }[] = [];
+    const seenNames = new Set<string>();
+
+    customEquipmentHistory.forEach((item, idx) => {
+      list.push({ ...item, isCustom: true, customIndex: idx });
+      seenNames.add(item.name.toLowerCase());
+    });
+
+    ILLUSTRATED_EQUIPMENT_PRESETS.forEach(preset => {
+      if (!seenNames.has(preset.name.toLowerCase())) {
+        list.push(preset);
+        seenNames.add(preset.name.toLowerCase());
+      }
+    });
+
+    return list;
+  }, [customEquipmentHistory]);
   
   const [newRecipe, setNewRecipe] = useState<Partial<Recipe>>({
     name: '',
@@ -769,6 +861,27 @@ export default function App() {
         const missingAccomps = defaultAccompaniments.filter(da => !finalRecipes.some(r => r.name === da.name));
         finalRecipes = [...finalRecipes, ...missingAccomps];
 
+        // Apply local overrides
+        try {
+          const savedOverrides = localStorage.getItem('coffee_recipe_overrides');
+          if (savedOverrides) {
+            const overrides = JSON.parse(savedOverrides);
+            finalRecipes = finalRecipes.map(r => {
+              const o = overrides[r.id];
+              if (o) {
+                return {
+                  ...r,
+                  name: o.name !== undefined ? o.name : r.name,
+                  equipment: o.equipment !== undefined ? o.equipment : r.equipment,
+                };
+              }
+              return r;
+            });
+          }
+        } catch (overrideErr) {
+          console.error("Error applying recipe overrides on mount:", overrideErr);
+        }
+
         setAllRecipes(finalRecipes);
 
         if (dbJourney && dbJourney.length > 0) {
@@ -785,7 +898,26 @@ export default function App() {
         setSupabaseError(err.message || "Erro de conexão");
         
         // Fallback to local default recipes and journey steps to ensure a robust and working user experience
-        const finalRecipes = [...recipes, ...defaultAccompaniments];
+        let finalRecipes = [...recipes, ...defaultAccompaniments];
+        try {
+          const savedOverrides = localStorage.getItem('coffee_recipe_overrides');
+          if (savedOverrides) {
+            const overrides = JSON.parse(savedOverrides);
+            finalRecipes = finalRecipes.map(r => {
+              const o = overrides[r.id];
+              if (o) {
+                return {
+                  ...r,
+                  name: o.name !== undefined ? o.name : r.name,
+                  equipment: o.equipment !== undefined ? o.equipment : r.equipment,
+                };
+              }
+              return r;
+            });
+          }
+        } catch (overrideErr) {
+          console.error("Error applying recipe overrides in catch block:", overrideErr);
+        }
         setAllRecipes(finalRecipes);
         setCurrentJourney(coffeeJourney);
       } finally {
@@ -1288,6 +1420,12 @@ export default function App() {
       ...tempIngredient,
       icon: selectedTempIngredientIcon || undefined
     };
+
+    // Auto-save custom icon to history if it's a URL
+    if (selectedTempIngredientIcon && (selectedTempIngredientIcon.startsWith('http') || selectedTempIngredientIcon.startsWith('data:image'))) {
+      saveIngredientIconToHistory(tempIngredient.name, selectedTempIngredientIcon);
+    }
+
     setNewRecipe(prev => ({
       ...prev,
       detailedIngredients: [...(prev.detailedIngredients || []), ingredientWithIcon],
@@ -1310,6 +1448,10 @@ export default function App() {
     const finalEquipment = selectedTempEquipmentIcon 
       ? `${tempEquipment}::${selectedTempEquipmentIcon}` 
       : tempEquipment;
+
+    // Auto-save equipment & custom icon image to history
+    saveEquipmentToHistory(tempEquipment, selectedTempEquipmentIcon || '');
+
     setNewRecipe(prev => ({
       ...prev,
       equipment: [...(prev.equipment || []), finalEquipment]
@@ -1376,6 +1518,158 @@ export default function App() {
     if (editingStepIndex === index) {
       setEditingStepIndex(null);
       setTempStep({ title: '', description: '', image: '' });
+    }
+  };
+
+  const saveRecipeOverride = async (recipeId: string, fields: { name?: string; equipment?: string[] }) => {
+    // 1. Update localStorage
+    try {
+      const savedOverrides = localStorage.getItem('coffee_recipe_overrides');
+      const overrides = savedOverrides ? JSON.parse(savedOverrides) : {};
+      overrides[recipeId] = {
+        ...overrides[recipeId],
+        ...fields
+      };
+      localStorage.setItem('coffee_recipe_overrides', JSON.stringify(overrides));
+    } catch (err) {
+      console.error("Failed to save override to localStorage:", err);
+    }
+
+    // 2. Update state of allRecipes
+    setAllRecipes(prev => prev.map(r => {
+      if (r.id === recipeId) {
+        return {
+          ...r,
+          ...fields
+        };
+      }
+      return r;
+    }));
+
+    // 3. Update selectedRecipe if it is the current one
+    if (selectedRecipe && selectedRecipe.id === recipeId) {
+      setSelectedRecipe(prev => prev ? {
+        ...prev,
+        ...fields
+      } : null);
+    }
+
+    // 4. Try to sync to Supabase (if we have permissions/are admin, otherwise ignore gracefully)
+    try {
+      await updateRecipeInSupabase(recipeId, fields);
+    } catch (err) {
+      console.log("Supabase save skipped (local override saved successfully):", err);
+    }
+  };
+
+  const resetRecipeNameToDefault = async (recipeId: string) => {
+    try {
+      const original = [...recipes, ...defaultAccompaniments].find(r => r.id === recipeId);
+      const defaultName = original ? original.name : '';
+      if (!defaultName) return;
+
+      // 1. Update localStorage by removing the name override
+      const savedOverrides = localStorage.getItem('coffee_recipe_overrides');
+      if (savedOverrides) {
+        const overrides = JSON.parse(savedOverrides);
+        if (overrides[recipeId]) {
+          delete overrides[recipeId].name;
+          if (Object.keys(overrides[recipeId]).length === 0) {
+            delete overrides[recipeId];
+          }
+          localStorage.setItem('coffee_recipe_overrides', JSON.stringify(overrides));
+        }
+      }
+
+      // 2. Update state of allRecipes
+      setAllRecipes(prev => prev.map(r => {
+        if (r.id === recipeId) {
+          return {
+            ...r,
+            name: defaultName
+          };
+        }
+        return r;
+      }));
+
+      // 3. Update selectedRecipe if it is the current one
+      if (selectedRecipe && selectedRecipe.id === recipeId) {
+        setSelectedRecipe(prev => prev ? {
+          ...prev,
+          name: defaultName
+        } : null);
+      }
+
+      // 4. Try to sync to Supabase (if we have permissions/are admin, otherwise ignore gracefully)
+      try {
+        await updateRecipeInSupabase(recipeId, { name: defaultName });
+      } catch (err) {
+        console.log("Supabase reset skipped:", err);
+      }
+    } catch (err) {
+      console.error("Failed to reset recipe name:", err);
+    }
+  };
+
+  const resetEquipmentToDefault = async (recipeId: string, equipmentIndex: number) => {
+    try {
+      const originalRecipe = [...recipes, ...defaultAccompaniments].find(r => r.id === recipeId);
+      if (!originalRecipe || !originalRecipe.equipment || !originalRecipe.equipment[equipmentIndex]) return;
+
+      const defaultEq = originalRecipe.equipment[equipmentIndex];
+      const defaultParts = defaultEq.split('::');
+      const defaultName = defaultParts[0];
+
+      // Temporary update to state
+      const recipe = allRecipes.find(r => r.id === recipeId);
+      if (!recipe) return;
+
+      const updatedEquipment = [...recipe.equipment];
+      updatedEquipment[equipmentIndex] = defaultEq; // restore the full original string including ::icon if any
+
+      await saveRecipeOverride(recipeId, { equipment: updatedEquipment });
+
+      // Clean up localStorage override if no equipment is customized anymore
+      const hasDifferences = updatedEquipment.some((eq, idx) => {
+        const origEq = originalRecipe.equipment[idx];
+        return eq !== origEq;
+      });
+
+      if (!hasDifferences) {
+        const savedOverrides = localStorage.getItem('coffee_recipe_overrides');
+        if (savedOverrides) {
+          const overrides = JSON.parse(savedOverrides);
+          if (overrides[recipeId]) {
+            delete overrides[recipeId].equipment;
+            if (Object.keys(overrides[recipeId]).length === 0) {
+              delete overrides[recipeId];
+            }
+            localStorage.setItem('coffee_recipe_overrides', JSON.stringify(overrides));
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Failed to reset equipment to default:", err);
+    }
+  };
+
+  const handleRenameEquipment = async (recipeId: string, equipmentIndex: number, newName: string) => {
+    if (!newName.trim()) return;
+    try {
+      const recipe = allRecipes.find(r => r.id === recipeId);
+      if (!recipe) return;
+
+      const originalEq = recipe.equipment[equipmentIndex];
+      const parts = originalEq.split('::');
+      parts[0] = newName.trim();
+      const newEq = parts.join('::');
+
+      const updatedEquipment = [...recipe.equipment];
+      updatedEquipment[equipmentIndex] = newEq;
+
+      await saveRecipeOverride(recipeId, { equipment: updatedEquipment });
+    } catch (err) {
+      console.error("Failed to rename equipment:", err);
     }
   };
 
@@ -2091,7 +2385,64 @@ export default function App() {
                         <MapPin size={12} />
                         <span className="text-[10px] font-bold uppercase tracking-widest">{recipe.country}</span>
                       </div>
-                      <h3 className="text-xl font-sans font-bold text-coffee-950 mb-1 break-words">{recipe.name}</h3>
+                      {editingRecipeNameId === recipe.id ? (
+                        <div className="flex items-center gap-2 mb-2" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="text"
+                            value={editingRecipeNameValue}
+                            onChange={(e) => setEditingRecipeNameValue(e.target.value)}
+                            className="flex-1 min-w-0 text-sm font-sans font-bold text-coffee-950 bg-white border border-coffee-200 rounded-xl px-2 py-1 outline-none focus:border-amber-500 shadow-sm"
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                saveRecipeOverride(recipe.id, { name: editingRecipeNameValue });
+                                setEditingRecipeNameId(null);
+                              } else if (e.key === 'Escape') {
+                                setEditingRecipeNameId(null);
+                              }
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              saveRecipeOverride(recipe.id, { name: editingRecipeNameValue });
+                              setEditingRecipeNameId(null);
+                            }}
+                            className="p-1.5 rounded-lg bg-amber-500 text-white hover:bg-amber-600 shadow transition-all flex items-center justify-center shrink-0"
+                            title="Salvar"
+                          >
+                            <Check size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              resetRecipeNameToDefault(recipe.id);
+                              setEditingRecipeNameId(null);
+                            }}
+                            className="p-1.5 rounded-lg bg-coffee-100 hover:bg-coffee-200 text-coffee-600 shadow-sm transition-all flex items-center justify-center shrink-0"
+                            title="Restaurar nome padrão"
+                          >
+                            <RotateCcw size={14} />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-start justify-between gap-1 mb-1 group/title">
+                          <h3 className="text-xl font-sans font-bold text-coffee-950 break-words leading-tight">{recipe.name}</h3>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingRecipeNameId(recipe.id);
+                              setEditingRecipeNameValue(recipe.name);
+                            }}
+                            className="opacity-0 group-hover/title:opacity-100 hover:text-amber-500 text-coffee-400 p-1 transition-opacity duration-200 flex items-center justify-center shrink-0"
+                            title="Editar nome"
+                          >
+                            <Edit size={12} />
+                          </button>
+                        </div>
+                      )}
                       <div className="flex items-center gap-4 text-coffee-400">
                         <div className="flex items-center gap-1">
                           <Clock size={14} />
@@ -2816,30 +3167,69 @@ export default function App() {
                             );
                           })}
                         </div>
-                        <div className="mt-1.5 flex items-center gap-2">
+
+                        {/* Custom Saved Ingredient Icons History */}
+                        {customIngredientIconHistory.length > 0 && (
+                          <div className="mt-2 pt-2 border-t border-coffee-100/60 flex flex-col gap-1.5">
+                            <span className="text-[10px] font-bold text-coffee-500 uppercase tracking-widest">Seus Ícones Salvos (Histórico):</span>
+                            <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto pr-1">
+                              {customIngredientIconHistory.map((item, idx) => {
+                                const isSelected = selectedTempIngredientIcon === item.iconUrl;
+                                return (
+                                  <div key={idx} className="relative group">
+                                    <button
+                                      type="button"
+                                      onClick={() => setSelectedTempIngredientIcon(isSelected ? '' : item.iconUrl)}
+                                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[11px] transition-all font-semibold ${
+                                        isSelected
+                                          ? 'bg-amber-100 border-amber-500 text-amber-950 scale-105 shadow-sm ring-1 ring-amber-400'
+                                          : 'bg-white border-coffee-100 text-coffee-700 hover:bg-coffee-50'
+                                      }`}
+                                    >
+                                      <img src={item.iconUrl} alt={item.label} className="w-4 h-4 object-contain rounded-full" referrerPolicy="no-referrer" />
+                                      <span>{item.label}</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      title="Remover do histórico"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        removeIngredientIconFromHistory(idx);
+                                      }}
+                                      className="absolute -top-1 -right-1 z-10 bg-red-500 hover:bg-red-600 text-white rounded-full p-0.5 shadow transition-all opacity-0 group-hover:opacity-100"
+                                    >
+                                      <X size={8} strokeWidth={3} />
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="mt-1.5 flex flex-wrap items-center gap-2">
                           <span className="text-[10px] font-bold text-coffee-400 uppercase shrink-0">Ou cole a URL de um ícone:</span>
                           <input
                             type="text"
                             placeholder="https://exemplo.com/icone.png"
                             value={selectedTempIngredientIcon && !INGREDIENT_ICONS[selectedTempIngredientIcon as keyof typeof INGREDIENT_ICONS] ? selectedTempIngredientIcon : ''}
                             onChange={(e) => setSelectedTempIngredientIcon(e.target.value)}
-                            className="flex-1 bg-white border border-coffee-100 rounded-lg py-1 px-2.5 text-xs text-coffee-800"
+                            className="flex-1 min-w-[180px] bg-white border border-coffee-100 rounded-lg py-1 px-2.5 text-xs text-coffee-800"
                           />
+                          {selectedTempIngredientIcon && (selectedTempIngredientIcon.startsWith('http') || selectedTempIngredientIcon.startsWith('data:image')) && (
+                            <button
+                              type="button"
+                              onClick={() => saveIngredientIconToHistory(tempIngredient.name || 'Ícone', selectedTempIngredientIcon)}
+                              className="bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-bold px-2 py-1 rounded-lg shadow transition-colors shrink-0 flex items-center gap-1"
+                              title="Salvar ícone no histórico"
+                            >
+                              <Plus size={12} />
+                              <span>Salvar no Histórico</span>
+                            </button>
+                          )}
                         </div>
                       </div>
 
-                      <div className="flex flex-wrap gap-2">
-                        {allIngredients.slice(0, 8).map(ing => (
-                          <button
-                            key={ing}
-                            type="button"
-                            onClick={() => setTempIngredient({ name: ing, amount: '' })}
-                            className="bg-coffee-100/50 text-coffee-600 px-2 py-1 rounded-lg text-[10px] font-bold uppercase hover:bg-coffee-200 transition-colors"
-                          >
-                            + {ing}
-                          </button>
-                        ))}
-                      </div>
                       <div className="flex flex-wrap gap-2">
                         {newRecipe.detailedIngredients?.map((ing, i) => (
                           <div key={i} className="bg-white border border-coffee-100 px-3 py-1 rounded-full text-xs flex items-center gap-2 shadow-sm">
@@ -2880,7 +3270,7 @@ export default function App() {
                       {/* Illustrated Equipment Catalog Selection */}
                       <div className="bg-coffee-card border border-coffee-100/50 rounded-2xl p-4 flex flex-col gap-3">
                         <div className="flex justify-between items-center">
-                          <span className="text-[10px] font-bold text-coffee-400 uppercase tracking-widest">Catálogo de Equipamentos Ilustrados:</span>
+                          <span className="text-[10px] font-bold text-coffee-400 uppercase tracking-widest">Catálogo de Equipamentos & Histórico:</span>
                           {selectedTempEquipmentIcon && (
                             <button
                               type="button"
@@ -2896,69 +3286,95 @@ export default function App() {
                         </div>
                         
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-72 overflow-y-auto pr-1">
-                          {ILLUSTRATED_EQUIPMENT_PRESETS.map((preset) => {
+                          {combinedEquipmentCatalog.map((preset, idx) => {
                             const isSelected = selectedTempEquipmentIcon === preset.image;
                             return (
-                              <button
-                                key={preset.name}
-                                type="button"
-                                onClick={() => {
-                                  setTempEquipment(preset.name);
-                                  setSelectedTempEquipmentIcon(preset.image);
-                                }}
-                                className={`group relative flex flex-col items-center p-2.5 rounded-xl border text-left transition-all ${
-                                  isSelected
-                                    ? 'bg-amber-50/50 border-amber-500 ring-2 ring-amber-500/20 scale-[1.02] shadow-sm'
-                                    : 'bg-white border-coffee-100 hover:border-coffee-300 hover:bg-coffee-50/50'
-                                }`}
-                              >
-                                <div className="w-full aspect-square rounded-lg overflow-hidden bg-white mb-2 relative p-1 border border-coffee-50/50">
-                                  <img 
-                                    src={preset.image} 
-                                    alt={preset.name} 
-                                    referrerPolicy="no-referrer"
-                                    className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
-                                  />
-                                  {isSelected && (
-                                    <div className="absolute top-1 right-1 bg-amber-500 text-white rounded-full p-0.5 shadow">
-                                      <Check size={10} strokeWidth={3} />
-                                    </div>
-                                  )}
-                                </div>
-                                <span className="text-[10px] font-bold text-coffee-800 tracking-tight leading-tight text-center line-clamp-2 w-full px-0.5">
-                                  {preset.name}
-                                </span>
-                              </button>
+                              <div key={`${preset.name}-${idx}`} className="relative group">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setTempEquipment(preset.name);
+                                    setSelectedTempEquipmentIcon(preset.image);
+                                    saveEquipmentToHistory(preset.name, preset.image);
+                                  }}
+                                  className={`w-full relative flex flex-col items-center p-2.5 rounded-xl border text-left transition-all ${
+                                    isSelected
+                                      ? 'bg-amber-50/50 border-amber-500 ring-2 ring-amber-500/20 scale-[1.02] shadow-sm'
+                                      : 'bg-white border-coffee-100 hover:border-coffee-300 hover:bg-coffee-50/50'
+                                  }`}
+                                >
+                                  <div className="w-full aspect-square rounded-lg overflow-hidden bg-white mb-2 relative p-1 border border-coffee-50/50">
+                                    {preset.image ? (
+                                      <img 
+                                        src={preset.image} 
+                                        alt={preset.name} 
+                                        referrerPolicy="no-referrer"
+                                        className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                                      />
+                                    ) : (
+                                      <div className="w-full h-full flex items-center justify-center bg-coffee-50 text-coffee-400 font-bold text-[10px] rounded text-center">
+                                        {preset.name}
+                                      </div>
+                                    )}
+                                    {isSelected && (
+                                      <div className="absolute top-1 right-1 bg-amber-500 text-white rounded-full p-0.5 shadow">
+                                        <Check size={10} strokeWidth={3} />
+                                      </div>
+                                    )}
+                                    {preset.isCustom && (
+                                      <div className="absolute top-1 left-1 bg-coffee-900 text-white text-[7px] font-black px-1.5 py-0.5 rounded shadow uppercase tracking-wider">
+                                        Histórico
+                                      </div>
+                                    )}
+                                  </div>
+                                  <span className="text-[10px] font-bold text-coffee-800 tracking-tight leading-tight text-center line-clamp-2 w-full px-0.5">
+                                    {preset.name}
+                                  </span>
+                                </button>
+
+                                {preset.isCustom && preset.customIndex !== undefined && (
+                                  <button
+                                    type="button"
+                                    title="Remover do histórico"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      removeEquipmentFromHistory(preset.customIndex!);
+                                    }}
+                                    className="absolute -top-1.5 -right-1.5 z-10 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 shadow transition-all opacity-0 group-hover:opacity-100"
+                                  >
+                                    <X size={10} strokeWidth={3} />
+                                  </button>
+                                )}
+                              </div>
                             );
                           })}
                         </div>
 
                         <div className="border-t border-coffee-100/60 pt-3 mt-1 space-y-2">
-                          <span className="text-[10px] font-bold text-coffee-400 uppercase tracking-widest block">Ou personalize manualmente:</span>
-                          <div className="flex gap-2">
+                          <span className="text-[10px] font-bold text-coffee-400 uppercase tracking-widest block">Ou personalize e salve no histórico:</span>
+                          <div className="flex flex-wrap gap-2">
                             <input
                               type="text"
-                              placeholder="URL da Imagem ou Ícone"
+                              placeholder="URL da Imagem do Equipamento"
                               value={selectedTempEquipmentIcon && !ILLUSTRATED_EQUIPMENT_PRESETS.some(p => p.image === selectedTempEquipmentIcon) ? selectedTempEquipmentIcon : ''}
                               onChange={(e) => setSelectedTempEquipmentIcon(e.target.value)}
-                              className="flex-1 bg-white border border-coffee-100 rounded-xl py-2 px-3 text-xs text-coffee-800"
+                              className="flex-1 min-w-[200px] bg-white border border-coffee-100 rounded-xl py-2 px-3 text-xs text-coffee-800"
                             />
+                            {tempEquipment && selectedTempEquipmentIcon && (
+                              <button
+                                type="button"
+                                onClick={() => saveEquipmentToHistory(tempEquipment, selectedTempEquipmentIcon)}
+                                className="bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-3 py-2 rounded-xl shadow transition-colors shrink-0 flex items-center gap-1"
+                                title="Salvar este equipamento no seu histórico"
+                              >
+                                <Plus size={14} />
+                                <span>Salvar no Histórico</span>
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>
 
-                      <div className="flex flex-wrap gap-2">
-                        {allEquipment.slice(0, 8).map(eq => (
-                          <button
-                            key={eq}
-                            type="button"
-                            onClick={() => setTempEquipment(eq)}
-                            className="bg-coffee-100/50 text-coffee-600 px-2 py-1 rounded-lg text-[10px] font-bold uppercase hover:bg-coffee-200 transition-colors"
-                          >
-                            + {eq}
-                          </button>
-                        ))}
-                      </div>
                       <div className="flex flex-wrap gap-2">
                         {newRecipe.equipment?.map((eq, i) => {
                           const isCustom = eq.includes('::');
@@ -3367,7 +3783,63 @@ export default function App() {
                         <span>•</span>
                         <span>{selectedRecipe.difficulty}</span>
                       </div>
-                      <h2 className="text-3xl sm:text-4xl font-sans font-black text-coffee-950 break-words leading-tight">{selectedRecipe.name}</h2>
+                      {editingRecipeNameId === selectedRecipe.id ? (
+                        <div className="flex items-center gap-2 mt-2">
+                          <input
+                            type="text"
+                            value={editingRecipeNameValue}
+                            onChange={(e) => setEditingRecipeNameValue(e.target.value)}
+                            className="flex-1 min-w-0 text-2xl sm:text-3xl font-sans font-black text-coffee-950 bg-white border border-coffee-200 rounded-2xl px-3 py-1.5 outline-none focus:border-amber-500 shadow-sm"
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                saveRecipeOverride(selectedRecipe.id, { name: editingRecipeNameValue });
+                                setEditingRecipeNameId(null);
+                              } else if (e.key === 'Escape') {
+                                setEditingRecipeNameId(null);
+                              }
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              saveRecipeOverride(selectedRecipe.id, { name: editingRecipeNameValue });
+                              setEditingRecipeNameId(null);
+                            }}
+                            className="p-2 rounded-xl bg-amber-500 text-white hover:bg-amber-600 shadow transition-all flex items-center justify-center shrink-0"
+                            title="Salvar"
+                          >
+                            <Check size={18} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              resetRecipeNameToDefault(selectedRecipe.id);
+                              setEditingRecipeNameId(null);
+                            }}
+                            className="p-2 rounded-xl bg-coffee-100 hover:bg-coffee-200 text-coffee-600 shadow-sm transition-all flex items-center justify-center shrink-0"
+                            title="Restaurar nome padrão"
+                          >
+                            <RotateCcw size={18} />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-start justify-between gap-2 group/modal-title">
+                          <h2 className="text-3xl sm:text-4xl font-sans font-black text-coffee-950 break-words leading-tight">{selectedRecipe.name}</h2>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingRecipeNameId(selectedRecipe.id);
+                              setEditingRecipeNameValue(selectedRecipe.name);
+                            }}
+                            className="opacity-0 group-hover/modal-title:opacity-100 hover:text-amber-500 text-coffee-400 p-1.5 transition-opacity duration-200 flex items-center justify-center shrink-0 animate-pulse"
+                            title="Editar nome"
+                          >
+                            <Edit size={16} />
+                          </button>
+                        </div>
+                      )}
                     </div>
 
                     {/* Navigation Sub-Tabs to avoid long scrolling on mobile */}
@@ -3525,25 +3997,82 @@ export default function App() {
                                   >
                                     {selectedRecipe.equipment.map((eq, i) => {
                                       const cleanName = eq.includes('::') ? eq.split('::')[0] : eq;
-                                      const imageUrl = getEquipmentImage(eq);
+                                      const imageUrl = getEquipmentImage(eq, customEquipmentHistory);
+                                      const isEditing = editingEquipmentIndex === i;
                                       return (
                                         <div 
                                           key={i} 
                                           title={cleanName}
                                           className="group/item relative w-28 h-28 shrink-0 snap-start rounded-2xl border border-coffee-100/70 overflow-hidden bg-white shadow-sm hover:shadow-md hover:border-amber-500 transition-all duration-300"
                                         >
-                                          <img 
-                                            src={imageUrl} 
-                                            alt={cleanName} 
-                                            referrerPolicy="no-referrer"
-                                            className="w-full h-full object-contain p-2.5 group-hover/item:scale-105 transition-transform duration-500"
-                                          />
-                                          {/* Elegant minimal hover overlay */}
-                                          <div className="absolute inset-0 bg-gradient-to-t from-coffee-950/80 via-coffee-950/20 to-transparent opacity-0 group-hover/item:opacity-100 transition-opacity duration-300 flex items-end p-2.5">
-                                            <span className="text-[10px] font-bold text-white tracking-wide truncate w-full">
-                                              {cleanName}
-                                            </span>
-                                          </div>
+                                          {isEditing ? (
+                                            <div className="absolute inset-0 z-20 bg-amber-50/95 p-2 flex flex-col justify-between h-full w-full">
+                                              <textarea
+                                                value={editingEquipmentValue}
+                                                onChange={(e) => setEditingEquipmentValue(e.target.value)}
+                                                className="w-full flex-1 text-[10px] font-bold text-coffee-950 bg-transparent border-0 outline-none resize-none focus:ring-0 p-0 leading-tight"
+                                                placeholder="Nome..."
+                                                autoFocus
+                                                onKeyDown={(e) => {
+                                                  if (e.key === 'Enter') {
+                                                    e.preventDefault();
+                                                    handleRenameEquipment(selectedRecipe.id, i, editingEquipmentValue);
+                                                    setEditingEquipmentIndex(null);
+                                                  } else if (e.key === 'Escape') {
+                                                    setEditingEquipmentIndex(null);
+                                                  }
+                                                }}
+                                              />
+                                              <div className="flex justify-end gap-1 border-t border-coffee-200/30 pt-1">
+                                                <button
+                                                  type="button"
+                                                  onClick={() => setEditingEquipmentIndex(null)}
+                                                  className="px-1.5 py-0.5 rounded text-[8px] font-extrabold text-coffee-600 hover:bg-coffee-100"
+                                                >
+                                                  Sair
+                                                </button>
+                                                <button
+                                                  type="button"
+                                                  onClick={() => {
+                                                    handleRenameEquipment(selectedRecipe.id, i, editingEquipmentValue);
+                                                    setEditingEquipmentIndex(null);
+                                                  }}
+                                                  className="px-1.5 py-0.5 rounded text-[8px] font-extrabold bg-amber-500 text-white hover:bg-amber-600"
+                                                >
+                                                  Ok
+                                                </button>
+                                              </div>
+                                            </div>
+                                          ) : (
+                                            <>
+                                              <img 
+                                                src={imageUrl} 
+                                                alt={cleanName} 
+                                                referrerPolicy="no-referrer"
+                                                className="w-full h-full object-contain p-2.5 group-hover/item:scale-105 transition-transform duration-500"
+                                              />
+                                              {/* Elegant minimal hover overlay */}
+                                              <div className="absolute inset-0 bg-gradient-to-t from-coffee-950/80 via-coffee-950/20 to-transparent opacity-0 group-hover/item:opacity-100 transition-opacity duration-300 flex items-end p-2.5">
+                                                <span className="text-[10px] font-bold text-white tracking-wide truncate pr-5 w-full">
+                                                  {cleanName}
+                                                </span>
+                                              </div>
+
+                                              {/* Edit Pencil Button */}
+                                              <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  setEditingEquipmentIndex(i);
+                                                  setEditingEquipmentValue(cleanName);
+                                                }}
+                                                title="Editar nome"
+                                                className="absolute top-1 right-1 bg-white/95 hover:bg-amber-500 hover:text-white text-coffee-950 w-5 h-5 rounded-full flex items-center justify-center shadow transition-all duration-200 opacity-0 group-hover/item:opacity-100 z-10 border border-coffee-100"
+                                              >
+                                                <Edit size={10} />
+                                              </button>
+                                            </>
+                                          )}
                                         </div>
                                       );
                                     })}
