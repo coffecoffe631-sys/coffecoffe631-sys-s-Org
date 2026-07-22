@@ -201,18 +201,41 @@ export const updateAppLogo = async (logoBase64: string) => {
 export const fetchSettingsKey = async (key: string): Promise<string | null> => {
   try {
     const tableName = await getLogoTableName();
-    const { data, error } = await supabase
+
+    // Try 1: 'id' column
+    const { data: d1, error: e1 } = await supabase
       .from(tableName)
-      .select('value')
+      .select('*')
+      .eq('id', key)
+      .maybeSingle();
+
+    if (!e1 && d1) {
+      return d1.value || d1.valor || d1.dados || null;
+    }
+
+    // Try 2: 'key' column
+    const { data: d2, error: e2 } = await supabase
+      .from(tableName)
+      .select('*')
       .eq('key', key)
       .maybeSingle();
 
-    if (error) {
-      console.warn(`Could not fetch ${key} from Supabase:`, error.message);
-      return null;
+    if (!e2 && d2) {
+      return d2.value || d2.valor || d2.dados || null;
     }
 
-    return data?.value || null;
+    // Try 3: 'chave' column
+    const { data: d3, error: e3 } = await supabase
+      .from(tableName)
+      .select('*')
+      .eq('chave', key)
+      .maybeSingle();
+
+    if (!e3 && d3) {
+      return d3.value || d3.valor || d3.dados || null;
+    }
+
+    return null;
   } catch (err) {
     console.error(`Error in fetchSettingsKey (${key}):`, err);
     return null;
@@ -222,12 +245,36 @@ export const fetchSettingsKey = async (key: string): Promise<string | null> => {
 export const updateSettingsKey = async (key: string, value: string) => {
   try {
     const tableName = await getLogoTableName();
-    const { error } = await supabase
+
+    // Try 1: upsert with 'id' column
+    const { error: e1 } = await supabase
+      .from(tableName)
+      .upsert({ id: key, value }, { onConflict: 'id' });
+
+    if (!e1) return;
+
+    // Try 2: upsert with 'key' column
+    const { error: e2 } = await supabase
       .from(tableName)
       .upsert({ key, value }, { onConflict: 'key' });
 
-    if (error) {
-      console.error(`Error updating ${key} in Supabase:`, error.message);
+    if (!e2) return;
+
+    // Try 3: upsert with 'chave' column
+    const { error: e3 } = await supabase
+      .from(tableName)
+      .upsert({ chave: key, valor: value }, { onConflict: 'chave' });
+
+    if (!e3) return;
+
+    // Try 4: direct update
+    const { error: e4 } = await supabase
+      .from(tableName)
+      .update({ value })
+      .eq('id', key);
+
+    if (e4) {
+      console.warn(`Could not update settings key '${key}' in Supabase:`, e1?.message || e2?.message || e3?.message || e4?.message);
     }
   } catch (err) {
     console.error(`Error in updateSettingsKey (${key}):`, err);
