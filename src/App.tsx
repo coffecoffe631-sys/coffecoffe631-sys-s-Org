@@ -583,13 +583,112 @@ const getEquipmentImage = (eqString: string, customPresets: { name: string; imag
   return 'https://res.cloudinary.com/dyfeeocgb/image/upload/v1784338023/WhatsApp_Image_2026-07-17_at_22.26.15_efxzjt.jpg';
 };
 
-const formatIngredientText = (name: string, amount?: string) => {
-  if (!amount) return name;
-  const lowerName = name.toLowerCase();
-  if (lowerName.startsWith('de ') || lowerName.startsWith('do ') || lowerName.startsWith('da ')) {
-    return `${amount} ${name}`;
+const pluralizeUnits = (str: string, multiplier: number): string => {
+  if (multiplier <= 1) return str;
+  return str
+    .replace(/\bcolher\b/gi, 'colheres')
+    .replace(/\bxícara\b/gi, 'xícaras')
+    .replace(/\bxicara\b/gi, 'xícaras')
+    .replace(/\bbola\b/gi, 'bolas')
+    .replace(/\bfatia\b/gi, 'fatias')
+    .replace(/\bpitada\b/gi, 'pitadas')
+    .replace(/\blitro\b/gi, 'litros')
+    .replace(/\bporção\b/gi, 'porções')
+    .replace(/\bporcao\b/gi, 'porções')
+    .replace(/\bunidade\b/gi, 'unidades');
+};
+
+const scaleNumericAmount = (text: string, multiplier: number): string => {
+  if (!text || text.trim() === '') return text;
+
+  const formatValue = (num: number): string => {
+    if (isNaN(num)) return '';
+    if (Math.abs(num - Math.round(num)) < 0.05) {
+      return Math.round(num).toString();
+    }
+    const dec = num - Math.floor(num);
+    const whole = Math.floor(num);
+    if (Math.abs(dec - 0.5) < 0.05) return whole > 0 ? `${whole} ½` : '½';
+    if (Math.abs(dec - 0.25) < 0.05) return whole > 0 ? `${whole} ¼` : '¼';
+    if (Math.abs(dec - 0.75) < 0.05) return whole > 0 ? `${whole} ¾` : '¾';
+    if (Math.abs(dec - 0.33) < 0.05 || Math.abs(dec - 0.333) < 0.05) return whole > 0 ? `${whole} ⅓` : '⅓';
+    if (Math.abs(dec - 0.66) < 0.05 || Math.abs(dec - 0.666) < 0.05) return whole > 0 ? `${whole} ⅔` : '⅔';
+
+    const rounded = Math.round(num * 10) / 10;
+    return rounded.toString().replace('.', ',');
+  };
+
+  if (multiplier === 1) return text;
+
+  let temp = text
+    .replace(/½/g, '0.5')
+    .replace(/¼/g, '0.25')
+    .replace(/¾/g, '0.75')
+    .replace(/⅓/g, '0.33')
+    .replace(/⅔/g, '0.67');
+
+  temp = temp.replace(/(\d+)\/(\d+)/g, (_, n, d) => {
+    return (parseFloat(n) / parseFloat(d)).toString();
+  });
+
+  let hasNumber = false;
+  const scaled = temp.replace(/(\d+(?:[\.,]\d+)?)/g, (match) => {
+    hasNumber = true;
+    const val = parseFloat(match.replace(',', '.'));
+    if (isNaN(val)) return match;
+    return formatValue(val * multiplier);
+  });
+
+  if (hasNumber) {
+    return pluralizeUnits(scaled, multiplier);
   }
-  return `${amount} de ${name}`;
+
+  return text;
+};
+
+const formatIngredientText = (name: string, amount?: string, multiplier: number = 1) => {
+  let cleanName = name ? name.trim() : '';
+  let cleanAmount = amount ? amount.trim() : '';
+
+  // Clean out empty punctuation amounts (e.g. ".", "-", ":")
+  if (/^[\.\s\:\-\,]+$/.test(cleanAmount)) {
+    cleanAmount = '';
+  }
+
+  // Clean leading dots or dashes from cleanName
+  cleanName = cleanName.replace(/^[\.\s\:\-]+/, '').trim();
+
+  if (!cleanAmount) {
+    if (multiplier > 1) {
+      const scaled = scaleNumericAmount(cleanName, multiplier);
+      if (scaled !== cleanName) {
+        return scaled;
+      }
+      return `${cleanName} (${multiplier}x)`;
+    }
+    return cleanName;
+  }
+
+  const lowerAmount = cleanAmount.toLowerCase();
+  const lowerName = cleanName.toLowerCase();
+
+  if (lowerAmount === 'a gosto' || lowerAmount === 'à vontade' || lowerAmount === 'opcional') {
+    if (multiplier > 1) {
+      return `${cleanName} (${cleanAmount} - ${multiplier}x)`;
+    }
+    return `${cleanName} (${cleanAmount})`;
+  }
+
+  if (lowerName.includes(lowerAmount) || lowerName.startsWith(cleanAmount)) {
+    return scaleNumericAmount(cleanName, multiplier);
+  }
+
+  const scaledAmount = scaleNumericAmount(cleanAmount, multiplier);
+
+  if (lowerName.startsWith('de ') || lowerName.startsWith('do ') || lowerName.startsWith('da ')) {
+    return `${scaledAmount} ${cleanName}`;
+  }
+  return `${scaledAmount} de ${cleanName}`;
 };
 
 export default function App() {
@@ -732,6 +831,11 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
+  const [recipePortions, setRecipePortions] = useState<number>(1);
+
+  useEffect(() => {
+    setRecipePortions(1);
+  }, [selectedRecipe]);
   const [activeModalTab, setActiveModalTab] = useState<'sobre' | 'ingredientes' | 'preparo'>('sobre');
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [isFullScreenSteps, setIsFullScreenSteps] = useState(false);
@@ -4005,8 +4109,87 @@ export default function App() {
 
                         {activeModalTab === 'ingredientes' && (
                           <div className="space-y-6">
+                            {/* Calculadora de Doses & Porções */}
+                            <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 space-y-3 shadow-xs">
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <div className="w-8 h-8 rounded-xl bg-amber-600 text-white flex items-center justify-center font-bold shrink-0 shadow-xs">
+                                    <Scale size={18} />
+                                  </div>
+                                  <div className="min-w-0">
+                                    <h4 className="text-sm font-bold text-coffee-950 truncate">Calculadora de Doses & Porções</h4>
+                                    <p className="text-[11px] text-coffee-600 leading-tight">
+                                      {selectedRecipe.category === 'Acompanhamentos' 
+                                        ? 'Ajuste a quantidade de porções para calcular os ingredientes' 
+                                        : 'Ajuste a quantidade de xícaras/doses para calcular os ingredientes'}
+                                    </p>
+                                  </div>
+                                </div>
+                                {recipePortions !== 1 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setRecipePortions(1)}
+                                    className="text-[10px] font-bold text-amber-800 hover:text-amber-950 bg-amber-200/60 hover:bg-amber-200 px-2.5 py-1 rounded-lg uppercase tracking-wider transition-colors shrink-0"
+                                  >
+                                    1x Original
+                                  </button>
+                                )}
+                              </div>
+
+                              <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-amber-500/20">
+                                <div className="flex items-center gap-2 bg-white rounded-xl p-1 border border-amber-500/20 shadow-xs">
+                                  <button
+                                    type="button"
+                                    onClick={() => setRecipePortions(prev => Math.max(1, prev - 1))}
+                                    className="w-8 h-8 rounded-lg bg-coffee-100 hover:bg-coffee-200 text-coffee-900 flex items-center justify-center font-bold text-base transition-colors"
+                                    aria-label="Diminuir porção"
+                                  >
+                                    -
+                                  </button>
+                                  <span className="text-sm font-black text-coffee-950 px-3 min-w-[90px] text-center">
+                                    {recipePortions} {selectedRecipe.category === 'Acompanhamentos' 
+                                      ? (recipePortions === 1 ? 'porção' : 'porções') 
+                                      : (recipePortions === 1 ? 'xícara' : 'xícaras')}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => setRecipePortions(prev => prev + 1)}
+                                    className="w-8 h-8 rounded-lg bg-coffee-100 hover:bg-coffee-200 text-coffee-900 flex items-center justify-center font-bold text-base transition-colors"
+                                    aria-label="Aumentar porção"
+                                  >
+                                    +
+                                  </button>
+                                </div>
+
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  {[1, 2, 3, 4, 6, 10].map(count => (
+                                    <button
+                                      key={count}
+                                      type="button"
+                                      onClick={() => setRecipePortions(count)}
+                                      className={cn(
+                                        "px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all",
+                                        recipePortions === count
+                                          ? "bg-amber-600 text-white shadow-xs scale-105"
+                                          : "bg-white text-coffee-700 border border-coffee-200/80 hover:bg-amber-50"
+                                      )}
+                                    >
+                                      {count}x
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+
                             <div className="space-y-4">
-                              <h3 className="text-xl font-sans font-bold text-coffee-950">Ingredientes</h3>
+                              <div className="flex items-center justify-between">
+                                <h3 className="text-xl font-sans font-bold text-coffee-950">Ingredientes</h3>
+                                {recipePortions > 1 && (
+                                  <span className="text-xs font-bold text-amber-700 bg-amber-100 px-2.5 py-1 rounded-full">
+                                    Calculado para {recipePortions} {selectedRecipe.category === 'Acompanhamentos' ? 'porções' : 'xícaras'}
+                                  </span>
+                                )}
+                              </div>
                               <div className="grid grid-cols-1 gap-3">
                                 {(selectedRecipe.detailedIngredients && selectedRecipe.detailedIngredients.length > 0) ? (
                                   selectedRecipe.detailedIngredients.map((ing, i) => (
@@ -4016,7 +4199,7 @@ export default function App() {
                                           {getIngredientIcon(ing.name, ing.icon)}
                                         </div>
                                         <span className="text-sm font-semibold text-coffee-800 leading-snug">
-                                          {formatIngredientText(ing.name, ing.amount)}
+                                          {formatIngredientText(ing.name, ing.amount, recipePortions)}
                                         </span>
                                       </div>
                                       <span className="text-sm font-bold text-coffee-300/80 ml-3 shrink-0">{i + 1}</span>
@@ -4029,7 +4212,9 @@ export default function App() {
                                         <div className="w-10 h-10 rounded-full bg-neutral-100 flex items-center justify-center shrink-0">
                                           {getIngredientIcon(ing)}
                                         </div>
-                                        <span className="text-sm font-semibold text-coffee-800 leading-snug">{ing}</span>
+                                        <span className="text-sm font-semibold text-coffee-800 leading-snug">
+                                          {formatIngredientText(ing, '', recipePortions)}
+                                        </span>
                                       </div>
                                       <span className="text-sm font-bold text-coffee-300/80 ml-3 shrink-0">{i + 1}</span>
                                     </div>
