@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FileSpreadsheet, Download, Upload, Check, Loader2, AlertCircle, RefreshCw, ExternalLink, Database, LogIn, LogOut, FileText, Plus } from 'lucide-react';
+import { FileSpreadsheet, Download, Upload, Check, Loader2, AlertCircle, RefreshCw, ExternalLink, Database, LogIn, LogOut, FileText, Plus, Sparkles } from 'lucide-react';
 import { Recipe } from '../data/recipes';
 import { JourneyStep } from '../data/journey';
 import { signInWithGoogle, googleSignOut, initGoogleAuth, getGoogleAccessToken } from '../services/googleAuth';
@@ -357,10 +357,13 @@ export default function GoogleSheetsManager({
             type="text"
             value={spreadsheetId}
             onChange={(e) => {
-              setSpreadsheetId(e.target.value);
-              localStorage.setItem('coffee_google_spreadsheet_id', e.target.value);
+              const val = e.target.value;
+              const clean = extractSpreadsheetId(val);
+              setSpreadsheetId(clean);
+              localStorage.setItem('coffee_google_spreadsheet_id', clean);
+              updateSettingsKey('google_spreadsheet_id', clean).catch(console.warn);
             }}
-            placeholder="ID da Planilha no Google Drive (ex: 1BxiMVs0XRm5...)"
+            placeholder="Link completo ou ID da Planilha do Google (ex: https://docs.google.com/spreadsheets/d/...)"
             className="flex-1 w-full px-4 py-2.5 bg-coffee-50 border border-coffee-200 rounded-xl text-xs text-coffee-900 placeholder:text-coffee-400 focus:outline-none focus:border-emerald-600"
           />
 
@@ -375,6 +378,19 @@ export default function GoogleSheetsManager({
               Abrir Planilha
             </a>
           )}
+        </div>
+
+        {/* Tip Box for Unlocking / Sharing Google Sheet */}
+        <div className="bg-amber-50/70 border border-amber-200/80 rounded-xl p-3.5 text-xs text-amber-900 space-y-1.5">
+          <div className="font-bold flex items-center gap-1.5 text-amber-950">
+            <Sparkles size={14} className="text-amber-600 shrink-0" />
+            Como liberar a sincronização automática em qualquer dispositivo (sem login):
+          </div>
+          <ol className="list-decimal list-inside space-y-1 text-[11px] text-amber-900 leading-relaxed font-medium">
+            <li>Abra sua planilha no Google Sheets e clique no botão azul <strong>Compartilhar</strong> (canto superior direito).</li>
+            <li>Em <em>Acesso geral</em>, mude de <strong>Restrito</strong> para <strong>Qualquer pessoa com o link</strong> e garanta que está como <strong>Leitor</strong> (assim qualquer pessoa vê os dados no app, mas ninguém consegue alterar sua planilha).</li>
+            <li>Cole o link da planilha no campo acima. Pronto! Agora qualquer dispositivo sincronizará todas as receitas automaticamente ao abrir o app.</li>
+          </ol>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
