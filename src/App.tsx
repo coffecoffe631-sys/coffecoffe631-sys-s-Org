@@ -1,10 +1,11 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Search, Filter, MapPin, Cloud, CloudRain, Sun, Clock, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, X, Heart, Share2, Coffee, Droplets, Zap, Loader2, Settings, Plus, Trash2, Lock, Sparkles, Edit, RotateCcw, Upload, Image as ImageIcon, User as UserIcon, LogOut, Mail, Maximize2, Check, Menu, MessageCircle, Eye, EyeOff, Trophy, Map, Compass, Cookie, BookOpen, Milk, Bean, GlassWater, Flame, ChefHat, Utensils, Scale, Blend, Citrus, IceCream, Candy, Timer, Soup, Thermometer, CupSoda } from 'lucide-react';
+import { Search, Filter, MapPin, Cloud, CloudRain, Sun, Clock, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, X, Heart, Share2, Coffee, Droplets, Zap, Loader2, Settings, Plus, Trash2, Lock, Sparkles, Edit, RotateCcw, Upload, Image as ImageIcon, User as UserIcon, LogOut, Mail, Maximize2, Check, Menu, MessageCircle, Eye, EyeOff, Trophy, Map, Compass, Cookie, BookOpen, Milk, Bean, GlassWater, Flame, ChefHat, Utensils, Scale, Blend, Citrus, IceCream, Candy, Timer, Soup, Thermometer, CupSoda, FileSpreadsheet } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Recipe, Ingredient, Step, WeatherCondition, recipes, defaultAccompaniments } from './data/recipes';
 import { coffeeJourney, JourneyStep } from './data/journey';
 import { useWeather } from './hooks/useWeather';
 import JourneyView from './components/JourneyView';
+import GoogleSheetsManager from './components/GoogleSheetsManager';
 import { getLocalCoffeeRecommendation } from './services/recommendationService';
 import { fetchRecipesFromSupabase, insertRecipeToSupabase, deleteRecipeFromSupabase, updateRecipeInSupabase, seedRecipes, fetchAppLogo, updateAppLogo, fetchSettingsKey, updateSettingsKey, fetchJourneyFromSupabase, updateJourneyStepInSupabase, seedJourney, insertJourneyStepToSupabase, deleteJourneyStepFromSupabase, getRecipesTableName } from './services/supabaseService';
 import { cn } from './lib/utils';
@@ -100,7 +101,24 @@ function renderFormattedContent(text: string) {
       const isQuoted = (line.startsWith('"') && line.endsWith('"')) || (line.startsWith('“') && line.endsWith('”'));
       const textContent = isQuoted ? line.slice(1, -1) : line;
 
-      if (isQuoted) {
+      // Handle custom Barista advice
+      const hasDica = line.includes('Dica do Barista') || line.includes('Truque do Barista') || line.includes('💡') || line.toLowerCase().includes('dica:') || line.toLowerCase().includes('truque:');
+
+      if (hasDica) {
+        flushGroup();
+        const cleanLine = line.replace(/^(💡\s*)?(Dica do Barista:?|Truque do Barista:?|Dica:?|Truque:?)\s*/i, '').trim();
+        elements.push(
+          <div key={`dica-${keyIdx++}`} className="p-5 sm:p-6 bg-amber-50/90 border border-amber-200/60 rounded-2xl text-left shadow-sm w-full my-3">
+            <span className="font-sans font-black text-amber-900 text-xs uppercase tracking-widest block mb-1.5 flex items-center gap-2">
+              <Sparkles size={16} className="text-amber-500 animate-pulse" />
+              💡 Truque do Barista
+            </span>
+            <p className="text-sm sm:text-base font-sans font-semibold text-amber-950 leading-relaxed">
+              {parseInlineFormatting(cleanLine)}
+            </p>
+          </div>
+        );
+      } else if (isQuoted) {
         currentGroup.push(
           <p key={`para-${keyIdx++}`} className="text-coffee-600 text-sm sm:text-base leading-relaxed font-sans italic border-l-4 border-amber-500 pl-4 py-1 bg-amber-50/30 rounded-r-2xl my-2">
             “{parseInlineFormatting(textContent)}”
@@ -192,16 +210,16 @@ function renderStepContent(text: string) {
       const textContent = isQuoted ? line.slice(1, -1) : line;
 
       // Handle custom Barista advice
-      const hasDica = line.includes('Dica do Barista') || line.startsWith('💡') || line.toLowerCase().includes('dica:');
+      const hasDica = line.includes('Dica do Barista') || line.includes('Truque do Barista') || line.includes('💡') || line.toLowerCase().includes('dica:') || line.toLowerCase().includes('truque:');
 
       if (hasDica) {
         flushGroup();
-        const cleanLine = line.replace(/^(💡\s*)?(Dica do Barista:?|Dica:?)\s*/i, '').trim();
+        const cleanLine = line.replace(/^(💡\s*)?(Dica do Barista:?|Truque do Barista:?|Dica:?|Truque:?)\s*/i, '').trim();
         elements.push(
           <div key={`dica-${keyIdx++}`} className="p-6 sm:p-8 bg-amber-50/80 border border-amber-200/50 rounded-[2rem] text-left shadow-sm w-full max-w-xl mx-auto my-4">
             <span className="font-sans font-black text-amber-900 text-xs sm:text-sm uppercase tracking-widest block mb-2 flex items-center gap-2">
               <Sparkles size={16} className="text-amber-500 animate-pulse" />
-              Dica do Barista
+              💡 Truque do Barista
             </span>
             <p className="text-sm sm:text-base md:text-lg font-sans font-semibold text-amber-950 leading-relaxed">
               {parseInlineFormatting(cleanLine)}
@@ -650,13 +668,18 @@ const formatIngredientText = (name: string, amount?: string, multiplier: number 
   let cleanName = name ? name.trim() : '';
   let cleanAmount = amount ? amount.trim() : '';
 
-  // Clean out empty punctuation amounts (e.g. ".", "-", ":")
+  // Clean out empty punctuation amounts (e.g. ".", "-", ":", ",")
   if (/^[\.\s\:\-\,]+$/.test(cleanAmount)) {
     cleanAmount = '';
   }
 
-  // Clean leading dots or dashes from cleanName
+  // Clean leading dots or dashes from cleanName, and extra "de/do/da" if duplicated
   cleanName = cleanName.replace(/^[\.\s\:\-]+/, '').trim();
+  if (cleanName.toLowerCase().startsWith('de ')) {
+    cleanName = cleanName.slice(3).trim();
+  } else if (cleanName.toLowerCase().startsWith('do ') || cleanName.toLowerCase().startsWith('da ')) {
+    cleanName = cleanName.slice(3).trim();
+  }
 
   if (!cleanAmount) {
     if (multiplier > 1) {
@@ -685,15 +708,22 @@ const formatIngredientText = (name: string, amount?: string, multiplier: number 
 
   const scaledAmount = scaleNumericAmount(cleanAmount, multiplier);
 
-  if (lowerName.startsWith('de ') || lowerName.startsWith('do ') || lowerName.startsWith('da ')) {
-    return `${scaledAmount} ${cleanName}`;
-  }
   return `${scaledAmount} de ${cleanName}`;
 };
 
 export default function App() {
   const weather = useWeather();
-  const [allRecipes, setAllRecipes] = useState<Recipe[]>([]);
+  const [allRecipes, setAllRecipes] = useState<Recipe[]>(() => {
+    try {
+      const savedCustom = localStorage.getItem('coffee_user_custom_recipes');
+      const customList: Recipe[] = savedCustom ? JSON.parse(savedCustom) : [];
+      const base = [...recipes, ...defaultAccompaniments];
+      const missingCustom = customList.filter(c => !base.some(b => b.id === c.id || b.name === c.name));
+      return [...base, ...missingCustom];
+    } catch {
+      return [...recipes, ...defaultAccompaniments];
+    }
+  });
   const [currentJourney, setCurrentJourney] = useState<JourneyStep[]>(coffeeJourney);
   const [isLoadingSupabase, setIsLoadingSupabase] = useState(true);
   const [supabaseError, setSupabaseError] = useState<string | null>(null);
@@ -965,9 +995,34 @@ export default function App() {
 
         let finalRecipes = dbRecipes || [];
 
-        // Automatically inject default accompaniment recipes to ensure the section is richly populated!
-        const missingAccomps = defaultAccompaniments.filter(da => !finalRecipes.some(r => r.name === da.name));
-        finalRecipes = [...finalRecipes, ...missingAccomps];
+        if (!dbRecipes || dbRecipes.length === 0) {
+          try {
+            await seedRecipes([...recipes, ...defaultAccompaniments]);
+            const freshRecipes = await fetchRecipesFromSupabase();
+            if (freshRecipes && freshRecipes.length > 0) {
+              finalRecipes = freshRecipes;
+            } else {
+              finalRecipes = [...recipes, ...defaultAccompaniments];
+            }
+          } catch (seedErr) {
+            console.error("Auto-seeding recipes failed:", seedErr);
+            finalRecipes = [...recipes, ...defaultAccompaniments];
+          }
+        }
+        // Retrieve local custom recipes from localStorage
+        let customList: Recipe[] = [];
+        try {
+          const savedCustom = localStorage.getItem('coffee_user_custom_recipes');
+          if (savedCustom) customList = JSON.parse(savedCustom);
+        } catch (e) {
+          console.warn("Could not parse coffee_user_custom_recipes:", e);
+        }
+
+        // Automatically inject default coffee recipes, accompaniments, and user custom recipes if missing
+        const baseDefaults = [...recipes, ...defaultAccompaniments];
+        const missingDefaults = baseDefaults.filter(dr => !finalRecipes.some(r => r.name === dr.name || r.id === dr.id));
+        const missingCustom = customList.filter(c => !finalRecipes.some(r => r.name === c.name || r.id === c.id));
+        finalRecipes = [...finalRecipes, ...missingDefaults, ...missingCustom];
 
         // Apply local overrides
         try {
@@ -1300,14 +1355,17 @@ export default function App() {
     }
 
     return baseList.filter(recipe => {
-      const matchesSearch = recipe.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          recipe.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          recipe.country.toLowerCase().includes(searchQuery.toLowerCase());
+      if (!recipe || !recipe.name) return false;
+      const q = searchQuery.toLowerCase();
+      const matchesSearch = !q || 
+                          (recipe.name && recipe.name.toLowerCase().includes(q)) ||
+                          (recipe.description && recipe.description.toLowerCase().includes(q)) ||
+                          (recipe.country && recipe.country.toLowerCase().includes(q));
       const matchesCategory = !selectedCategory || recipe.category === selectedCategory;
       const matchesIngredients = activeIngredients.length === 0 || 
-                                activeIngredients.every(ing => recipe.ingredients.includes(ing));
+                                (recipe.ingredients && activeIngredients.every(ing => recipe.ingredients.includes(ing)));
       const matchesEquipment = activeEquipment.length === 0 || 
-                              activeEquipment.every(eq => recipe.equipment.includes(eq));
+                             (recipe.equipment && activeEquipment.every(eq => recipe.equipment.includes(eq)));
       
       return matchesSearch && matchesCategory && matchesIngredients && matchesEquipment;
     });
@@ -1435,15 +1493,73 @@ export default function App() {
         await insertRecipeToSupabase(newRecipe as Omit<Recipe, 'id'>);
       }
       
-      const dbRecipes = await fetchRecipesFromSupabase();
-      setAllRecipes(dbRecipes || []);
+      // Save to local custom list as fallback
+      const savedCustom = localStorage.getItem('coffee_user_custom_recipes');
+      let customList: Recipe[] = savedCustom ? JSON.parse(savedCustom) : [];
+      const recipeToSave: Recipe = {
+        id: editingRecipeId || `custom-${Date.now()}`,
+        name: newRecipe.name || 'Nova Receita',
+        country: newRecipe.country || 'Brasil',
+        description: newRecipe.description || '',
+        image: newRecipe.image || 'https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=1000&auto=format&fit=crop',
+        ingredients: newRecipe.ingredients || [],
+        equipment: newRecipe.equipment || [],
+        detailedIngredients: newRecipe.detailedIngredients || [],
+        steps: newRecipe.steps || [],
+        weatherSuitability: newRecipe.weatherSuitability || ['neutral'],
+        category: (newRecipe.category as any) || 'Specialty',
+        difficulty: (newRecipe.difficulty as any) || 'Medium',
+        prepTime: newRecipe.prepTime || '5 min'
+      };
+
+      if (editingRecipeId) {
+        customList = customList.map(r => r.id === editingRecipeId ? recipeToSave : r);
+      } else {
+        customList.push(recipeToSave);
+      }
+      localStorage.setItem('coffee_user_custom_recipes', JSON.stringify(customList));
+
+      let dbRecipes: Recipe[] = [];
+      try {
+        dbRecipes = await fetchRecipesFromSupabase();
+      } catch (e) {
+        console.warn("Could not fetch fresh recipes from Supabase after save:", e);
+      }
+
+      // Merge all recipe sources (defaults, local custom, current state, database)
+      const baseDefaults = [...recipes, ...defaultAccompaniments];
+      const mergedMap = new globalThis.Map<string, Recipe>();
+
+      baseDefaults.forEach(r => mergedMap.set(r.id, r));
+      customList.forEach(c => mergedMap.set(c.id, c));
+      allRecipes.forEach(r => mergedMap.set(r.id, r));
+      if (dbRecipes && dbRecipes.length > 0) {
+        dbRecipes.forEach((dbR: Recipe) => {
+          if (dbR.name && dbR.name !== 'Receita sem nome') {
+            const existing = mergedMap.get(dbR.id);
+            mergedMap.set(dbR.id, { ...existing, ...dbR } as Recipe);
+          }
+        });
+      }
+      
+      const finalMergedList: Recipe[] = Array.from(mergedMap.values());
+      setAllRecipes(finalMergedList);
+
+      // Reset category and search filters so all recipes are immediately visible
+      setSelectedCategory(null);
+      setSearchQuery('');
+      if ((foodCategories as string[]).includes(recipeToSave.category)) {
+        setActiveTab('accompaniments');
+      } else {
+        setActiveTab('home');
+      }
       
       // Update selectedRecipe if it was the one being edited
       if (editingRecipeId && selectedRecipe?.id === editingRecipeId && updatedRecipe) {
         setSelectedRecipe(updatedRecipe);
       } else if (editingRecipeId && selectedRecipe?.id === editingRecipeId) {
         // Fallback if result mapping failed
-        const refreshed = dbRecipes.find(r => r.id === editingRecipeId);
+        const refreshed = finalMergedList.find((r: Recipe) => r.id === editingRecipeId);
         if (refreshed) setSelectedRecipe(refreshed);
       }
 
@@ -1486,6 +1602,27 @@ export default function App() {
       alert('Erro ao sincronizar: ' + err.message);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleGoogleSheetsImported = (data: {
+    recipes?: Recipe[];
+    journey?: JourneyStep[];
+    logoUrl?: string;
+    settings?: Record<string, any>;
+  }) => {
+    if (data.recipes && data.recipes.length > 0) {
+      setAllRecipes(data.recipes);
+      // reset filters
+      setSelectedCategory(null);
+      setSearchQuery('');
+    }
+    if (data.journey && data.journey.length > 0) {
+      setCurrentJourney(data.journey);
+    }
+    if (data.logoUrl) {
+      setAppLogo(data.logoUrl);
+      localStorage.setItem('coffee_app_logo', data.logoUrl);
     }
   };
 
@@ -1863,9 +2000,35 @@ export default function App() {
     }
     if (!confirm('Tem certeza que deseja excluir esta receita?')) return;
     try {
-      await deleteRecipeFromSupabase(id);
-      const dbRecipes = await fetchRecipesFromSupabase();
-      setAllRecipes(dbRecipes || []);
+      try {
+        await deleteRecipeFromSupabase(id);
+      } catch (err) {
+        console.warn("Could not delete recipe from Supabase:", err);
+      }
+
+      // Also remove from local custom storage
+      let customList: Recipe[] = [];
+      const savedCustom = localStorage.getItem('coffee_user_custom_recipes');
+      if (savedCustom) {
+        customList = JSON.parse(savedCustom);
+        customList = customList.filter(r => r.id !== id);
+        localStorage.setItem('coffee_user_custom_recipes', JSON.stringify(customList));
+      }
+
+      let dbRecipes: Recipe[] = [];
+      try {
+        dbRecipes = await fetchRecipesFromSupabase();
+      } catch (e) {
+        console.warn("Could not fetch fresh recipes from Supabase after delete:", e);
+      }
+
+      let merged = dbRecipes && dbRecipes.length > 0 ? dbRecipes : [];
+      const base = [...recipes, ...defaultAccompaniments].filter(r => r.id !== id);
+      const missingDefaults = base.filter(dr => !merged.some(r => r.name === dr.name || r.id === dr.id));
+      const missingCustom = customList.filter(c => !merged.some(r => r.name === c.name || r.id === c.id));
+      merged = [...merged, ...missingDefaults, ...missingCustom];
+
+      setAllRecipes(merged);
       alert('Receita excluída!');
     } catch (err: any) {
       alert('Erro ao excluir: ' + err.message);
@@ -2229,6 +2392,22 @@ export default function App() {
                       className="absolute right-0 mt-3 w-48 bg-white rounded-2xl shadow-2xl border border-coffee-100 overflow-hidden z-50"
                     >
                       <div className="p-2 space-y-1">
+                        <button 
+                          onClick={() => {
+                            setShowUserMenu(false);
+                            if (isAdminAuthenticated) {
+                              setShowAdminPanel(true);
+                            } else {
+                              setShowAdminLogin(true);
+                            }
+                          }}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-emerald-800 hover:bg-emerald-50 rounded-xl transition-colors"
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-700">
+                            <FileSpreadsheet size={16} />
+                          </div>
+                          Importar Planilha (CSV)
+                        </button>
                         <button 
                           onClick={() => {
                             setNewName(userName);
@@ -2640,6 +2819,17 @@ export default function App() {
                   </motion.div>
                 ))}
               </div>
+
+              {filteredRecipes.length > 0 && (
+                <div className="pt-10 pb-8 flex items-center justify-center">
+                  <img 
+                    src="https://res.cloudinary.com/dvbifkpwd/image/upload/v1785199336/Mask_group_fercpf.png" 
+                    alt="Fim do menu de sabores" 
+                    referrerPolicy="no-referrer"
+                    className="max-w-[260px] sm:max-w-[340px] md:max-w-[400px] h-auto object-contain"
+                  />
+                </div>
+              )}
 
               {filteredRecipes.length === 0 && (
                 <div className="py-20 text-center space-y-4">
@@ -3155,6 +3345,18 @@ export default function App() {
               </div>
 
               <div className="space-y-10">
+                {/* Google Sheets & CSV Integration */}
+                <GoogleSheetsManager 
+                  recipes={allRecipes} 
+                  journey={currentJourney}
+                  logoUrl={appLogo}
+                  settings={{
+                    custom_equipment_history: customEquipmentHistory,
+                    custom_ingredient_history: customIngredientIconHistory
+                  }}
+                  onDataImported={handleGoogleSheetsImported} 
+                />
+
                 {/* App Customization */}
                 <section className="bg-coffee-50 rounded-3xl p-6 border border-coffee-100">
                   <h4 className="text-sm font-bold text-coffee-900 uppercase tracking-widest flex items-center gap-2 mb-6">
@@ -4119,7 +4321,7 @@ export default function App() {
                                   <div className="min-w-0">
                                     <h4 className="text-sm font-bold text-coffee-950 truncate">Calculadora de Doses & Porções</h4>
                                     <p className="text-[11px] text-coffee-600 leading-tight">
-                                      {selectedRecipe.category === 'Acompanhamentos' 
+                                      {(selectedRecipe.category as any) === 'Acompanhamentos' 
                                         ? 'Ajuste a quantidade de porções para calcular os ingredientes' 
                                         : 'Ajuste a quantidade de xícaras/doses para calcular os ingredientes'}
                                     </p>
@@ -4147,7 +4349,7 @@ export default function App() {
                                     -
                                   </button>
                                   <span className="text-sm font-black text-coffee-950 px-3 min-w-[90px] text-center">
-                                    {recipePortions} {selectedRecipe.category === 'Acompanhamentos' 
+                                    {recipePortions} {(selectedRecipe.category as any) === 'Acompanhamentos' 
                                       ? (recipePortions === 1 ? 'porção' : 'porções') 
                                       : (recipePortions === 1 ? 'xícara' : 'xícaras')}
                                   </span>
@@ -4186,7 +4388,7 @@ export default function App() {
                                 <h3 className="text-xl font-sans font-bold text-coffee-950">Ingredientes</h3>
                                 {recipePortions > 1 && (
                                   <span className="text-xs font-bold text-amber-700 bg-amber-100 px-2.5 py-1 rounded-full">
-                                    Calculado para {recipePortions} {selectedRecipe.category === 'Acompanhamentos' ? 'porções' : 'xícaras'}
+                                    Calculado para {recipePortions} {(selectedRecipe.category as any) === 'Acompanhamentos' ? 'porções' : 'xícaras'}
                                   </span>
                                 )}
                               </div>
@@ -4409,8 +4611,13 @@ export default function App() {
                                         />
                                       </div>
 
-                                      <div className="text-left max-w-md mx-auto space-y-4">
-                                        {renderFormattedContent(selectedRecipe.steps[currentStepIndex].description)}
+                                      <div className="text-center max-w-md mx-auto space-y-3">
+                                        <h4 className="text-xl sm:text-2xl font-sans font-black text-coffee-950">
+                                          {selectedRecipe.steps[currentStepIndex].title}
+                                        </h4>
+                                        <div className="text-left space-y-4">
+                                          {renderStepContent(selectedRecipe.steps[currentStepIndex].description)}
+                                        </div>
                                       </div>
                                     </motion.div>
                                   )}

@@ -9,6 +9,12 @@ export interface JourneyStep {
   requirements?: string;
   reward?: string;
   audioUrl?: string;
+  step?: number;
+  subtitle?: string;
+  imageUrl?: string;
+  baristaTip?: string;
+  readTime?: string;
+  iconName?: string;
   content?: {
     overview: string;
     tasks: string[];

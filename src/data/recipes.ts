@@ -11,6 +11,8 @@ export interface Step {
 }
 
 export type WeatherCondition = 'hot' | 'cold' | 'neutral' | 'rainy';
+export type Category = 'Espresso' | 'Latte' | 'Cappuccino' | 'Cold Brew' | 'Specialty' | 'Pães & Salgados' | 'Bolos' | 'Biscoitos & Doces';
+export type Difficulty = 'Easy' | 'Medium' | 'Hard';
 
 export interface Recipe {
   id: string;
@@ -23,8 +25,8 @@ export interface Recipe {
   detailedIngredients: Ingredient[];
   steps: Step[];
   weatherSuitability: WeatherCondition[];
-  category: 'Espresso' | 'Latte' | 'Cappuccino' | 'Cold Brew' | 'Specialty' | 'Pães & Salgados' | 'Bolos' | 'Biscoitos & Doces';
-  difficulty: 'Easy' | 'Medium' | 'Hard';
+  category: Category;
+  difficulty: Difficulty;
   prepTime: string;
 }
 
