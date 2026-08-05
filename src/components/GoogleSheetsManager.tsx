@@ -3,8 +3,9 @@ import { FileSpreadsheet, Download, Upload, Check, Loader2, AlertCircle, Refresh
 import { Recipe } from '../data/recipes';
 import { JourneyStep } from '../data/journey';
 import { signInWithGoogle, googleSignOut, initGoogleAuth, getGoogleAccessToken } from '../services/googleAuth';
-import { createCoffeeGoogleSheet, syncDataToGoogleSheet, readDataFromGoogleSheet } from '../services/googleSheetsService';
+import { createCoffeeGoogleSheet, syncDataToGoogleSheet, readDataFromGoogleSheet, extractSpreadsheetId } from '../services/googleSheetsService';
 import { exportRecipesToExcel, parseExcelOrCsvFile, downloadExcelTemplate } from '../services/excelService';
+import { updateSettingsKey, fetchSettingsKey } from '../services/supabaseService';
 import * as XLSX from 'xlsx';
 
 interface GoogleSheetsManagerProps {
@@ -49,8 +50,27 @@ export default function GoogleSheetsManager({
       setGoogleUser(null);
       setAccessToken(null);
     });
+
+    // Check Supabase settings for global spreadsheet ID
+    fetchSettingsKey('google_spreadsheet_id').then(remoteId => {
+      if (remoteId && !localStorage.getItem('coffee_google_spreadsheet_id')) {
+        setSpreadsheetId(remoteId);
+        localStorage.setItem('coffee_google_spreadsheet_id', remoteId);
+      }
+    }).catch(console.warn);
+
     return () => unsubscribe();
   }, []);
+
+  const saveSpreadsheetConfig = (id: string, url?: string) => {
+    const cleanId = extractSpreadsheetId(id);
+    setSpreadsheetId(cleanId);
+    if (url) setSpreadsheetUrl(url);
+    localStorage.setItem('coffee_google_spreadsheet_id', cleanId);
+    if (url) localStorage.setItem('coffee_google_spreadsheet_url', url);
+    updateSettingsKey('google_spreadsheet_id', cleanId).catch(console.warn);
+    if (url) updateSettingsKey('google_spreadsheet_url', url).catch(console.warn);
+  };
 
   const handleGoogleSignIn = async () => {
     setIsConnecting(true);
@@ -94,10 +114,7 @@ export default function GoogleSheetsManager({
         settings
       });
 
-      setSpreadsheetId(res.spreadsheetId);
-      setSpreadsheetUrl(res.spreadsheetUrl);
-      localStorage.setItem('coffee_google_spreadsheet_id', res.spreadsheetId);
-      localStorage.setItem('coffee_google_spreadsheet_url', res.spreadsheetUrl);
+      saveSpreadsheetConfig(res.spreadsheetId, res.spreadsheetUrl);
 
       setMessage({ type: 'success', text: 'Planilha criada com sucesso no seu Google Drive com as 4 abas!' });
     } catch (err: any) {
@@ -123,12 +140,14 @@ export default function GoogleSheetsManager({
     setMessage(null);
 
     try {
-      await syncDataToGoogleSheet(spreadsheetId, token, {
+      const cleanId = extractSpreadsheetId(spreadsheetId);
+      await syncDataToGoogleSheet(cleanId, token, {
         recipes,
         journey,
         logoUrl: logoUrl || undefined,
         settings
       });
+      saveSpreadsheetConfig(cleanId);
       setMessage({ type: 'success', text: 'Dados enviados para o Google Sheets com sucesso!' });
     } catch (err: any) {
       console.error(err);
@@ -139,13 +158,8 @@ export default function GoogleSheetsManager({
   };
 
   const handleReadFromGoogle = async () => {
-    const token = accessToken || getGoogleAccessToken();
-    if (!token) {
-      setMessage({ type: 'error', text: 'Faça login com o Google para carregar os dados.' });
-      return;
-    }
     if (!spreadsheetId) {
-      setMessage({ type: 'error', text: 'Insira um ID de Planilha do Google.' });
+      setMessage({ type: 'error', text: 'Insira um ID ou link de Planilha do Google.' });
       return;
     }
 
@@ -153,18 +167,26 @@ export default function GoogleSheetsManager({
     setMessage(null);
 
     try {
-      const data = await readDataFromGoogleSheet(spreadsheetId, token);
-      onDataImported({
-        recipes: data.receitas_cafe,
-        journey: data.jornada_do_cafe,
-        logoUrl: data.logotipo_de_cafe,
-        settings: data.configuracoes_do_aplicativo
-      });
+      const token = accessToken || getGoogleAccessToken();
+      const cleanId = extractSpreadsheetId(spreadsheetId);
+      saveSpreadsheetConfig(cleanId);
 
-      setMessage({ type: 'success', text: 'Dados atualizados do Google Sheets com sucesso!' });
+      const data = await readDataFromGoogleSheet(cleanId, token || undefined);
+      if ((data.receitas_cafe && data.receitas_cafe.length > 0) || data.jornada_do_cafe || data.logotipo_de_cafe) {
+        onDataImported({
+          recipes: data.receitas_cafe,
+          journey: data.jornada_do_cafe,
+          logoUrl: data.logotipo_de_cafe,
+          settings: data.configuracoes_do_aplicativo
+        });
+
+        setMessage({ type: 'success', text: 'Dados atualizados do Google Sheets com sucesso e sincronizados com a nuvem!' });
+      } else {
+        setMessage({ type: 'error', text: 'Nenhuma receita encontrada. Verifique se a planilha está pública ("Qualquer pessoa com o link") ou se as abas estão corretas.' });
+      }
     } catch (err: any) {
       console.error(err);
-      setMessage({ type: 'error', text: 'Erro ao ler dados da planilha do Google Sheets.' });
+      setMessage({ type: 'error', text: 'Erro ao ler dados da planilha do Google Sheets: ' + (err.message || '') });
     } finally {
       setIsLoading(false);
     }
@@ -376,7 +398,7 @@ export default function GoogleSheetsManager({
 
           <button
             onClick={handleReadFromGoogle}
-            disabled={isLoading || !googleUser || !spreadsheetId}
+            disabled={isLoading || !spreadsheetId}
             className="bg-white hover:bg-coffee-100 border border-coffee-200 text-coffee-900 disabled:opacity-50 px-4 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-sm"
           >
             {isLoading ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}

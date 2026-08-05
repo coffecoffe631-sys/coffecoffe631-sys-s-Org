@@ -6,6 +6,7 @@ import { coffeeJourney, JourneyStep } from './data/journey';
 import { useWeather } from './hooks/useWeather';
 import JourneyView from './components/JourneyView';
 import GoogleSheetsManager from './components/GoogleSheetsManager';
+import { readDataFromGoogleSheet } from './services/googleSheetsService';
 import { getLocalCoffeeRecommendation } from './services/recommendationService';
 import { fetchRecipesFromSupabase, insertRecipeToSupabase, deleteRecipeFromSupabase, updateRecipeInSupabase, seedRecipes, fetchAppLogo, updateAppLogo, fetchSettingsKey, updateSettingsKey, fetchJourneyFromSupabase, updateJourneyStepInSupabase, seedJourney, insertJourneyStepToSupabase, deleteJourneyStepFromSupabase, getRecipesTableName } from './services/supabaseService';
 import { cn } from './lib/utils';
@@ -986,30 +987,57 @@ export default function App() {
   [allRecipes]);
 
   useEffect(() => {
-    const loadSupabaseData = async () => {
+    const loadAppData = async () => {
       try {
-        const [dbRecipes, dbJourney] = await Promise.all([
-          fetchRecipesFromSupabase(),
-          fetchJourneyFromSupabase()
-        ]);
+        let finalRecipes: Recipe[] = [];
 
-        let finalRecipes = dbRecipes || [];
+        // Try fetching remote settings key for spreadsheet ID safely without blocking
+        let remoteSpreadsheetId: string | null = null;
+        try {
+          remoteSpreadsheetId = await fetchSettingsKey('google_spreadsheet_id');
+        } catch (e) {
+          console.warn("Supabase settings fetch skipped:", e);
+        }
 
-        if (!dbRecipes || dbRecipes.length === 0) {
+        const sheetId = remoteSpreadsheetId || localStorage.getItem('coffee_google_spreadsheet_id');
+
+        // 1. Primary Sync: Load data from Google Sheets if a sheet ID exists
+        if (sheetId) {
           try {
-            await seedRecipes([...recipes, ...defaultAccompaniments]);
-            const freshRecipes = await fetchRecipesFromSupabase();
-            if (freshRecipes && freshRecipes.length > 0) {
-              finalRecipes = freshRecipes;
-            } else {
-              finalRecipes = [...recipes, ...defaultAccompaniments];
+            const sheetData = await readDataFromGoogleSheet(sheetId);
+            if (sheetData.receitas_cafe && sheetData.receitas_cafe.length > 0) {
+              finalRecipes = sheetData.receitas_cafe;
+              localStorage.setItem('coffee_google_spreadsheet_id', sheetId);
             }
-          } catch (seedErr) {
-            console.error("Auto-seeding recipes failed:", seedErr);
-            finalRecipes = [...recipes, ...defaultAccompaniments];
+            if (sheetData.jornada_do_cafe && sheetData.jornada_do_cafe.length > 0) {
+              setCurrentJourney(sheetData.jornada_do_cafe);
+            }
+            if (sheetData.logotipo_de_cafe) {
+              setAppLogo(sheetData.logotipo_de_cafe);
+              localStorage.setItem('coffee_app_logo', sheetData.logotipo_de_cafe);
+            }
+          } catch (sheetErr) {
+            console.warn("Could not auto-sync Google Sheet on startup:", sheetErr);
           }
         }
-        // Retrieve local custom recipes from localStorage
+
+        // 2. Fallback: If no recipes loaded from Google Sheets, check Supabase or defaults
+        if (!finalRecipes || finalRecipes.length === 0) {
+          try {
+            const dbRecipes = await fetchRecipesFromSupabase();
+            if (dbRecipes && dbRecipes.length > 0) {
+              finalRecipes = dbRecipes;
+            }
+          } catch (e) {
+            console.warn("Supabase recipe fetch skipped:", e);
+          }
+        }
+
+        if (!finalRecipes || finalRecipes.length === 0) {
+          finalRecipes = [...recipes, ...defaultAccompaniments];
+        }
+
+        // 3. Merge local custom recipes if any exist
         let customList: Recipe[] = [];
         try {
           const savedCustom = localStorage.getItem('coffee_user_custom_recipes');
@@ -1018,13 +1046,14 @@ export default function App() {
           console.warn("Could not parse coffee_user_custom_recipes:", e);
         }
 
-        // Automatically inject default coffee recipes, accompaniments, and user custom recipes if missing
-        const baseDefaults = [...recipes, ...defaultAccompaniments];
-        const missingDefaults = baseDefaults.filter(dr => !finalRecipes.some(r => r.name === dr.name || r.id === dr.id));
-        const missingCustom = customList.filter(c => !finalRecipes.some(r => r.name === c.name || r.id === c.id));
-        finalRecipes = [...finalRecipes, ...missingDefaults, ...missingCustom];
+        if (customList.length > 0) {
+          const mergedMap = new globalThis.Map<string, Recipe>();
+          finalRecipes.forEach(r => mergedMap.set(r.name || r.id, r));
+          customList.forEach(c => mergedMap.set(c.name || c.id, c));
+          finalRecipes = Array.from(mergedMap.values());
+        }
 
-        // Apply local overrides
+        // 4. Apply local overrides
         try {
           const savedOverrides = localStorage.getItem('coffee_recipe_overrides');
           if (savedOverrides) {
@@ -1122,47 +1151,23 @@ export default function App() {
           return merged;
         });
 
-        if (dbJourney && dbJourney.length > 0) {
-          setCurrentJourney(dbJourney);
-        } else {
-          await seedJourney(coffeeJourney);
-          const freshJourney = await fetchJourneyFromSupabase();
-          setCurrentJourney(freshJourney);
+        try {
+          const dbJourney = await fetchJourneyFromSupabase();
+          if (dbJourney && dbJourney.length > 0) {
+            setCurrentJourney(dbJourney);
+          }
+        } catch (jErr) {
+          console.warn("Journey fetch from Supabase skipped:", jErr);
         }
 
         setSupabaseError(null);
       } catch (err: any) {
-        console.error("Failed to load data from Supabase:", err);
-        setSupabaseError(err.message || "Erro de conexão");
-        
-        // Fallback to local default recipes and journey steps to ensure a robust and working user experience
-        let finalRecipes = [...recipes, ...defaultAccompaniments];
-        try {
-          const savedOverrides = localStorage.getItem('coffee_recipe_overrides');
-          if (savedOverrides) {
-            const overrides = JSON.parse(savedOverrides);
-            finalRecipes = finalRecipes.map(r => {
-              const o = overrides[r.id];
-              if (o) {
-                return {
-                  ...r,
-                  name: o.name !== undefined ? o.name : r.name,
-                  equipment: o.equipment !== undefined ? o.equipment : r.equipment,
-                };
-              }
-              return r;
-            });
-          }
-        } catch (overrideErr) {
-          console.error("Error applying recipe overrides in catch block:", overrideErr);
-        }
-        setAllRecipes(finalRecipes);
-        setCurrentJourney(coffeeJourney);
+        console.error("Failed to load app data:", err);
       } finally {
         setIsLoadingSupabase(false);
       }
     };
-    loadSupabaseData();
+    loadAppData();
   }, []);
 
   useEffect(() => {
@@ -1605,7 +1610,7 @@ export default function App() {
     }
   };
 
-  const handleGoogleSheetsImported = (data: {
+  const handleGoogleSheetsImported = async (data: {
     recipes?: Recipe[];
     journey?: JourneyStep[];
     logoUrl?: string;
@@ -1616,13 +1621,29 @@ export default function App() {
       // reset filters
       setSelectedCategory(null);
       setSearchQuery('');
+
+      try {
+        await seedRecipes(data.recipes);
+      } catch (err) {
+        console.warn("Could not sync imported recipes to Supabase:", err);
+      }
     }
     if (data.journey && data.journey.length > 0) {
       setCurrentJourney(data.journey);
+      try {
+        await seedJourney(data.journey);
+      } catch (err) {
+        console.warn("Could not sync imported journey to Supabase:", err);
+      }
     }
     if (data.logoUrl) {
       setAppLogo(data.logoUrl);
       localStorage.setItem('coffee_app_logo', data.logoUrl);
+      try {
+        await updateAppLogo(data.logoUrl);
+      } catch (err) {
+        console.warn("Could not sync imported app logo to Supabase:", err);
+      }
     }
   };
 

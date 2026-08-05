@@ -241,18 +241,27 @@ export const seedRecipes = async (recipes: Recipe[]) => {
   const tableName = await getRecipesTableName();
   const formattedRecipesPt = recipes.map(recipe => ({
     nome: recipe.name,
-    pais: recipe.country,
-    descricao: recipe.description,
-    imagem_url: recipe.image,
-    categoria: recipe.category,
-    tempo_preparo: recipe.prepTime,
-    dificuldade: recipe.difficulty,
-    ingredientes: recipe.detailedIngredients,
-    modo_preparo: recipe.steps,
-    equipamentos: recipe.equipment,
-    clima_adequado: recipe.weatherSuitability
+    pais: recipe.country || 'Brasil',
+    descricao: recipe.description || '',
+    imagem_url: recipe.image || '',
+    categoria: recipe.category || 'Specialty',
+    tempo_preparo: recipe.prepTime || '5 min',
+    dificuldade: recipe.difficulty || 'Medium',
+    ingredientes: recipe.detailedIngredients || [],
+    modo_preparo: recipe.steps || [],
+    equipamentos: recipe.equipment || [],
+    clima_adequado: recipe.weatherSuitability || ['hot', 'cold', 'neutral']
   }));
 
+  // Try upserting on conflict 'nome' or 'id'
+  const { data: upsertData, error: upsertError } = await supabase
+    .from(tableName)
+    .upsert(formattedRecipesPt, { onConflict: 'nome' })
+    .select();
+
+  if (!upsertError) return upsertData;
+
+  // Fallback to simple insert
   const { data, error } = await supabase
     .from(tableName)
     .insert(formattedRecipesPt)
