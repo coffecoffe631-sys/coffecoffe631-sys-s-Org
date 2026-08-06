@@ -440,117 +440,163 @@ export async function readPublicGoogleSheetData(
   const cleanId = extractSpreadsheetId(spreadsheetId);
   if (!cleanId) return {};
 
-  const tabs = ['receitas_cafe', 'jornada_do_cafe', 'logotipo_de_cafe', 'configuracoes_do_aplicativo'];
+  const tabGroups = [
+    {
+      key: 'receitas_cafe',
+      candidates: ['receitas_cafe', 'receitas_café', 'receitas', 'Receitas', 'Receitas do Café', 'receitas_do_cafe']
+    },
+    {
+      key: 'jornada_do_cafe',
+      candidates: ['jornada_do_cafe', 'jornada_do_café', 'jornada', 'Jornada', 'Jornada do Café', 'jornada_cafe', 'Jornada do Cafe']
+    },
+    {
+      key: 'logotipo_de_cafe',
+      candidates: ['logotipo_de_cafe', 'logotipo_de_café', 'logotipo', 'Logo', 'Logotipo do Café', 'app_logo']
+    },
+    {
+      key: 'configuracoes_do_aplicativo',
+      candidates: ['configuracoes_do_aplicativo', 'configurações_do_aplicativo', 'configuracoes', 'Configurações', 'settings']
+    }
+  ];
+
   const result: Partial<GoogleSheetsData> = {};
 
-  for (const tab of tabs) {
-    try {
-      const csvUrl = `https://docs.google.com/spreadsheets/d/${cleanId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(tab)}`;
-      const response = await fetch(csvUrl);
-      if (!response.ok) continue;
+  for (const group of tabGroups) {
+    let fetchedRows: any[] | null = null;
 
-      const csvText = await response.text();
-      if (!csvText || csvText.includes('<!DOCTYPE html>')) continue;
+    for (const cand of group.candidates) {
+      try {
+        const csvUrl = `https://docs.google.com/spreadsheets/d/${cleanId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(cand)}`;
+        const response = await fetch(csvUrl);
+        if (!response.ok) continue;
 
-      const workbook = XLSX.read(csvText, { type: 'string' });
-      const firstSheetName = workbook.SheetNames[0];
-      if (!firstSheetName) continue;
-      const worksheet = workbook.Sheets[firstSheetName];
-      const rows: any[] = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+        const csvText = await response.text();
+        if (!csvText || csvText.includes('<!DOCTYPE html>')) continue;
 
-      if (!rows || rows.length === 0) continue;
+        const workbook = XLSX.read(csvText, { type: 'string' });
+        const firstSheetName = workbook.SheetNames[0];
+        if (!firstSheetName) continue;
+        const worksheet = workbook.Sheets[firstSheetName];
+        const rows: any[] = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
 
-      if (tab === 'receitas_cafe') {
-        const recipes: Recipe[] = [];
-        rows.forEach((row, idx) => {
-          const getVal = (key: string) => {
-            const keyMatch = Object.keys(row).find(rk => rk.toLowerCase().trim() === key.toLowerCase().trim());
-            return keyMatch ? String(row[keyMatch] || '') : '';
-          };
-
-          const name = getVal('nome') || getVal('name');
-          if (!name) return;
-
-          const rawIng = getVal('ingredientes') || getVal('ingredients');
-          const { detailedIngredients, ingredients } = parseIngredients(rawIng);
-
-          const rawEq = getVal('equipamentos') || getVal('equipment');
-          const equipment = parseEquipment(rawEq);
-
-          const rawSteps = getVal('modo_preparo') || getVal('modo_de_preparo') || getVal('steps');
-          const steps = parseSteps(rawSteps);
-
-          const weatherSuitability = parseWeatherSuitability(getVal('clima_adequado') || getVal('clima'));
-
-          recipes.push({
-            id: getVal('id') || `sheet-pub-${idx}`,
-            name,
-            country: getVal('pais') || getVal('country') || 'Brasil',
-            description: getVal('descricao') || getVal('description') || '',
-            image: getVal('imagem_url') || getVal('imagem') || getVal('image_url') || getVal('image') || 'https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=1000',
-            category: (getVal('categoria') || getVal('category') || 'Specialty') as any,
-            prepTime: getVal('tempo_preparo') || getVal('tempo_de_preparo') || getVal('prep_time') || '5 min',
-            difficulty: (getVal('dificuldade') || getVal('difficulty') || 'Easy') as any,
-            ingredients,
-            detailedIngredients,
-            equipment,
-            steps,
-            weatherSuitability: weatherSuitability as any
-          });
-        });
-
-        if (recipes.length > 0) {
-          result.receitas_cafe = recipes;
+        if (rows && rows.length > 0) {
+          fetchedRows = rows;
+          break; // successfully found tab
         }
-      } else if (tab === 'jornada_do_cafe') {
-        const journey: JourneyStep[] = [];
-        rows.forEach((row, idx) => {
-          const getVal = (key: string) => {
-            const keyMatch = Object.keys(row).find(rk => rk.toLowerCase().trim() === key.toLowerCase().trim());
-            return keyMatch ? String(row[keyMatch] || '') : '';
-          };
-
-          journey.push({
-            id: `journey-pub-${idx}`,
-            status: idx === 0 ? 'completed' : idx === 1 ? 'current' : 'locked',
-            icon: getVal('icone') || 'Coffee',
-            step: parseInt(getVal('step') || String(idx + 1), 10),
-            title: getVal('titulo') || 'Etapa do Café',
-            subtitle: getVal('subtitulo') || '',
-            description: getVal('descricao') || '',
-            imageUrl: getVal('imagem_url') || '',
-            baristaTip: getVal('dica_barista') || '',
-            readTime: getVal('tempo_leitura') || '3 min',
-            iconName: getVal('icone') || 'Coffee'
-          });
-        });
-
-        if (journey.length > 0) {
-          result.jornada_do_cafe = journey;
-        }
-      } else if (tab === 'logotipo_de_cafe') {
-        const row = rows[0];
-        if (row) {
-          const logoVal = row['valor'] || row['valor_url'] || row['app_logo'] || Object.values(row)[1] || '';
-          if (logoVal) result.logotipo_de_cafe = String(logoVal);
-        }
-      } else if (tab === 'configuracoes_do_aplicativo') {
-        const settings: Record<string, any> = {};
-        rows.forEach(row => {
-          const key = row['chave'] || row['key'];
-          const rawVal = row['valor_json'] || row['value'] || row['valor'] || '';
-          if (key) {
-            try {
-              settings[key] = JSON.parse(rawVal);
-            } catch (e) {
-              settings[key] = rawVal;
-            }
-          }
-        });
-        result.configuracoes_do_aplicativo = settings;
+      } catch (e) {
+        // continue trying next candidate
       }
-    } catch (e) {
-      console.warn(`Error reading public tab ${tab}:`, e);
+    }
+
+    if (!fetchedRows || fetchedRows.length === 0) continue;
+
+    if (group.key === 'receitas_cafe') {
+      const recipes: Recipe[] = [];
+      fetchedRows.forEach((row, idx) => {
+        const getVal = (keys: string[]) => {
+          for (const k of keys) {
+            const match = Object.keys(row).find(rk => rk.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "") === k.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
+            if (match && row[match] !== undefined && String(row[match]).trim() !== '') return String(row[match]);
+          }
+          return '';
+        };
+
+        const name = getVal(['nome', 'name', 'receita']);
+        if (!name) return;
+
+        const rawIng = getVal(['ingredientes', 'ingredients']);
+        const { detailedIngredients, ingredients } = parseIngredients(rawIng);
+
+        const rawEq = getVal(['equipamentos', 'equipment']);
+        const equipment = parseEquipment(rawEq);
+
+        const rawSteps = getVal(['modo_preparo', 'modo_de_preparo', 'steps', 'preparo']);
+        const steps = parseSteps(rawSteps);
+
+        const weatherSuitability = parseWeatherSuitability(getVal(['clima_adequado', 'clima', 'weather']));
+
+        recipes.push({
+          id: getVal(['id']) || `sheet-pub-${idx}`,
+          name,
+          country: getVal(['pais', 'country']) || 'Brasil',
+          description: getVal(['descricao', 'description']) || '',
+          image: getVal(['imagem_url', 'imagem', 'image_url', 'image', 'foto']) || 'https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=1000',
+          category: (getVal(['categoria', 'category']) || 'Specialty') as any,
+          prepTime: getVal(['tempo_preparo', 'tempo_de_preparo', 'prep_time', 'tempo']) || '5 min',
+          difficulty: (getVal(['dificuldade', 'difficulty']) || 'Easy') as any,
+          ingredients,
+          detailedIngredients,
+          equipment,
+          steps,
+          weatherSuitability: weatherSuitability as any
+        });
+      });
+
+      if (recipes.length > 0) {
+        result.receitas_cafe = recipes;
+      }
+    } else if (group.key === 'jornada_do_cafe') {
+      const journey: JourneyStep[] = [];
+      fetchedRows.forEach((row, idx) => {
+        const getVal = (keys: string[]) => {
+          for (const k of keys) {
+            const match = Object.keys(row).find(rk => rk.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "") === k.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
+            if (match && row[match] !== undefined && String(row[match]).trim() !== '') return String(row[match]);
+          }
+          return '';
+        };
+
+        const title = getVal(['titulo', 'title', 'nome', 'etapa']);
+        if (!title && !row['step'] && !row['etapa']) return;
+
+        const rawStep = getVal(['step', 'etapa', 'passo', 'numero']);
+        const stepNum = rawStep ? parseInt(rawStep, 10) : idx + 1;
+
+        const statusRaw = getVal(['status', 'estado']);
+        const status = (statusRaw === 'completed' || statusRaw === 'current' || statusRaw === 'locked')
+          ? statusRaw
+          : (idx === 0 ? 'completed' : idx === 1 ? 'current' : 'locked');
+
+        journey.push({
+          id: getVal(['id']) || `journey-pub-${idx}`,
+          step: isNaN(stepNum) ? idx + 1 : stepNum,
+          title: title || `Etapa ${idx + 1}`,
+          subtitle: getVal(['subtitulo', 'subtitle']),
+          description: getVal(['descricao', 'description', 'conteudo']),
+          imageUrl: getVal(['imagem_url', 'imagem', 'image_url', 'image', 'foto']),
+          baristaTip: getVal(['dica_barista', 'dica', 'barista_tip', 'tip']),
+          readTime: getVal(['tempo_leitura', 'read_time', 'tempo']) || '3 min',
+          iconName: getVal(['icone', 'icon', 'icon_name']) || 'Coffee',
+          icon: getVal(['icone', 'icon', 'icon_name']) || 'Coffee',
+          status,
+          audioUrl: getVal(['audio_url', 'audio', 'som']),
+          reward: getVal(['reward', 'recompensa', 'premio'])
+        });
+      });
+
+      if (journey.length > 0) {
+        result.jornada_do_cafe = journey;
+      }
+    } else if (group.key === 'logotipo_de_cafe') {
+      const row = fetchedRows[0];
+      if (row) {
+        const logoVal = row['valor'] || row['valor_url'] || row['app_logo'] || Object.values(row)[1] || Object.values(row)[0] || '';
+        if (logoVal) result.logotipo_de_cafe = String(logoVal);
+      }
+    } else if (group.key === 'configuracoes_do_aplicativo') {
+      const settings: Record<string, any> = {};
+      fetchedRows.forEach(row => {
+        const key = row['chave'] || row['key'];
+        const rawVal = row['valor_json'] || row['value'] || row['valor'] || '';
+        if (key) {
+          try {
+            settings[key] = JSON.parse(rawVal);
+          } catch (e) {
+            settings[key] = rawVal;
+          }
+        }
+      });
+      result.configuracoes_do_aplicativo = settings;
     }
   }
 
@@ -636,34 +682,50 @@ export async function readDataFromGoogleSheet(
   // 2. Jornada do Café
   const journeyRange = valueRanges[1]?.values || [];
   if (journeyRange.length > 1) {
-    const headers = journeyRange[0].map((h: string) => h.toLowerCase().trim());
+    const rawHeaders = journeyRange[0].map((h: string) => String(h || '').toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
     const journey: JourneyStep[] = [];
 
     for (let i = 1; i < journeyRange.length; i++) {
       const row = journeyRange[i];
       if (!row || row.length === 0) continue;
 
-      const getVal = (key: string) => {
-        const idx = headers.indexOf(key);
-        return idx !== -1 ? row[idx] || '' : '';
+      const getVal = (keys: string[]) => {
+        for (const k of keys) {
+          const normK = k.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+          const idx = rawHeaders.indexOf(normK);
+          if (idx !== -1 && row[idx] !== undefined && String(row[idx]).trim() !== '') return String(row[idx]);
+        }
+        return '';
       };
 
+      const rawStep = getVal(['step', 'etapa', 'passo', 'numero']);
+      const stepNum = rawStep ? parseInt(rawStep, 10) : i;
+      const title = getVal(['titulo', 'title', 'nome', 'etapa']);
+      const statusRaw = getVal(['status', 'estado']);
+      const status = (statusRaw === 'completed' || statusRaw === 'current' || statusRaw === 'locked')
+        ? statusRaw
+        : (i === 1 ? 'completed' : i === 2 ? 'current' : 'locked');
+
       journey.push({
-        id: `journey-${i}`,
-        status: i === 1 ? 'completed' : i === 2 ? 'current' : 'locked',
-        icon: getVal('icone') || 'Coffee',
-        step: parseInt(getVal('step') || String(i), 10),
-        title: getVal('titulo') || 'Etapa do Café',
-        subtitle: getVal('subtitulo') || '',
-        description: getVal('descricao') || '',
-        imageUrl: getVal('imagem_url') || '',
-        baristaTip: getVal('dica_barista') || '',
-        readTime: getVal('tempo_leitura') || '3 min',
-        iconName: getVal('icone') || 'Coffee'
+        id: getVal(['id']) || `journey-${i}`,
+        step: isNaN(stepNum) ? i : stepNum,
+        title: title || `Etapa ${i}`,
+        subtitle: getVal(['subtitulo', 'subtitle']),
+        description: getVal(['descricao', 'description', 'conteudo']),
+        imageUrl: getVal(['imagem_url', 'imagem', 'image_url', 'image', 'foto']),
+        baristaTip: getVal(['dica_barista', 'dica', 'barista_tip', 'tip']),
+        readTime: getVal(['tempo_leitura', 'read_time', 'tempo']) || '3 min',
+        iconName: getVal(['icone', 'icon', 'icon_name']) || 'Coffee',
+        icon: getVal(['icone', 'icon', 'icon_name']) || 'Coffee',
+        status,
+        audioUrl: getVal(['audio_url', 'audio', 'som']),
+        reward: getVal(['reward', 'recompensa', 'premio'])
       });
     }
 
-    result.jornada_do_cafe = journey;
+    if (journey.length > 0) {
+      result.jornada_do_cafe = journey;
+    }
   }
 
   // 3. Logotipo de Café

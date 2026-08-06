@@ -40,39 +40,68 @@ export function exportRecipesToExcel(recipes: Recipe[], filename: string = 'rece
 }
 
 export function downloadExcelTemplate() {
-  const templateData = [
+  const recipesTemplate = [
     {
-      'Nome': 'Café Coado Especial',
-      'País': 'Brasil',
-      'Descrição': 'Um café suave e aromático preparado no filtro V60.',
-      'Imagem URL': 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?q=80&w=1000',
-      'Categoria': 'Specialty',
-      'Tempo de Preparo': '5 min',
-      'Dificuldade': 'Easy',
-      'Ingredientes': 'Café especial moído médio (20g); Água filtrada aquecida (300ml)',
-      'Equipamentos': 'Filtro V60; Chaleira com bico de ganso; Balança',
-      'Modo de Preparo': '1. Escalfe o filtro com água quente.\n2. Adicione 20g de café e faça pré-infusão de 40s com 50ml de água.\n3. Despeje o restante da água em círculos até atingir 300ml.',
-      'Clima Adequado': 'hot, cold, neutral'
+      'nome': 'Café Coado Especial',
+      'pais': 'Brasil',
+      'descricao': 'Um café suave e aromático preparado no filtro V60.',
+      'imagem_url': 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?q=80&w=1000',
+      'categoria': 'Specialty',
+      'tempo_preparo': '5 min',
+      'dificuldade': 'Easy',
+      'ingredientes': 'Café especial moído médio (20g); Água filtrada aquecida (300ml)',
+      'equipamentos': 'Filtro V60; Chaleira com bico de ganso; Balança',
+      'modo_preparo': '1. Escalfe o filtro com água quente.\n2. Adicione 20g de café e faça pré-infusão de 40s com 50ml de água.\n3. Despeje o restante da água em círculos até atingir 300ml.',
+      'clima_adequado': 'hot, cold, neutral'
     },
     {
-      'Nome': 'Pão de Queijo Mineiro',
-      'País': 'Brasil',
-      'Descrição': 'Pão de queijo quentinho e crocante por fora e macio por dentro.',
-      'Imagem URL': 'https://images.unsplash.com/photo-1598142773945-f4820898516c?q=80&w=1000',
-      'Categoria': 'Pães & Salgados',
-      'Tempo de Preparo': '30 min',
-      'Dificuldade': 'Easy',
-      'Ingredientes': 'Polvilho azedo (500g); Queijo canastra ralado (300g); Leite (200ml); Óleo (100ml); Ovos (2 unidades); Sal (1 colher de chá)',
-      'Equipamentos': 'Forno; Bacia; Assadeira',
-      'Modo de Preparo': '1. Ferva o leite com o óleo e o sal e escalde o polvilho.\n2. Espere esfriar, adicione os ovos e o queijo e sove bem.\n3. Faça bolinhas e asse a 200°C por 25 minutos.',
-      'Clima Adequado': 'hot, cold, neutral'
+      'nome': 'Pão de Queijo Mineiro',
+      'pais': 'Brasil',
+      'descricao': 'Pão de queijo quentinho e crocante por fora e macio por dentro.',
+      'imagem_url': 'https://images.unsplash.com/photo-1598142773945-f4820898516c?q=80&w=1000',
+      'categoria': 'Pães & Salgados',
+      'tempo_preparo': '30 min',
+      'dificuldade': 'Easy',
+      'ingredientes': 'Polvilho azedo (500g); Queijo canastra ralado (300g); Leite (200ml); Óleo (100ml); Ovos (2 unidades); Sal (1 colher de chá)',
+      'equipamentos': 'Forno; Bacia; Assadeira',
+      'modo_preparo': '1. Ferva o leite com o óleo e o sal e escalde o polvilho.\n2. Espere esfriar, adicione os ovos e o queijo e sove bem.\n3. Faça bolinhas e asse a 200°C por 25 minutos.',
+      'clima_adequado': 'hot, cold, neutral'
     }
   ];
 
-  const worksheet = XLSX.utils.json_to_sheet(templateData);
+  const journeyTemplate = [
+    {
+      'step': 1,
+      'titulo': 'O Despertar do Grão',
+      'subtitulo': 'Sua jornada começa aqui',
+      'descricao': 'Aprenda sobre a origem dos grãos e como escolher o café perfeito para seu paladar.',
+      'imagem_url': 'https://images.unsplash.com/photo-1495474472251-094c1f60f64c?w=1200&auto=format&fit=crop&q=80',
+      'dica_barista': 'Grãos 100% Arábica de altitude costumam ser mais suaves e aromáticos.',
+      'tempo_leitura': '3 min',
+      'icone': 'Leaf',
+      'status': 'completed'
+    },
+    {
+      'step': 2,
+      'titulo': 'Mestre da Extração',
+      'subtitulo': 'Domine a arte do equilíbrio',
+      'descricao': 'Aprenda como a temperatura da água e o tempo de infusão mudam o sabor da xícara.',
+      'imagem_url': 'https://images.unsplash.com/photo-1459756263433-2c026e4a5541?w=1200&auto=format&fit=crop&q=80',
+      'dica_barista': 'Água ideal fica entre 92°C e 96°C. Não use água fervendo para não queimar o café.',
+      'tempo_leitura': '4 min',
+      'icone': 'Droplets',
+      'status': 'current'
+    }
+  ];
+
   const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Modelo Receitas');
-  XLSX.writeFile(workbook, 'modelo_importacao_receitas.xlsx');
+  const wsRecipes = XLSX.utils.json_to_sheet(recipesTemplate);
+  const wsJourney = XLSX.utils.json_to_sheet(journeyTemplate);
+
+  XLSX.utils.book_append_sheet(workbook, wsRecipes, 'receitas_cafe');
+  XLSX.utils.book_append_sheet(workbook, wsJourney, 'jornada_do_cafe');
+
+  XLSX.writeFile(workbook, 'modelo_importacao_planilha_cafe.xlsx');
 }
 
 export async function parseExcelOrCsvFile(file: File): Promise<Omit<Recipe, 'id'>[]> {
