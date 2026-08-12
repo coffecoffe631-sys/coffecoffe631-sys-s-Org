@@ -72,28 +72,51 @@ export const signInWithGoogle = async (): Promise<{ user: any; accessToken: stri
   isSigningIn = true;
 
   // 1. Primary Method: Google Identity Services (GIS) Token Client
-  // Direct to Google OAuth without relying on Firebase Authorized Domains in iframe
   try {
     await loadGsiScript();
     if (window.google?.accounts?.oauth2 && firebaseConfig.oAuthClientId) {
       const token = await new Promise<string>((resolve, reject) => {
-        const tokenClient = window.google.accounts.oauth2.initTokenClient({
-          client_id: firebaseConfig.oAuthClientId,
-          scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email',
-          callback: (response: any) => {
-            if (response.error) {
-              reject(new Error(response.error_description || response.error));
-            } else if (response.access_token) {
-              resolve(response.access_token);
-            } else {
-              reject(new Error('Nenhum token retornado pelo Google.'));
-            }
-          },
-          error_callback: (err: any) => {
-            reject(err);
+        let isSettled = false;
+        
+        // Safety timeout of 60 seconds
+        const timeout = setTimeout(() => {
+          if (!isSettled) {
+            isSettled = true;
+            reject(new Error('A autenticação do Google expirou por inatividade.'));
           }
-        });
-        tokenClient.requestAccessToken({ prompt: 'consent' });
+        }, 60000);
+
+        try {
+          const tokenClient = window.google.accounts.oauth2.initTokenClient({
+            client_id: firebaseConfig.oAuthClientId,
+            scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email',
+            callback: (response: any) => {
+              clearTimeout(timeout);
+              if (isSettled) return;
+              isSettled = true;
+              if (response.error) {
+                reject(new Error(response.error_description || response.error));
+              } else if (response.access_token) {
+                resolve(response.access_token);
+              } else {
+                reject(new Error('Nenhum token retornado pelo Google.'));
+              }
+            },
+            error_callback: (err: any) => {
+              clearTimeout(timeout);
+              if (isSettled) return;
+              isSettled = true;
+              reject(new Error(err?.message || 'Erro na autenticação do Google.'));
+            }
+          });
+          tokenClient.requestAccessToken({ prompt: 'select_account' });
+        } catch (initErr) {
+          clearTimeout(timeout);
+          if (!isSettled) {
+            isSettled = true;
+            reject(initErr);
+          }
+        }
       });
 
       // Retrieve Google user info using the token
@@ -143,10 +166,10 @@ export const signInWithGoogle = async (): Promise<{ user: any; accessToken: stri
   } catch (error: any) {
     console.error('Erro na autenticação do Google:', error);
     if (error.code === 'auth/popup-closed-by-user') {
-      throw new Error('A janela de login do Google foi fechada antes de concluir.');
+      throw new Error('A janela do Google foi fechada. Por favor, verifique se seu navegador não bloqueou o pop-up.');
     }
-    if (error.code === 'auth/unauthorized-domain' || error.message?.includes('unauthorized-domain')) {
-      throw new Error('Bloqueio de segurança do navegador. Você ainda pode ler dados da planilha tornando-a pública ("Qualquer pessoa com o link").');
+    if (error.code === 'auth/unauthorized-domain' || error.message?.includes('unauthorized-domain') || error.message?.includes('origin_mismatch')) {
+      throw new Error('Não foi possível autenticar o pop-up no ambiente atual. Lembre-se: para carregar/ler sua planilha, não é necessário login se ela estiver como "Qualquer pessoa com o link"!');
     }
     throw new Error(error.message || 'Erro ao autenticar com o Google.');
   } finally {
