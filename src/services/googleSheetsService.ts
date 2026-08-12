@@ -468,7 +468,7 @@ export async function readPublicGoogleSheetData(
             return keyMatch ? String(row[keyMatch] || '') : '';
           };
 
-          const name = getVal('nome') || getVal('name');
+          const name = getVal('nome') || getVal('name') || getVal('receita') || getVal('titulo');
           if (!name) return;
 
           const rawIng = getVal('ingredientes') || getVal('ingredients');
@@ -477,7 +477,7 @@ export async function readPublicGoogleSheetData(
           const rawEq = getVal('equipamentos') || getVal('equipment');
           const equipment = parseEquipment(rawEq);
 
-          const rawSteps = getVal('modo_preparo') || getVal('modo_de_preparo') || getVal('steps');
+          const rawSteps = getVal('modo_preparo') || getVal('modo_de_preparo') || getVal('steps') || getVal('preparo');
           const steps = parseSteps(rawSteps);
 
           const weatherSuitability = parseWeatherSuitability(getVal('clima_adequado') || getVal('clima'));
@@ -551,6 +551,69 @@ export async function readPublicGoogleSheetData(
       }
     } catch (e) {
       console.warn(`Error reading public tab ${tab}:`, e);
+    }
+  }
+
+  // Fallback: If no recipes found under "receitas_cafe", try fetching default first sheet (no sheet parameter)
+  if (!result.receitas_cafe || result.receitas_cafe.length === 0) {
+    try {
+      const csvUrl = `https://docs.google.com/spreadsheets/d/${cleanId}/gviz/tq?tqx=out:csv`;
+      const response = await fetch(csvUrl);
+      if (response.ok) {
+        const csvText = await response.text();
+        if (csvText && !csvText.includes('<!DOCTYPE html>')) {
+          const workbook = XLSX.read(csvText, { type: 'string' });
+          const firstSheetName = workbook.SheetNames[0];
+          if (firstSheetName) {
+            const worksheet = workbook.Sheets[firstSheetName];
+            const rows: any[] = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+            const recipes: Recipe[] = [];
+
+            rows.forEach((row, idx) => {
+              const getVal = (key: string) => {
+                const keyMatch = Object.keys(row).find(rk => rk.toLowerCase().trim() === key.toLowerCase().trim());
+                return keyMatch ? String(row[keyMatch] || '') : '';
+              };
+
+              const name = getVal('nome') || getVal('name') || getVal('receita') || getVal('titulo');
+              if (!name) return;
+
+              const rawIng = getVal('ingredientes') || getVal('ingredients');
+              const { detailedIngredients, ingredients } = parseIngredients(rawIng);
+
+              const rawEq = getVal('equipamentos') || getVal('equipment');
+              const equipment = parseEquipment(rawEq);
+
+              const rawSteps = getVal('modo_preparo') || getVal('modo_de_preparo') || getVal('steps') || getVal('preparo');
+              const steps = parseSteps(rawSteps);
+
+              const weatherSuitability = parseWeatherSuitability(getVal('clima_adequado') || getVal('clima'));
+
+              recipes.push({
+                id: getVal('id') || `sheet-fallback-${idx}`,
+                name,
+                country: getVal('pais') || getVal('country') || 'Brasil',
+                description: getVal('descricao') || getVal('description') || '',
+                image: getVal('imagem_url') || getVal('imagem') || getVal('image_url') || getVal('image') || 'https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=1000',
+                category: (getVal('categoria') || getVal('category') || 'Specialty') as any,
+                prepTime: getVal('tempo_preparo') || getVal('tempo_de_preparo') || getVal('prep_time') || '5 min',
+                difficulty: (getVal('dificuldade') || getVal('difficulty') || 'Easy') as any,
+                ingredients,
+                detailedIngredients,
+                equipment,
+                steps,
+                weatherSuitability: weatherSuitability as any
+              });
+            });
+
+            if (recipes.length > 0) {
+              result.receitas_cafe = recipes;
+            }
+          }
+        }
+      }
+    } catch (fallbackErr) {
+      console.warn('Fallback sheet reading failed:', fallbackErr);
     }
   }
 
