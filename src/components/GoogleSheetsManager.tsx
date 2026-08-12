@@ -53,7 +53,7 @@ export default function GoogleSheetsManager({
 
     // Check Supabase settings for global spreadsheet ID
     fetchSettingsKey('google_spreadsheet_id').then(remoteId => {
-      if (remoteId && !localStorage.getItem('coffee_google_spreadsheet_id')) {
+      if (remoteId) {
         setSpreadsheetId(remoteId);
         localStorage.setItem('coffee_google_spreadsheet_id', remoteId);
       }

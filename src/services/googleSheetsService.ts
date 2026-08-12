@@ -320,6 +320,31 @@ async function sheetsApiFetch(endpoint: string, accessToken: string, options: Re
   return response.json();
 }
 
+export async function makeSpreadsheetPublic(
+  spreadsheetId: string,
+  accessToken: string
+): Promise<boolean> {
+  const cleanId = extractSpreadsheetId(spreadsheetId);
+  if (!cleanId) return false;
+  try {
+    const res = await fetch(`https://www.googleapis.com/drive/v3/files/${cleanId}/permissions`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        role: 'reader',
+        type: 'anyone'
+      })
+    });
+    return res.ok;
+  } catch (err) {
+    console.warn('Could not set spreadsheet permissions to public automatically:', err);
+    return false;
+  }
+}
+
 /**
  * Creates a brand new Google Spreadsheet in Google Drive with the 4 requested tabs.
  */
@@ -355,6 +380,9 @@ export async function createCoffeeGoogleSheet(
 
   // 2. Populate initial rows for each tab
   await syncDataToGoogleSheet(spreadsheetId, accessToken, initialData);
+
+  // 3. Make the spreadsheet public so anyone without token can read it
+  await makeSpreadsheetPublic(spreadsheetId, accessToken);
 
   return { spreadsheetId, spreadsheetUrl };
 }
@@ -429,6 +457,9 @@ export async function syncDataToGoogleSheet(
       data: valueRanges
     })
   });
+
+  // Ensure public access permission
+  await makeSpreadsheetPublic(spreadsheetId, accessToken);
 }
 
 /**
