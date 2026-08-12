@@ -10,7 +10,7 @@ provider.addScope('https://www.googleapis.com/auth/spreadsheets');
 provider.addScope('https://www.googleapis.com/auth/drive.file');
 
 let isSigningIn = false;
-let cachedAccessToken: string | null = null;
+let cachedAccessToken: string | null = localStorage.getItem('google_access_token');
 
 export const initGoogleAuth = (
   onAuthSuccess?: (user: User, token: string) => void,
@@ -18,14 +18,16 @@ export const initGoogleAuth = (
 ) => {
   return onAuthStateChanged(auth, async (user: User | null) => {
     if (user) {
-      if (cachedAccessToken) {
-        if (onAuthSuccess) onAuthSuccess(user, cachedAccessToken);
-      } else if (!isSigningIn) {
-        cachedAccessToken = null;
-        if (onAuthFailure) onAuthFailure();
+      const storedToken = cachedAccessToken || localStorage.getItem('google_access_token');
+      if (storedToken) {
+        cachedAccessToken = storedToken;
+        if (onAuthSuccess) onAuthSuccess(user, storedToken);
+      } else {
+        if (onAuthSuccess) onAuthSuccess(user, '');
       }
     } else {
       cachedAccessToken = null;
+      localStorage.removeItem('google_access_token');
       if (onAuthFailure) onAuthFailure();
     }
   });
@@ -41,6 +43,7 @@ export const signInWithGoogle = async (): Promise<{ user: User; accessToken: str
     }
 
     cachedAccessToken = credential.accessToken;
+    localStorage.setItem('google_access_token', credential.accessToken);
     return { user: result.user, accessToken: cachedAccessToken };
   } catch (error: any) {
     console.error('Erro na autenticação do Google:', error);
@@ -53,8 +56,9 @@ export const signInWithGoogle = async (): Promise<{ user: User; accessToken: str
 export const googleSignOut = async (): Promise<void> => {
   await signOut(auth);
   cachedAccessToken = null;
+  localStorage.removeItem('google_access_token');
 };
 
 export const getGoogleAccessToken = (): string | null => {
-  return cachedAccessToken;
+  return cachedAccessToken || localStorage.getItem('google_access_token');
 };
