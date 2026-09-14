@@ -180,7 +180,12 @@ export default function GoogleSheetsManager({
           settings: data.configuracoes_do_aplicativo
         });
 
-        setMessage({ type: 'success', text: 'Dados atualizados do Google Sheets com sucesso e sincronizados com a nuvem!' });
+        const countRecipes = data.receitas_cafe?.length || 0;
+        const countJourney = data.jornada_do_cafe?.length || 0;
+        setMessage({
+          type: 'success',
+          text: `Planilha lida com sucesso! ${countRecipes} receita(s) e ${countJourney} etapa(s) da jornada importadas e sincronizadas.`
+        });
       } else {
         setMessage({ type: 'error', text: 'Nenhuma receita encontrada. Verifique se a planilha está pública ("Qualquer pessoa com o link") ou se as abas estão corretas.' });
       }

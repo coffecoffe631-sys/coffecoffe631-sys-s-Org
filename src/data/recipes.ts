@@ -28,6 +28,12 @@ export interface Recipe {
   category: Category;
   difficulty: Difficulty;
   prepTime: string;
+  yield?: string;
+  history?: string;
+  baristaTip?: string;
+  commonErrors?: string;
+  howToServe?: string;
+  curiosity?: string;
 }
 
 export const recipes: Recipe[] = [

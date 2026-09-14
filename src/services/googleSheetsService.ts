@@ -301,6 +301,172 @@ export function parseWeatherSuitability(rawInput: any): WeatherCondition[] {
   return mapped.length > 0 ? Array.from(new Set(mapped)) : ['hot', 'cold', 'neutral'];
 }
 
+/**
+ * Normalizes category from Portuguese/English variations to Category union
+ */
+export function parseCategory(raw: string): Category {
+  const s = String(raw || '').toLowerCase().trim();
+  if (s.includes('especial') || s.includes('specialty')) return 'Specialty';
+  if (s.includes('clássic') || s.includes('classic') || s.includes('tradicional')) return 'Classics';
+  if (s.includes('frio') || s.includes('gelad') || s.includes('cold') || s.includes('iced') || s.includes('refresc')) return 'Cold';
+  if (s.includes('doce') || s.includes('sobremesa') || s.includes('dessert') || s.includes('sweet')) return 'Dessert';
+  if (s.includes('quente') || s.includes('hot')) return 'Hot';
+  return 'Specialty';
+}
+
+/**
+ * Normalizes difficulty from Portuguese/English variations to Difficulty union
+ */
+export function parseDifficulty(raw: string): Difficulty {
+  const s = String(raw || '').toLowerCase().trim();
+  if (s.includes('difícil') || s.includes('dificil') || s.includes('hard') || s.includes('avançad') || s.includes('complex')) return 'Hard';
+  if (s.includes('médio') || s.includes('medio') || s.includes('medium') || s.includes('moderado') || s.includes('intermediári')) return 'Medium';
+  return 'Easy';
+}
+
+/**
+ * Normalizes header keys by stripping accents, symbols, spaces, and punctuation
+ */
+function normalizeHeaderKey(key: string): string {
+  return String(key || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // remove acentos
+    .replace(/[^a-z0-9]/g, ''); // remove underscores, hífens, espaços, etc.
+}
+
+/**
+ * Dictionary of field aliases mapping to canonical fields
+ */
+const RECIPE_FIELD_ALIASES: Record<string, string[]> = {
+  name: [
+    'nome', 'name', 'receita', 'nomereceita', 'titulo', 'titulodareceita', 'bebidanome', 'nomedabebida', 'item', 'cafe', 'nomecafe'
+  ],
+  country: [
+    'pais', 'country', 'origem', 'nacao', 'regiao', 'procedencia', 'ondeveio'
+  ],
+  description: [
+    'descricao', 'description', 'sobre', 'detalhes', 'resumo', 'apresentacao', 'textodescritivo', 'info'
+  ],
+  image: [
+    'imagemurl', 'imagem', 'imageurl', 'image', 'foto', 'fotourl', 'linkimagem', 'urlimagem', 'fotodareceita', 'capa'
+  ],
+  category: [
+    'categoria', 'category', 'tipo', 'tipodecafe', 'estilo', 'classificacao', 'grupo'
+  ],
+  prepTime: [
+    'tempopreparo', 'tempodepreparo', 'preptime', 'tempo', 'duracao', 'minutos', 'tempototal'
+  ],
+  difficulty: [
+    'dificuldade', 'difficulty', 'nivel', 'niveldificuldade', 'graudificuldade', 'grau'
+  ],
+  ingredients: [
+    'ingredientes', 'ingredients', 'ingrediente', 'listadeingredientes', 'composicao', 'oquevai'
+  ],
+  equipment: [
+    'equipamentos', 'equipment', 'equipamento', 'utensilios', 'utensilio', 'materiais', 'ferramentas', 'acessorios'
+  ],
+  steps: [
+    'modopreparo', 'mododepreparo', 'steps', 'preparo', 'comofazer', 'passos', 'instrucoes', 'passoapasso', 'metodo', 'procedimento'
+  ],
+  weather: [
+    'climaadequado', 'clima', 'tempoadequado', 'estacao', 'weather', 'temperaturaideal', 'ocasioes'
+  ],
+  yield: [
+    'rendimento', 'rendimentoporcoes', 'porcoes', 'porcao', 'serve', 'yield', 'quantidadexicaras', 'xicaras', 'doses'
+  ],
+  history: [
+    'historia', 'historiadareceita', 'origemhistorica', 'contexto', 'contextohistorico', 'history'
+  ],
+  baristaTip: [
+    'dicabarista', 'dicadobarista', 'dica', 'truque', 'segredo', 'baristatip', 'tip', 'conselhodobarista'
+  ],
+  commonErrors: [
+    'erroscomuns', 'errosafazer', 'cuidados', 'oquenaofazer', 'atencao', 'errosfrequentes', 'falhascomuns'
+  ],
+  howToServe: [
+    'comoservir', 'sugestaodeservir', 'acompanhamentos', 'harmonizacao', 'servircom', 'apresentacaoideal'
+  ],
+  curiosity: [
+    'curiosidade', 'curiosidades', 'sabiamais', 'fatocurioso', 'curiosity'
+  ]
+};
+
+/**
+ * Flexible extractor for any recipe row (supports object from XLSX, key-value maps, etc.)
+ */
+function extractValueFromRow(row: Record<string, any>, aliases: string[]): string {
+  const rowKeys = Object.keys(row);
+  for (const alias of aliases) {
+    const normalizedAlias = normalizeHeaderKey(alias);
+    const matchedKey = rowKeys.find(rk => normalizeHeaderKey(rk) === normalizedAlias);
+    if (matchedKey && row[matchedKey] !== undefined && row[matchedKey] !== null) {
+      const val = String(row[matchedKey]).trim();
+      if (val) return val;
+    }
+  }
+  return '';
+}
+
+/**
+ * Converts a raw table row from any user spreadsheet into a standardized Recipe object
+ */
+export function mapRowToRecipe(row: Record<string, any>, index: number, prefix: string = 'sheet'): Recipe | null {
+  const name = extractValueFromRow(row, RECIPE_FIELD_ALIASES.name);
+  if (!name) return null;
+
+  const rawIng = extractValueFromRow(row, RECIPE_FIELD_ALIASES.ingredients);
+  const { detailedIngredients, ingredients } = parseIngredients(rawIng);
+
+  const rawEq = extractValueFromRow(row, RECIPE_FIELD_ALIASES.equipment);
+  const equipment = parseEquipment(rawEq);
+
+  const rawSteps = extractValueFromRow(row, RECIPE_FIELD_ALIASES.steps);
+  const steps = parseSteps(rawSteps);
+
+  const rawWeather = extractValueFromRow(row, RECIPE_FIELD_ALIASES.weather);
+  const weatherSuitability = parseWeatherSuitability(rawWeather);
+
+  const category = parseCategory(extractValueFromRow(row, RECIPE_FIELD_ALIASES.category));
+  const difficulty = parseDifficulty(extractValueFromRow(row, RECIPE_FIELD_ALIASES.difficulty));
+
+  const prepTime = extractValueFromRow(row, RECIPE_FIELD_ALIASES.prepTime) || '5 min';
+  const country = extractValueFromRow(row, RECIPE_FIELD_ALIASES.country) || 'Brasil';
+  const description = extractValueFromRow(row, RECIPE_FIELD_ALIASES.description);
+  const image = extractValueFromRow(row, RECIPE_FIELD_ALIASES.image) || 'https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=1000';
+
+  const recipeYield = extractValueFromRow(row, RECIPE_FIELD_ALIASES.yield);
+  const history = extractValueFromRow(row, RECIPE_FIELD_ALIASES.history);
+  const baristaTip = extractValueFromRow(row, RECIPE_FIELD_ALIASES.baristaTip);
+  const commonErrors = extractValueFromRow(row, RECIPE_FIELD_ALIASES.commonErrors);
+  const howToServe = extractValueFromRow(row, RECIPE_FIELD_ALIASES.howToServe);
+  const curiosity = extractValueFromRow(row, RECIPE_FIELD_ALIASES.curiosity);
+
+  const idVal = row['id'] || row['ID'] || `${prefix}-${index}`;
+
+  return {
+    id: String(idVal),
+    name,
+    country,
+    description,
+    image,
+    category,
+    prepTime,
+    difficulty,
+    ingredients,
+    detailedIngredients,
+    equipment,
+    steps,
+    weatherSuitability,
+    yield: recipeYield || undefined,
+    history: history || undefined,
+    baristaTip: baristaTip || undefined,
+    commonErrors: commonErrors || undefined,
+    howToServe: howToServe || undefined,
+    curiosity: curiosity || undefined
+  };
+}
+
 // Helper to call Google Sheets API
 async function sheetsApiFetch(endpoint: string, accessToken: string, options: RequestInit = {}) {
   const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets${endpoint}`, {
@@ -494,40 +660,8 @@ export async function readPublicGoogleSheetData(
       if (tab === 'receitas_cafe') {
         const recipes: Recipe[] = [];
         rows.forEach((row, idx) => {
-          const getVal = (key: string) => {
-            const keyMatch = Object.keys(row).find(rk => rk.toLowerCase().trim() === key.toLowerCase().trim());
-            return keyMatch ? String(row[keyMatch] || '') : '';
-          };
-
-          const name = getVal('nome') || getVal('name') || getVal('receita') || getVal('titulo');
-          if (!name) return;
-
-          const rawIng = getVal('ingredientes') || getVal('ingredients');
-          const { detailedIngredients, ingredients } = parseIngredients(rawIng);
-
-          const rawEq = getVal('equipamentos') || getVal('equipment');
-          const equipment = parseEquipment(rawEq);
-
-          const rawSteps = getVal('modo_preparo') || getVal('modo_de_preparo') || getVal('steps') || getVal('preparo');
-          const steps = parseSteps(rawSteps);
-
-          const weatherSuitability = parseWeatherSuitability(getVal('clima_adequado') || getVal('clima'));
-
-          recipes.push({
-            id: getVal('id') || `sheet-pub-${idx}`,
-            name,
-            country: getVal('pais') || getVal('country') || 'Brasil',
-            description: getVal('descricao') || getVal('description') || '',
-            image: getVal('imagem_url') || getVal('imagem') || getVal('image_url') || getVal('image') || 'https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=1000',
-            category: (getVal('categoria') || getVal('category') || 'Specialty') as any,
-            prepTime: getVal('tempo_preparo') || getVal('tempo_de_preparo') || getVal('prep_time') || '5 min',
-            difficulty: (getVal('dificuldade') || getVal('difficulty') || 'Easy') as any,
-            ingredients,
-            detailedIngredients,
-            equipment,
-            steps,
-            weatherSuitability: weatherSuitability as any
-          });
+          const mapped = mapRowToRecipe(row, idx, 'sheet-pub');
+          if (mapped) recipes.push(mapped);
         });
 
         if (recipes.length > 0) {
@@ -536,23 +670,20 @@ export async function readPublicGoogleSheetData(
       } else if (tab === 'jornada_do_cafe') {
         const journey: JourneyStep[] = [];
         rows.forEach((row, idx) => {
-          const getVal = (key: string) => {
-            const keyMatch = Object.keys(row).find(rk => rk.toLowerCase().trim() === key.toLowerCase().trim());
-            return keyMatch ? String(row[keyMatch] || '') : '';
-          };
+          const getVal = (aliases: string[]) => extractValueFromRow(row, aliases);
 
           journey.push({
             id: `journey-pub-${idx}`,
             status: idx === 0 ? 'completed' : idx === 1 ? 'current' : 'locked',
-            icon: getVal('icone') || 'Coffee',
-            step: parseInt(getVal('step') || String(idx + 1), 10),
-            title: getVal('titulo') || 'Etapa do Café',
-            subtitle: getVal('subtitulo') || '',
-            description: getVal('descricao') || '',
-            imageUrl: getVal('imagem_url') || '',
-            baristaTip: getVal('dica_barista') || '',
-            readTime: getVal('tempo_leitura') || '3 min',
-            iconName: getVal('icone') || 'Coffee'
+            icon: getVal(['icone', 'icon', 'simbolo']) || 'Coffee',
+            step: parseInt(getVal(['step', 'passo', 'etapa', 'ordem']) || String(idx + 1), 10),
+            title: getVal(['titulo', 'title', 'nome', 'etapa']) || 'Etapa do Café',
+            subtitle: getVal(['subtitulo', 'subtitle', 'fase']) || '',
+            description: getVal(['descricao', 'description', 'sobre', 'texto', 'detalhes']) || '',
+            imageUrl: getVal(['imagem_url', 'imagem', 'image_url', 'image', 'foto', 'link_imagem']) || '',
+            baristaTip: getVal(['dica_barista', 'dicabarista', 'dica', 'truque', 'barista_tip']) || '',
+            readTime: getVal(['tempo_leitura', 'tempo', 'tempodeleitura', 'duracao', 'read_time']) || '3 min',
+            iconName: getVal(['icone', 'icon', 'simbolo']) || 'Coffee'
           });
         });
 
@@ -562,14 +693,14 @@ export async function readPublicGoogleSheetData(
       } else if (tab === 'logotipo_de_cafe') {
         const row = rows[0];
         if (row) {
-          const logoVal = row['valor'] || row['valor_url'] || row['app_logo'] || Object.values(row)[1] || '';
-          if (logoVal) result.logotipo_de_cafe = String(logoVal);
+          const logoVal = extractValueFromRow(row, ['valor', 'valor_url', 'app_logo', 'logo', 'logotipo', 'link', 'imagem', 'url']) || Object.values(row)[1] || Object.values(row)[0] || '';
+          if (logoVal && String(logoVal).startsWith('http')) result.logotipo_de_cafe = String(logoVal);
         }
       } else if (tab === 'configuracoes_do_aplicativo') {
         const settings: Record<string, any> = {};
         rows.forEach(row => {
-          const key = row['chave'] || row['key'];
-          const rawVal = row['valor_json'] || row['value'] || row['valor'] || '';
+          const key = extractValueFromRow(row, ['chave', 'key', 'configuracao', 'nome', 'parametro']);
+          const rawVal = extractValueFromRow(row, ['valor_json', 'value', 'valor', 'conteudo']) || '';
           if (key) {
             try {
               settings[key] = JSON.parse(rawVal);
@@ -601,40 +732,8 @@ export async function readPublicGoogleSheetData(
             const recipes: Recipe[] = [];
 
             rows.forEach((row, idx) => {
-              const getVal = (key: string) => {
-                const keyMatch = Object.keys(row).find(rk => rk.toLowerCase().trim() === key.toLowerCase().trim());
-                return keyMatch ? String(row[keyMatch] || '') : '';
-              };
-
-              const name = getVal('nome') || getVal('name') || getVal('receita') || getVal('titulo');
-              if (!name) return;
-
-              const rawIng = getVal('ingredientes') || getVal('ingredients');
-              const { detailedIngredients, ingredients } = parseIngredients(rawIng);
-
-              const rawEq = getVal('equipamentos') || getVal('equipment');
-              const equipment = parseEquipment(rawEq);
-
-              const rawSteps = getVal('modo_preparo') || getVal('modo_de_preparo') || getVal('steps') || getVal('preparo');
-              const steps = parseSteps(rawSteps);
-
-              const weatherSuitability = parseWeatherSuitability(getVal('clima_adequado') || getVal('clima'));
-
-              recipes.push({
-                id: getVal('id') || `sheet-fallback-${idx}`,
-                name,
-                country: getVal('pais') || getVal('country') || 'Brasil',
-                description: getVal('descricao') || getVal('description') || '',
-                image: getVal('imagem_url') || getVal('imagem') || getVal('image_url') || getVal('image') || 'https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=1000',
-                category: (getVal('categoria') || getVal('category') || 'Specialty') as any,
-                prepTime: getVal('tempo_preparo') || getVal('tempo_de_preparo') || getVal('prep_time') || '5 min',
-                difficulty: (getVal('dificuldade') || getVal('difficulty') || 'Easy') as any,
-                ingredients,
-                detailedIngredients,
-                equipment,
-                steps,
-                weatherSuitability: weatherSuitability as any
-              });
+              const mapped = mapRowToRecipe(row, idx, 'sheet-fallback');
+              if (mapped) recipes.push(mapped);
             });
 
             if (recipes.length > 0) {
@@ -652,7 +751,8 @@ export async function readPublicGoogleSheetData(
 }
 
 /**
- * Reads all 4 tabs from a Google Sheet and returns formatted data
+ * Reads all tabs from a Google Sheet and returns formatted data.
+ * First queries spreadsheet metadata to get all actual sheet titles dynamically.
  */
 export async function readDataFromGoogleSheet(
   spreadsheetId: string,
@@ -666,128 +766,145 @@ export async function readDataFromGoogleSheet(
   }
 
   try {
-    const ranges = [
-      'receitas_cafe!A1:Z500',
-      'jornada_do_cafe!A1:Z100',
-      'logotipo_de_cafe!A1:Z10',
-      'configuracoes_do_aplicativo!A1:Z100'
-    ];
+    // 1. First inspect the spreadsheet metadata to get real sheet titles
+    let sheetNames: string[] = [];
+    try {
+      const meta = await sheetsApiFetch(`/${cleanId}?fields=sheets.properties.title`, accessToken);
+      if (meta?.sheets && Array.isArray(meta.sheets)) {
+        sheetNames = meta.sheets.map((s: any) => s?.properties?.title).filter(Boolean);
+      }
+    } catch (metaErr) {
+      console.warn('Failed to fetch sheet metadata, falling back to standard names:', metaErr);
+    }
 
-    const response = await sheetsApiFetch(`/${cleanId}/values:batchGet?ranges=${ranges.map(encodeURIComponent).join('&ranges=')}`, accessToken);
+    // Identify matching tabs
+    const findTab = (candidates: string[]) => {
+      const normalizedCandidates = candidates.map(normalizeHeaderKey);
+      return sheetNames.find(sn => normalizedCandidates.includes(normalizeHeaderKey(sn)));
+    };
+
+    const recipesTab = findTab(['receitas_cafe', 'receitas', 'cafes', 'coffee_recipes', 'cardapio', 'menu']) || sheetNames[0] || 'receitas_cafe';
+    const journeyTab = findTab(['jornada_do_cafe', 'jornada', 'etapas', 'journey', 'passos_cafe']);
+    const logoTab = findTab(['logotipo_de_cafe', 'logotipo', 'logo', 'app_logo']);
+    const settingsTab = findTab(['configuracoes_do_aplicativo', 'configuracoes', 'settings', 'config']);
+
+    const rangesToFetch = [
+      `${recipesTab}!A1:Z500`,
+      journeyTab ? `${journeyTab}!A1:Z100` : null,
+      logoTab ? `${logoTab}!A1:Z10` : null,
+      settingsTab ? `${settingsTab}!A1:Z100` : null
+    ].filter(Boolean) as string[];
+
+    const response = await sheetsApiFetch(`/${cleanId}/values:batchGet?ranges=${rangesToFetch.map(encodeURIComponent).join('&ranges=')}`, accessToken);
     const valueRanges = response.valueRanges || [];
 
     const result: Partial<GoogleSheetsData> = {};
 
-  // 1. Receitas
-  const recipesRange = valueRanges[0]?.values || [];
-  if (recipesRange.length > 1) {
-    const headers = recipesRange[0].map((h: string) => h.toLowerCase().trim());
-    const recipes: Recipe[] = [];
+    // 1. Receitas
+    const recipesRange = valueRanges[0]?.values || [];
+    if (recipesRange.length > 1) {
+      const headers = recipesRange[0].map((h: any) => String(h || '').trim());
+      const recipes: Recipe[] = [];
 
-    for (let i = 1; i < recipesRange.length; i++) {
-      const row = recipesRange[i];
-      if (!row || row.length === 0) continue;
+      for (let i = 1; i < recipesRange.length; i++) {
+        const rowArr = recipesRange[i];
+        if (!rowArr || rowArr.length === 0) continue;
 
-      const getVal = (key: string) => {
-        const idx = headers.indexOf(key);
-        return idx !== -1 ? row[idx] || '' : '';
-      };
+        // Build object from headers and row values
+        const rowObj: Record<string, any> = {};
+        headers.forEach((h: string, colIdx: number) => {
+          if (h) rowObj[h] = rowArr[colIdx] !== undefined ? rowArr[colIdx] : '';
+        });
 
-      const name = getVal('nome') || getVal('name');
-      if (!name) continue;
+        const mapped = mapRowToRecipe(rowObj, i, 'sheet');
+        if (mapped) recipes.push(mapped);
+      }
 
-      const rawIng = getVal('ingredientes') || getVal('ingredients');
-      const { detailedIngredients, ingredients } = parseIngredients(rawIng);
-
-      const rawEq = getVal('equipamentos') || getVal('equipment');
-      const equipment = parseEquipment(rawEq);
-
-      const rawSteps = getVal('modo_preparo') || getVal('modo_de_preparo') || getVal('steps');
-      const steps = parseSteps(rawSteps);
-
-      let weatherSuitability = parseWeatherSuitability(getVal('clima_adequado') || getVal('clima'));
-
-      recipes.push({
-        id: getVal('id') || `sheet-${i}`,
-        name,
-        country: getVal('pais') || getVal('country') || 'Brasil',
-        description: getVal('descricao') || getVal('description') || '',
-        image: getVal('imagem_url') || getVal('imagem') || getVal('image_url') || getVal('image') || 'https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=1000',
-        category: (getVal('categoria') || getVal('category') || 'Specialty') as any,
-        prepTime: getVal('tempo_preparo') || getVal('tempo_de_preparo') || getVal('prep_time') || '5 min',
-        difficulty: (getVal('dificuldade') || getVal('difficulty') || 'Easy') as any,
-        ingredients,
-        detailedIngredients,
-        equipment,
-        steps,
-        weatherSuitability: weatherSuitability as any
-      });
-    }
-
-    result.receitas_cafe = recipes;
-  }
-
-  // 2. Jornada do Café
-  const journeyRange = valueRanges[1]?.values || [];
-  if (journeyRange.length > 1) {
-    const headers = journeyRange[0].map((h: string) => h.toLowerCase().trim());
-    const journey: JourneyStep[] = [];
-
-    for (let i = 1; i < journeyRange.length; i++) {
-      const row = journeyRange[i];
-      if (!row || row.length === 0) continue;
-
-      const getVal = (key: string) => {
-        const idx = headers.indexOf(key);
-        return idx !== -1 ? row[idx] || '' : '';
-      };
-
-      journey.push({
-        id: `journey-${i}`,
-        status: i === 1 ? 'completed' : i === 2 ? 'current' : 'locked',
-        icon: getVal('icone') || 'Coffee',
-        step: parseInt(getVal('step') || String(i), 10),
-        title: getVal('titulo') || 'Etapa do Café',
-        subtitle: getVal('subtitulo') || '',
-        description: getVal('descricao') || '',
-        imageUrl: getVal('imagem_url') || '',
-        baristaTip: getVal('dica_barista') || '',
-        readTime: getVal('tempo_leitura') || '3 min',
-        iconName: getVal('icone') || 'Coffee'
-      });
-    }
-
-    result.jornada_do_cafe = journey;
-  }
-
-  // 3. Logotipo de Café
-  const logoRange = valueRanges[2]?.values || [];
-  if (logoRange.length > 1) {
-    const row = logoRange[1];
-    if (row && row[1]) {
-      result.logotipo_de_cafe = row[1];
-    }
-  }
-
-  // 4. Configurações
-  const settingsRange = valueRanges[3]?.values || [];
-  if (settingsRange.length > 1) {
-    const settings: Record<string, any> = {};
-    for (let i = 1; i < settingsRange.length; i++) {
-      const row = settingsRange[i];
-      if (!row || !row[0]) continue;
-      const key = row[0];
-      const rawVal = row[1] || '';
-      try {
-        settings[key] = JSON.parse(rawVal);
-      } catch (e) {
-        settings[key] = rawVal;
+      if (recipes.length > 0) {
+        result.receitas_cafe = recipes;
       }
     }
-    result.configuracoes_do_aplicativo = settings;
-  }
 
-  return result;
+    // 2. Jornada do Café (if tab exists)
+    let rangeIdx = 1;
+    if (journeyTab && valueRanges[rangeIdx]) {
+      const journeyRange = valueRanges[rangeIdx]?.values || [];
+      if (journeyRange.length > 1) {
+        const headers = journeyRange[0].map((h: any) => String(h || '').trim());
+        const journey: JourneyStep[] = [];
+
+        for (let i = 1; i < journeyRange.length; i++) {
+          const rowArr = journeyRange[i];
+          if (!rowArr || rowArr.length === 0) continue;
+
+          const rowObj: Record<string, any> = {};
+          headers.forEach((h: string, colIdx: number) => {
+            if (h) rowObj[h] = rowArr[colIdx] !== undefined ? rowArr[colIdx] : '';
+          });
+
+          const getVal = (aliases: string[]) => extractValueFromRow(rowObj, aliases);
+
+          journey.push({
+            id: `journey-${i}`,
+            status: i === 1 ? 'completed' : i === 2 ? 'current' : 'locked',
+            icon: getVal(['icone', 'icon', 'simbolo']) || 'Coffee',
+            step: parseInt(getVal(['step', 'passo', 'etapa', 'ordem']) || String(i), 10),
+            title: getVal(['titulo', 'title', 'nome', 'etapa']) || 'Etapa do Café',
+            subtitle: getVal(['subtitulo', 'subtitle', 'fase']) || '',
+            description: getVal(['descricao', 'description', 'sobre', 'texto', 'detalhes']) || '',
+            imageUrl: getVal(['imagem_url', 'imagem', 'image_url', 'image', 'foto', 'link_imagem']) || '',
+            baristaTip: getVal(['dica_barista', 'dicabarista', 'dica', 'truque', 'barista_tip']) || '',
+            readTime: getVal(['tempo_leitura', 'tempo', 'tempodeleitura', 'duracao', 'read_time']) || '3 min',
+            iconName: getVal(['icone', 'icon', 'simbolo']) || 'Coffee'
+          });
+        }
+
+        if (journey.length > 0) result.jornada_do_cafe = journey;
+      }
+      rangeIdx++;
+    }
+
+    // 3. Logotipo de Café
+    if (logoTab && valueRanges[rangeIdx]) {
+      const logoRange = valueRanges[rangeIdx]?.values || [];
+      if (logoRange.length > 1) {
+        const row = logoRange[1];
+        if (row && row[1]) {
+          result.logotipo_de_cafe = String(row[1]);
+        }
+      }
+      rangeIdx++;
+    }
+
+    // 4. Configurações
+    if (settingsTab && valueRanges[rangeIdx]) {
+      const settingsRange = valueRanges[rangeIdx]?.values || [];
+      if (settingsRange.length > 1) {
+        const settings: Record<string, any> = {};
+        for (let i = 1; i < settingsRange.length; i++) {
+          const row = settingsRange[i];
+          if (!row || !row[0]) continue;
+          const key = String(row[0]);
+          const rawVal = row[1] || '';
+          try {
+            settings[key] = JSON.parse(rawVal);
+          } catch (e) {
+            settings[key] = rawVal;
+          }
+        }
+        result.configuracoes_do_aplicativo = settings;
+      }
+    }
+
+    // If no recipes were loaded via standard tabs, fallback to public CSV reader
+    if (!result.receitas_cafe || result.receitas_cafe.length === 0) {
+      const fallbackResult = await readPublicGoogleSheetData(cleanId);
+      if (fallbackResult.receitas_cafe && fallbackResult.receitas_cafe.length > 0) {
+        result.receitas_cafe = fallbackResult.receitas_cafe;
+      }
+    }
+
+    return result;
   } catch (err) {
     console.warn('Google Sheets API error, falling back to public CSV endpoint:', err);
     return readPublicGoogleSheetData(cleanId);
